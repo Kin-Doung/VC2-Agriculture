@@ -2,6 +2,10 @@
 
 import { Smartphone, Cloud, BarChart3, Users, Shield, Zap, Check, ArrowRight } from "lucide-react"
 import { Link } from "react-router-dom"
+import organicRice from "../../images/organic-rice.jpg"
+import phkaRomduolRice from "../../images/phka-romduol-rice.jpg"
+import neangMinhRice from "../../images/neang-minh-rice.jpg"
+
 
 const PublicProducts = ({ language }) => {
   const translations = {
@@ -11,49 +15,44 @@ const PublicProducts = ({ language }) => {
         subtitle: "Comprehensive farming solutions designed to help you succeed",
       },
       products: {
-        title: "What We Offer",
+        title: "Products for Sale",
+        subtitle: "Discover fresh, locally-sourced agricultural products directly from Cambodian farmers.",
         items: [
           {
-            icon: Smartphone,
-            title: "Mobile App",
-            description: "Complete farm management on your smartphone",
-            features: [
-              "Crop tracking and monitoring",
-              "Weather alerts and forecasts",
-              "Task management and reminders",
-              "Market price updates",
-              "Offline functionality",
-            ],
-            price: "Free",
-            popular: false,
+            title: "Organic Rice",
+            description: "High-quality Jasmine rice, grown without pesticides, 1200 KHR",
+            image: organicRice,
+            price: "1200 KHR",
           },
           {
-            icon: Cloud,
-            title: "Cloud Platform",
-            description: "Advanced analytics and data management",
-            features: [
-              "Data backup and sync",
-              "Advanced reporting",
-              "Multi-device access",
-              "API integrations",
-              "Priority support",
-            ],
-            price: "$9.99/month",
-            popular: true,
+            title: "Phka Romduol Rice",
+            description: "Locally grown fragrant rice, perfect for cooking, 350 KHR",
+            image: phkaRomduolRice,
+            price: "350 KHR",
           },
           {
-            icon: BarChart3,
-            title: "Analytics Pro",
-            description: "Professional insights and recommendations",
-            features: [
-              "AI-powered recommendations",
-              "Yield prediction models",
-              "Cost optimization analysis",
-              "Custom reports",
-              "Expert consultations",
-            ],
-            price: "$29.99/month",
-            popular: false,
+            title: "Neang Minh Rice",
+            description: "Sweet and tender corn, harvested daily, 600 KHR",
+            image: neangMinhRice,
+            price: "600 KHR",
+          },
+          {
+            title: "Organic Rice",
+            description: "High-quality rice, grown without pesticides, 1200 KHR",
+            image: organicRice,
+            price: "1200 KHR",
+          },
+          {
+            title: "Phka Romduol Rice",
+            description: "Locally grown fragrant rice, perfect for cooking, 350 KHR",
+            image: phkaRomduolRice,
+            price: "350 KHR",
+          },
+          {
+            title: "Neang Minh Rice",
+            description: "Sweet and tender rice, harvested daily, 600 KHR",
+            image: neangMinhRice,
+            price: "600 KHR",
           },
         ],
       },
@@ -104,49 +103,44 @@ const PublicProducts = ({ language }) => {
         subtitle: "ដំណោះស្រាយកសិកម្មគ្រប់គ្រាន់ដែលរចនាឡើងដើម្បីជួយអ្នកឱ្យជោគជ័យ",
       },
       products: {
-        title: "អ្វីដែលយើងផ្តល់ជូន",
+        title: "ផលិតផលដែលលក់",
+        subtitle: "រកផលិតផលកសិកម្មដែលមានភាពស្រស់ និងបានប្រមូលផ្តុំក្នុងស្រុកផ្ទាល់ពីអ្នកប្រមូលផលកម្ពុជា។",
         items: [
           {
-            icon: Smartphone,
-            title: "កម្មវិធីទូរស័ព្ទ",
-            description: "ការគ្រប់គ្រងកសិដ្ឋានពេញលេញនៅលើស្មាតហ្វូនរបស់អ្នក",
-            features: [
-              "ការតាមដាន និងត្រួតពិនិត្យដំណាំ",
-              "ការជូនដំណឹងអាកាសធាតុ និងការព្យាករណ៍",
-              "ការគ្រប់គ្រងកិច្ចការ និងការរំលឹក",
-              "ការធ្វើបច្ចុប្បន្នភាពតម្លៃទីផ្សារ",
-              "មុខងារក្រៅបណ្តាញ",
-            ],
-            price: "ឥតគិតថ្លៃ",
-            popular: false,
+            title: "អង្ករធម្មជាតិ",
+            description: "អង្ករជាម៉ាស៊ីដែលមានគុណភាពខ្ពស់ ដាំដុះដោយគ្មានថ្នាំពុល 1200 KHR",
+            image: "organic-rice.jpg",
+            price: "1200 KHR",
           },
           {
-            icon: Cloud,
-            title: "វេទិកាពពក",
-            description: "ការវិភាគកម្រិតខ្ពស់ និងការគ្រប់គ្រងទិន្នន័យ",
-            features: [
-              "ការបម្រុងទុក និងធ្វើសមកាលកម្មទិន្នន័យ",
-              "របាយការណ៍កម្រិតខ្ពស់",
-              "ការចូលប្រើពហុឧបករណ៍",
-              "ការរួមបញ្ចូល API",
-              "ការគាំទ្រអាទិភាព",
-            ],
-            price: "$9.99/ខែ",
-            popular: true,
+            title: "អង្ករ Phka Romduol",
+            description: "អង្ករក្លិនឈ្ងុយដែលបានដាំក្នុងស្រុក សម្រាប់ចម្អិនអាហារ 350 KHR",
+            image: "phka-romduol-rice.jpg",
+            price: "350 KHR",
           },
           {
-            icon: BarChart3,
-            title: "Analytics Pro",
-            description: "ការយល់ដឹង និងការណែនាំជំនាញ",
-            features: [
-              "ការណែនាំដែលដំណើរការដោយ AI",
-              "ម៉ូដែលព្យាករណ៍ទិន្នផល",
-              "ការវិភាគបង្កើនប្រសិទ្ធភាពការចំណាយ",
-              "របាយការណ៍ផ្ទាល់ខ្លួន",
-              "ការពិគ្រោះយោបល់អ្នកជំនាញ",
-            ],
-            price: "$29.99/ខែ",
-            popular: false,
+            title: "អង្ករ Neang Minh",
+            description: "ផ្លែឈើផ្អែម និងភ្លុយ ដែលបានប្រមូលផ្តុំប្រចាំថ្ងៃ 600 KHR",
+            image: "neang-minh-corn.jpg",
+            price: "600 KHR",
+          },
+          {
+            title: "អង្ករធម្មជាតិ",
+            description: "អង្ករដែលមានគុណភាពខ្ពស់ ដាំដុះដោយគ្មានថ្នាំពុល 1200 KHR",
+            image: "organic-rice-2.jpg",
+            price: "1200 KHR",
+          },
+          {
+            title: "អង្ករ Phka Romduol",
+            description: "អង្ករក្លិនឈ្ងុយដែលបានដាំក្នុងស្រុក សម្រាប់ចម្អិនអាហារ 350 KHR",
+            image: "phka-romduol-rice-2.jpg",
+            price: "350 KHR",
+          },
+          {
+            title: "អង្ករ Neang Minh",
+            description: "អង្ករផ្អែម និងភ្លុយ ដែលបានប្រមូលផ្តុំប្រចាំថ្ងៃ 600 KHR",
+            image: "neang-minh-rice.jpg",
+            price: "600 KHR",
           },
         ],
       },
@@ -208,51 +202,31 @@ const PublicProducts = ({ language }) => {
       {/* Products Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-16">{t.products.title}</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">
+            {t.products.title}
+          </h2>
+          <p className="text-center text-gray-600 mb-12">{t.products.subtitle}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {t.products.items.map((product, index) => (
-              <div
-                key={index}
-                className={`relative bg-white rounded-2xl shadow-xl p-8 ${product.popular ? "ring-2 ring-green-500 scale-105" : ""}`}
-              >
-                {product.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                      {language === "en" ? "Most Popular" : "ពេញនិយមបំផុត"}
-                    </span>
-                  </div>
-                )}
-
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <product.icon className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{product.title}</h3>
+              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+                <img
+                  src={product.image}
+                  alt={product.title}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="p-6 text-center">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                    {product.title}
+                  </h3>
                   <p className="text-gray-600 mb-4">{product.description}</p>
-                  <div className="text-3xl font-bold text-green-600">{product.price}</div>
+                  <p className="text-2xl font-bold text-green-600">{product.price}</p>
+                  <Link
+                    to="/product-details"
+                    className="mt-4 inline-block bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                  >
+                    View Details
+                  </Link>
                 </div>
-
-                <ul className="space-y-3 mb-8">
-                  {product.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center gap-3">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  to="/register"
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold transition-colors ${
-                    product.popular
-                      ? "bg-green-600 text-white hover:bg-green-700"
-                      : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                  }`}
-                >
-                  {language === "en" ? "Get Started" : "ចាប់ផ្តើម"}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
               </div>
             ))}
           </div>
