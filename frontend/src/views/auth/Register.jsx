@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Eye, EyeOff, Mail, Lock, User, MapPin, Leaf } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, MapPin, Leaf, Phone } from "lucide-react"
 import axios from "axios"
 
 const Register = ({ language, onRegister }) => {
@@ -243,6 +243,31 @@ const handleSubmit = async (e) => {
               </div>
               {errors.farmName && <p className="mt-1 text-sm text-red-600">{errors.farmName}</p>}
             </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                {t.phone || "Phone Number"}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Phone className="h-5 w-5 text-gray-400" /> 
+                </div>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="text"
+                  required
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                    errors.phone ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="012 345 678"
+                />
+              </div>
+              {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+            </div>
+
 
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
