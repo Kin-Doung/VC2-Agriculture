@@ -21,7 +21,39 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'farm_name',
+        'location',
+        'phone',
     ];
+    public function seedScans()
+    {
+        return $this->hasMany(SeedScan::class, 'user_id');
+    }
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class, 'user_id');
+    }
+    public function farm()
+    {
+        return $this->hasMany(Farm::class, 'user_id');
+    }
+    public function products(){
+        return $this->hasMany(Product::class, 'user_id');
+    }
+    public function supportRequests()
+    {
+        return $this->hasMany(SupportRequest::class, 'user_id');
+    }
+    public function chats()
+    {
+        return $this->hasMany(Chat::class, 'user_id');
+    }
+
+    public function productPhotos()
+    {
+        return $this->hasMany(ProductPhoto::class, 'user_id');
+    }
+    
 
     /**
      * The attributes that should be hidden for serialization.

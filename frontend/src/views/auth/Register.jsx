@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Eye, EyeOff, Mail, Lock, User, MapPin, Leaf } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, MapPin, Leaf, Phone } from "lucide-react"
+import axios from "axios"
 
 const Register = ({ language, onRegister }) => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ const Register = ({ language, onRegister }) => {
     confirmPassword: "",
     farmName: "",
     location: "",
+    phone: "",
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -27,6 +29,7 @@ const Register = ({ language, onRegister }) => {
       password: "Password",
       confirmPassword: "Confirm Password",
       farmName: "Farm Name",
+      phone: "Phone Number",
       location: "Location",
       showPassword: "Show password",
       hidePassword: "Hide password",
@@ -54,6 +57,7 @@ const Register = ({ language, onRegister }) => {
       password: "ពាក្យសម្ងាត់",
       confirmPassword: "បញ្ជាក់ពាក្យសម្ងាត់",
       farmName: "ឈ្មោះកសិដ្ឋាន",
+      phone: "លេខទូរស័ព្ទ",
       location: "ទីតាំង",
       showPassword: "បង្ហាញពាក្យសម្ងាត់",
       hidePassword: "លាក់ពាក្យសម្ងាត់",
@@ -102,6 +106,7 @@ const Register = ({ language, onRegister }) => {
     if (!formData.confirmPassword) newErrors.confirmPassword = t.errors.required
     if (!formData.farmName.trim()) newErrors.farmName = t.errors.required
     if (!formData.location.trim()) newErrors.location = t.errors.required
+    if (!formData.phone.trim()) newErrors.phone = t.errors.required
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -123,35 +128,35 @@ const Register = ({ language, onRegister }) => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+const handleSubmit = async (e) => {
+  e.preventDefault()
 
-    if (!validateForm()) {
-      return
-    }
+  if (!validateForm()) return
 
-    setIsLoading(true)
+  setIsLoading(true)
 
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+  try {
+    const response = await axios.post("http://localhost:8000/api/register", {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      password_confirmation: formData.confirmPassword,
+      farm_name: formData.farmName,
+      location: formData.location,
+      phone: formData.phone,
+    })
 
-      // For demo purposes, create user account
-      const userData = {
-        id: Date.now(),
-        name: formData.name,
-        email: formData.email,
-        farmName: formData.farmName,
-        location: formData.location,
-      }
-
-      onRegister(userData)
-    } catch (err) {
+    onRegister(response.data)
+  } catch (error) {
+    if (error.response?.data?.errors?.email) {
       setErrors({ email: t.errors.emailExists })
-    } finally {
-      setIsLoading(false)
+    } else {
+      alert("Register failed")
     }
+  } finally {
+    setIsLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -187,7 +192,7 @@ const Register = ({ language, onRegister }) => {
                   className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
                     errors.name ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="John Doe"
+                  placeholder="Enter Full Name"
                 />
               </div>
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -236,11 +241,36 @@ const Register = ({ language, onRegister }) => {
                   className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
                     errors.farmName ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Green Valley Farm"
+                  placeholder="Enter Farm Name"
                 />
               </div>
               {errors.farmName && <p className="mt-1 text-sm text-red-600">{errors.farmName}</p>}
             </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                {t.phone || "Phone Number"}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Phone className="h-5 w-5 text-gray-400" /> 
+                </div>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="text"
+                  required
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                    errors.phone ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="Enter Phone Number"
+                />
+              </div>
+              {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+            </div>
+
 
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
