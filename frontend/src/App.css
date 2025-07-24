@@ -36,3 +36,143 @@
     transform: rotate(360deg);
   }
 }
+
+
+
+.leaflet-container {
+  z-index: 1;
+}
+
+button {
+  transition: background-color 0.2s;
+}
+
+input {
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus {
+  border-color: #2563eb;
+}
+
+.pulse-icon .pulse {
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+
+.pulse-icon .marker {
+  width: 8px;
+  height: 8px;
+  background-color: #16a34a;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.animate-pulse {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsiveness (max-width: 768px) */
+@media (max-width: 768px) {
+  /* Adjust header layout for mobile */
+  .flex.items-center.justify-between.flex-wrap.gap-4 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  /* Limit map height on mobile */
+  .leaflet-container {
+    height: 50vh !important;
+  }
+
+  /* Adjust sidebar width and border */
+  .w-full.md\:w-80.bg-white.border-l.border-gray-200.p-2.sm\:p-4 {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  /* Ensure touch-friendly buttons and inputs */
+  .bg-green-600,
+  .bg-blue-600,
+  .bg-transparent {
+    padding: 0.75rem 1rem !important; /* Minimum 48px touch target */
+    font-size: 0.875rem !important;
+  }
+
+  .w-full.px-2.sm\:px-3.py-1.sm\:py-2.border.border-gray-300.rounded-md.focus\:outline-none.focus\:ring-2.focus\:ring-green-500 {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Adjust overlay for mobile */
+  .absolute.inset-0.flex.items-center.justify-center.z-10 .bg-white.bg-opacity-90.p-4.sm\:p-6.rounded-lg.text-center.max-w-md.mx-2.sm\:mx-4 {
+    max-width: 90%;
+    margin: 0 0.5rem;
+    padding: 0.75rem;
+  }
+
+  /* Center notification on mobile */
+  .absolute.top-2.sm\:top-4.left-2.sm\:left-4.bg-green-600.text-white.px-2.sm\:px-4.py-1.sm\:py-2.rounded.shadow-lg.animate-fade-out.z-20 {
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Pulsing icon animation */
+.pulse-icon .pulse {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+.pulse-icon .marker {
+  width: 10px;
+  height: 10px;
+  background: red;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.pulse-icon .pulse::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 0, 0, 0.5);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}
