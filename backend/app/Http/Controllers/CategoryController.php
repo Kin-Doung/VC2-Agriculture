@@ -14,6 +14,8 @@ class CategoryController extends Controller
     public function index()
     {
         //
+        $categories = Category::all();
+        return response()->json($categories);
     }
 
     /**
@@ -22,29 +24,47 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         //
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+        ]); 
+        $category = Category::create($validatedData);
+        return response()->json($category, 201);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Category $category)
+    public function show(string $id)
     {
         //
+        $category = Category::findOrFail($id);
+        return response()->json($category);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Category $category)
+    public function update(Request $request, string $id)
     {
         //
+        $category = Category::findOrFail($id);
+        $validatedData = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+        $category->update($validatedData);
+        return response()->json($category);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Category $category)
+    public function destroy(string $id)
     {
         //
+        $category = Category::findOrFail($id);
+        $category->delete();
+        return response()->json(null, 204);
     }
 }
