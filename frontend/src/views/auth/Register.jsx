@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock, User, MapPin, Leaf } from "lucide-react"
+import axios from "axios"
 
 const Register = ({ language, onRegister }) => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ const Register = ({ language, onRegister }) => {
     confirmPassword: "",
     farmName: "",
     location: "",
+    phone: "",
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -123,35 +125,35 @@ const Register = ({ language, onRegister }) => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+const handleSubmit = async (e) => {
+  e.preventDefault()
 
-    if (!validateForm()) {
-      return
-    }
+  if (!validateForm()) return
 
-    setIsLoading(true)
+  setIsLoading(true)
 
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+  try {
+    const response = await axios.post("http://localhost:8000/api/register", {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      password_confirmation: formData.confirmPassword,
+      farm_name: formData.farmName,
+      location: formData.location,
+      phone: formData.phone,
+    })
 
-      // For demo purposes, create user account
-      const userData = {
-        id: Date.now(),
-        name: formData.name,
-        email: formData.email,
-        farmName: formData.farmName,
-        location: formData.location,
-      }
-
-      onRegister(userData)
-    } catch (err) {
+    onRegister(response.data)
+  } catch (error) {
+    if (error.response?.data?.errors?.email) {
       setErrors({ email: t.errors.emailExists })
-    } finally {
-      setIsLoading(false)
+    } else {
+      alert("Register failed")
     }
+  } finally {
+    setIsLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">

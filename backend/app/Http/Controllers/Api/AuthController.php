@@ -19,7 +19,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
             'farm_name' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
-            'phone'     => 'required|string|max:20'
+            'phone'     => 'required'
         ]);
 
         $user = User::create([
