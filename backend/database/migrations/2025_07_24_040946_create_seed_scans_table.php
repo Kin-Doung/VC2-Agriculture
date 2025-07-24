@@ -13,11 +13,10 @@ return new class extends Migration
     {
         Schema::create('seed_scans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('farm_id')->constrained('farms')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('crop_type_id')->constrained('crop_types')->onDelete('cascade');
             $table->text('scan_result');
             $table->date('scan_date');
-            
             $table->timestamps();
         });
     }

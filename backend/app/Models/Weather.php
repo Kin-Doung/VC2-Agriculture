@@ -8,4 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 class Weather extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'farm_id',
+        'date',
+        'temperature',
+        'condition',
+        'precipitation',
+    ];
+    public function farm()
+    {
+        return $this->belongsTo(Farm::class, 'farm_id');
+    }
 }
