@@ -10,14 +10,14 @@ class Product extends Model
     use HasFactory;
     protected $fillable = [
         'name',
-        'crop_id',
-        'user_id',
-        'category_id',
-        'name',
         'description',
         'price',
         'quantity',
+        'user_id',
+        'category_id',
+        'crop_id',
         'available_from',
+        'image_path',
     ];
     public function user()
     {
@@ -35,5 +35,4 @@ class Product extends Model
     {
         return $this->hasMany(Chat::class, 'product_id');
     }
-
 }
