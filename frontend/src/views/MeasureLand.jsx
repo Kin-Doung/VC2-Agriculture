@@ -1,8 +1,45 @@
-// src/views/MeasureLand.jsx
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "../components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
-import { Map as MapIcon, Clock } from "lucide-react";
+import { Map as MapIcon, Clock, Wheat } from "lucide-react";
+
+// Recommendations object for land types
+const recommendations = {
+  tonle_sap_basin: {
+    rice: "High-yield varieties like IR36, IR42, or Phka Romdoul (fragrant, export-quality). Yields >1 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 25 kg DAP + 500 kg compost",
+      "Tillering stage (20 days): 30 kg urea",
+      "Panicle initiation (40–50 days): 25 kg urea + 20 kg MOP",
+    ],
+  },
+  coastal_plains: {
+    rice: "Traditional varieties or improved strains like IR36. Yields ~0.8 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 20 kg DAP + 400 kg compost",
+      "Tillering stage (20 days): 25 kg urea",
+      "Panicle initiation (40–50 days): 20 kg urea + 15 kg MOP",
+    ],
+  },
+  highlands: {
+    rice: "Floating rice for flood-prone areas. Yields <0.6 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 15 kg DAP + 300 kg compost",
+      "Tillering stage (20 days): 20 kg urea",
+      "Panicle initiation (40–50 days): 15 kg urea + 10 kg MOP",
+    ],
+  },
+};
+
+// Helper to format land type label
+const formatLandType = (landType) => {
+  const landTypeOptions = {
+    tonle_sap_basin: "Tonle Sap Basin & Lowlands",
+    coastal_plains: "Coastal Plains",
+    highlands: "Highlands",
+  };
+  return landTypeOptions[landType] || "Not specified";
+};
 
 export default function MeasureLand({ onMeasure, onHistory, measurements, language }) {
   const totalArea = measurements.reduce((sum, m) => sum + (m.area || 0), 0);
@@ -67,14 +104,42 @@ export default function MeasureLand({ onMeasure, onHistory, measurements, langua
             {measurements.length === 0 ? (
               <p className="text-gray-600 text-center">No recent measurements available.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {measurements.map((measurement) => (
-                  <div key={measurement.id} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                    <div className="flex-1">
-                      <span className="text-sm text-gray-700">{measurement.name}</span>
-                      <span className="text-xs text-gray-500 ml-2">{measurement.date}</span>
+                  <div
+                    key={measurement.id}
+                    className="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-700">{measurement.name}</span>
+                        <span className="text-xs text-gray-500 ml-2">{measurement.date}</span>
+                      </div>
+                      <span className="text-sm font-medium text-green-600">{measurement.area} ha</span>
                     </div>
-                    <span className="text-sm font-medium text-green-600">{measurement.area} ha</span>
+                    <div className="text-sm text-gray-600">
+                      <div className="flex items-center mb-2">
+                        <Wheat className="w-4 h-4 mr-1 text-yellow-600" />
+                        <span className="font-medium">Land Type: </span>
+                        {formatLandType(measurement.landType)}
+                      </div>
+                      {measurement.landType && recommendations[measurement.landType] && (
+                        <div>
+                          <div className="mb-2">
+                            <span className="font-medium text-gray-700">Recommended Rice Varieties:</span>
+                            <p>{recommendations[measurement.landType].rice}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Fertilizer Plan:</span>
+                            <ul className="list-disc pl-5 text-sm">
+                              {recommendations[measurement.landType].fertilizerPlan.map((step, index) => (
+                                <li key={index}>{step}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
