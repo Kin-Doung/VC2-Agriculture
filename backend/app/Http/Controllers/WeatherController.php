@@ -27,7 +27,7 @@ class WeatherController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Weather $weather)
+    public function show(string $id)
     {
         //
     }
@@ -35,7 +35,7 @@ class WeatherController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Weather $weather)
+    public function update(Request $request, string $id)
     {
         //
     }
@@ -43,7 +43,7 @@ class WeatherController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Weather $weather)
+    public function destroy(string $id)
     {
         //
     }

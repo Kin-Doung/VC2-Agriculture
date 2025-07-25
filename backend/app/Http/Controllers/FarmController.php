@@ -27,7 +27,7 @@ class FarmController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Farm $farm)
+    public function show(string $id)
     {
         //
     }
@@ -35,7 +35,7 @@ class FarmController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Farm $farm)
+    public function update(Request $request, string $id)
     {
         //
     }
@@ -43,7 +43,7 @@ class FarmController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Farm $farm)
+    public function destroy(string $id)
     {
         //
     }

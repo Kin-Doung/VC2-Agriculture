@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,3 +28,6 @@ Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logo
 
 // Category Routes
 Route::apiResource('categories', CategoryController::class);
+
+// Product 
+Route::apiResource("products", ProductController::class);
