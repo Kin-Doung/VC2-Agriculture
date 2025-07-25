@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock, User, MapPin, Leaf, Phone } from "lucide-react"
 import axios from "axios"
+import Swal from 'sweetalert2';
+
 
 const Register = ({ language, onRegister }) => {
   const [formData, setFormData] = useState({
@@ -148,12 +150,13 @@ const validateForm = () => {
   return Object.keys(newErrors).length === 0;
 };
 
+const navigate = useNavigate();
 
 const handleSubmit = async (e) => {
   e.preventDefault();
 
   const isValid = validateForm();
-  if (!isValid) return; // Don’t submit if validation fails
+  if (!isValid) return;
 
   setIsLoading(true);
 
@@ -168,6 +171,17 @@ const handleSubmit = async (e) => {
       phone: formData.phone,
     });
 
+    // Show success message
+    Swal.fire({
+      icon: 'success',
+      title: 'Account Created!',
+      text: 'You have successfully registered.',
+      showConfirmButton: false,
+      timer: 2000,
+    }).then(() => {
+      navigate("/");
+    });
+
     onRegister(response.data);
   } catch (error) {
     const backendErrors = error.response?.data?.errors;
@@ -178,8 +192,22 @@ const handleSubmit = async (e) => {
         formattedErrors[key] = backendErrors[key][0];
       });
       setErrors(formattedErrors);
+
+      // Show email exists error 
+      if (formattedErrors.email) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Registration Failed',
+          text: formattedErrors.email,
+        });
+      }
     } else {
-      alert("Register failed");
+      // Generic error
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Something went wrong during registration!',
+      });
     }
   } finally {
     setIsLoading(false);
