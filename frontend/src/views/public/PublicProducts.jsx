@@ -2,12 +2,13 @@
 
 import { Smartphone, Cloud, BarChart3, Users, Shield, Zap, Check, ArrowRight } from "lucide-react"
 import { Link } from "react-router-dom"
-import organicRice from "../../images/organic-rice.jpg"
-import phkaRomduolRice from "../../images/phka-romduol-rice.jpg"
-import neangMinhRice from "../../images/neang-minh-rice.jpg"
+import { useEffect, useState } from "react"
+import axios from "axios"
 
 
 const PublicProducts = ({ language }) => {
+  const [products, setProducts] = useState([])
+
   const translations = {
     en: {
       hero: {
@@ -17,44 +18,6 @@ const PublicProducts = ({ language }) => {
       products: {
         title: "Products for Sale",
         subtitle: "Discover fresh, locally-sourced agricultural products directly from Cambodian farmers.",
-        items: [
-          {
-            title: "Organic Rice",
-            description: "High-quality Jasmine rice, grown without pesticides, 1200 KHR",
-            image: organicRice,
-            price: "1200 KHR",
-          },
-          {
-            title: "Phka Romduol Rice",
-            description: "Locally grown fragrant rice, perfect for cooking, 350 KHR",
-            image: phkaRomduolRice,
-            price: "350 KHR",
-          },
-          {
-            title: "Neang Minh Rice",
-            description: "Sweet and tender corn, harvested daily, 600 KHR",
-            image: neangMinhRice,
-            price: "600 KHR",
-          },
-          {
-            title: "Organic Rice",
-            description: "High-quality rice, grown without pesticides, 1200 KHR",
-            image: organicRice,
-            price: "1200 KHR",
-          },
-          {
-            title: "Phka Romduol Rice",
-            description: "Locally grown fragrant rice, perfect for cooking, 350 KHR",
-            image: phkaRomduolRice,
-            price: "350 KHR",
-          },
-          {
-            title: "Neang Minh Rice",
-            description: "Sweet and tender rice, harvested daily, 600 KHR",
-            image: neangMinhRice,
-            price: "600 KHR",
-          },
-        ],
       },
       features: {
         title: "Key Features",
@@ -105,44 +68,6 @@ const PublicProducts = ({ language }) => {
       products: {
         title: "ផលិតផលដែលលក់",
         subtitle: "រកផលិតផលកសិកម្មដែលមានភាពស្រស់ និងបានប្រមូលផ្តុំក្នុងស្រុកផ្ទាល់ពីអ្នកប្រមូលផលកម្ពុជា។",
-        items: [
-          {
-            title: "អង្ករធម្មជាតិ",
-            description: "អង្ករជាម៉ាស៊ីដែលមានគុណភាពខ្ពស់ ដាំដុះដោយគ្មានថ្នាំពុល 1200 KHR",
-            image: "organic-rice.jpg",
-            price: "1200 KHR",
-          },
-          {
-            title: "អង្ករ Phka Romduol",
-            description: "អង្ករក្លិនឈ្ងុយដែលបានដាំក្នុងស្រុក សម្រាប់ចម្អិនអាហារ 350 KHR",
-            image: "phka-romduol-rice.jpg",
-            price: "350 KHR",
-          },
-          {
-            title: "អង្ករ Neang Minh",
-            description: "ផ្លែឈើផ្អែម និងភ្លុយ ដែលបានប្រមូលផ្តុំប្រចាំថ្ងៃ 600 KHR",
-            image: "neang-minh-corn.jpg",
-            price: "600 KHR",
-          },
-          {
-            title: "អង្ករធម្មជាតិ",
-            description: "អង្ករដែលមានគុណភាពខ្ពស់ ដាំដុះដោយគ្មានថ្នាំពុល 1200 KHR",
-            image: "organic-rice-2.jpg",
-            price: "1200 KHR",
-          },
-          {
-            title: "អង្ករ Phka Romduol",
-            description: "អង្ករក្លិនឈ្ងុយដែលបានដាំក្នុងស្រុក សម្រាប់ចម្អិនអាហារ 350 KHR",
-            image: "phka-romduol-rice-2.jpg",
-            price: "350 KHR",
-          },
-          {
-            title: "អង្ករ Neang Minh",
-            description: "អង្ករផ្អែម និងភ្លុយ ដែលបានប្រមូលផ្តុំប្រចាំថ្ងៃ 600 KHR",
-            image: "neang-minh-rice.jpg",
-            price: "600 KHR",
-          },
-        ],
       },
       features: {
         title: "លក្ខណៈពិសេសសំខាន់",
@@ -187,7 +112,18 @@ const PublicProducts = ({ language }) => {
     },
   }
 
-  const t = translations[language]
+  const t = translations[language] || translations.en
+
+  useEffect(() => {
+    axios
+      .get("http://127.0.0.1:8000/api/products")
+      .then((res) => {
+        setProducts(res.data)
+      })
+      .catch((err) => {
+        console.error("Failed to fetch products:", err)
+      })
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -207,21 +143,19 @@ const PublicProducts = ({ language }) => {
           </h2>
           <p className="text-center text-gray-600 mb-12">{t.products.subtitle}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {t.products.items.map((product, index) => (
+            {products.map((product, index) => (
               <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
                 <img
-                  src={product.image}
-                  alt={product.title}
+                  src={`http://127.0.0.1:8000/storage/${product.image_path}`}
+                  alt={product.name}
                   className="w-full h-48 object-cover"
                 />
                 <div className="p-6 text-center">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                    {product.title}
-                  </h3>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">{product.name}</h3>
                   <p className="text-gray-600 mb-4">{product.description}</p>
-                  <p className="text-2xl font-bold text-green-600">{product.price}</p>
+                  <p className="text-2xl font-bold text-green-600">{product.price} KHR</p>
                   <Link
-                    to="/product-details"
+                    to={`/product-details/${product.id}`}
                     className="mt-4 inline-block bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
                   >
                     View Details
