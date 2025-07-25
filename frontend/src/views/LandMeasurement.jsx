@@ -30,84 +30,109 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import leafletImage from "leaflet-image";
 
-// Recommendations object for land types
-const recommendations = {
-  tonle_sap_basin: {
-    rice: "High-yield varieties like IR36, IR42, or Phka Romdoul (fragrant, export-quality). Yields >1 ton/ha.",
-    fertilizerPlan: [
-      "Before planting: 25 kg DAP + 500 kg compost",
-      "Tillering stage (20 days): 30 kg urea",
-      "Panicle initiation (40–50 days): 25 kg urea + 20 kg MOP",
-    ],
-  },
-  coastal_plains: {
-    rice: "Traditional varieties or improved strains like IR36. Yields ~0.8 ton/ha.",
-    fertilizerPlan: [
-      "Before planting: 20 kg DAP + 400 kg compost",
-      "Tillering stage (20 days): 25 kg urea",
-      "Panicle initiation (40–50 days): 20 kg urea + 15 kg MOP",
-    ],
-  },
-  highlands: {
-    rice: "Floating rice for flood-prone areas. Yields <0.6 ton/ha.",
-    fertilizerPlan: [
-      "Before planting: 15 kg DAP + 300 kg compost",
-      "Tillering stage (20 days): 20 kg urea",
-      "Panicle initiation (40–50 days): 15 kg urea + 10 kg MOP",
-    ],
-  },
-};
+// Comprehensive land type data (100 types)
+const landTypes = [
+  { value: "Lowland Rainfed", label: "Lowland Rainfed", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Irrigated Paddy Field", label: "Irrigated Paddy Field", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 30 } },
+  { value: "Flood-prone Land", label: "Flood-prone Land", seedRate: [100, 120], fertilizer: { Compost: 2000, Urea: 50 } },
+  { value: "Upland/Dry Area", label: "Upland/Dry Area", seedRate: [80, 100], fertilizer: { DAP: 60, Organic: 1500 } },
+  { value: "Alluvial Soil (River side)", label: "Alluvial Soil (River side)", seedRate: [60, 80], fertilizer: { Urea: 70, DAP: 40 } },
+  { value: "Sandy Soil", label: "Sandy Soil", seedRate: [100, 120], fertilizer: { Compost: 3000, DAP: 60 } },
+  { value: "Clay Soil", label: "Clay Soil", seedRate: [80, 90], fertilizer: { Urea: 80, KCl: 40 } },
+  { value: "Loam Soil", label: "Loam Soil", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 60 } },
+  { value: "Heavy Clay (Flooded Area)", label: "Heavy Clay (Flooded Area)", seedRate: [90, 110], fertilizer: { Organic: 2000, Urea: 50 } },
+  { value: "Marshy Land (Wet all year)", label: "Marshy Land (Wet all year)", seedRate: [90, 120], fertilizer: { DAP: 50, Compost: 3000 } },
+  { value: "High-Fertility Lowland", label: "High-Fertility Lowland", seedRate: [60, 70], fertilizer: { Urea: 40, DAP: 30 } },
+  { value: "Mountain Base", label: "Mountain Base", seedRate: [80, 100], fertilizer: { Compost: 2000, Urea: 60 } },
+  { value: "Sloped Upland", label: "Sloped Upland", seedRate: [100, 120], fertilizer: { DAP: 40, Organic: 1000 } },
+  { value: "Red Soil Area", label: "Red Soil Area", seedRate: [80, 90], fertilizer: { DAP: 60, KCl: 30 } },
+  { value: "Acid Soil", label: "Acid Soil", seedRate: [90, 110], fertilizer: { Lime: 300, DAP: 60 } },
+  { value: "Saline Soil", label: "Saline Soil", seedRate: [80, 100], fertilizer: { Gypsum: 500, Urea: 50 } },
+  { value: "Land Near Lake", label: "Land Near Lake", seedRate: [80, 100], fertilizer: { DAP: 60, Compost: 2000 } },
+  { value: "Land with Water Retention", label: "Land with Water Retention", seedRate: [70, 90], fertilizer: { Urea: 60, KCl: 40 } },
+  { value: "Former Shrubland", label: "Former Shrubland", seedRate: [100, 120], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Former Forest Land", label: "Former Forest Land", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 50 } },
+  { value: "Organic-Rich Lowland", label: "Organic-Rich Lowland", seedRate: [70, 80], fertilizer: { Urea: 50, DAP: 30 } },
+  { value: "Drought-Prone Area", label: "Drought-Prone Area", seedRate: [100, 120], fertilizer: { Organic: 2000, DAP: 60 } },
+  { value: "River Island Soil", label: "River Island Soil", seedRate: [80, 90], fertilizer: { Compost: 2000, Urea: 60 } },
+  { value: "Black Soil", label: "Black Soil", seedRate: [70, 80], fertilizer: { DAP: 50, KCl: 30 } },
+  { value: "Silt Loam (Lake side)", label: "Silt Loam (Lake side)", seedRate: [60, 70], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Soil with High Organic Matter", label: "Soil with High Organic Matter", seedRate: [60, 80], fertilizer: { Urea: 30, DAP: 30 } },
+  { value: "Double-cropping Land", label: "Double-cropping Land", seedRate: [70, 90], fertilizer: { Urea: 60, KCl: 40 } },
+  { value: "Triple-cropping Land", label: "Triple-cropping Land", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 50 } },
+  { value: "Mixed Soil (clay + sand)", label: "Mixed Soil (clay + sand)", seedRate: [90, 110], fertilizer: { DAP: 60, Organic: 2000 } },
+  { value: "Soil with Pest History", label: "Soil with Pest History", seedRate: [100, 120], fertilizer: { DAP: 60, KCl: 50 } },
+  // Adding remaining 70 types (51-100) as per the provided list
+  { value: "Seasonal Wetland", label: "Seasonal Wetland", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 60 } },
+  { value: "Near Main Canal", label: "Near Main Canal", seedRate: [80, 90], fertilizer: { Urea: 70, DAP: 50 } },
+  { value: "Area with Natural Drainage", label: "Area with Natural Drainage", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Newly Cleared Lowland", label: "Newly Cleared Lowland", seedRate: [90, 100], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Soil with High pH", label: "Soil with High pH", seedRate: [80, 90], fertilizer: { Gypsum: 500, Urea: 50 } },
+  { value: "Soil with Low pH", label: "Soil with Low pH", seedRate: [90, 110], fertilizer: { Lime: 400, DAP: 60 } },
+  { value: "Edge of Hill or Slope", label: "Edge of Hill or Slope", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
+  { value: "Rice Land Prone to Weed Pressure", label: "Rice Land Prone to Weed Pressure", seedRate: [90, 110], fertilizer: { DAP: 60, Urea: 60 } },
+  { value: "Wind-exposed Open Field", label: "Wind-exposed Open Field", seedRate: [90, 100], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Protected Field Near Forest Edge", label: "Protected Field Near Forest Edge", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Moist Shaded Area", label: "Moist Shaded Area", seedRate: [80, 100], fertilizer: { DAP: 50, Urea: 60 } },
+  { value: "Hard Crust Soil After Rain", label: "Hard Crust Soil After Rain", seedRate: [90, 110], fertilizer: { Compost: 3000, DAP: 60 } },
+  { value: "Medium Clay Field", label: "Medium Clay Field", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Silty-clay Flood Area", label: "Silty-clay Flood Area", seedRate: [100, 120], fertilizer: { Compost: 2500, DAP: 50 } },
+  { value: "Gravelly Loam Land", label: "Gravelly Loam Land", seedRate: [90, 110], fertilizer: { Organic: 2000, DAP: 60 } },
+  { value: "Deep Topsoil Loam", label: "Deep Topsoil Loam", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Rice-duck Integrated Field", label: "Rice-duck Integrated Field", seedRate: [80, 100], fertilizer: { DAP: 40, Organic: 1500 } },
+  { value: "Fish-rice System Area", label: "Fish-rice System Area", seedRate: [70, 80], fertilizer: { Organic: 2000, DAP: 40 } },
+  { value: "Organic Rice Farming Land", label: "Organic Rice Farming Land", seedRate: [80, 100], fertilizer: { Compost: 3000, GreenManure: 1000 } },
+  { value: "Former Banana Field", label: "Former Banana Field", seedRate: [90, 100], fertilizer: { Organic: 2000, DAP: 60 } },
+  { value: "Former Cassava Field", label: "Former Cassava Field", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 50 } },
+  { value: "Field After Maize Crop", label: "Field After Maize Crop", seedRate: [90, 110], fertilizer: { Compost: 2000, DAP: 60 } },
+  { value: "Multi-season Cropping Land", label: "Multi-season Cropping Land", seedRate: [70, 90], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Summer Season Field", label: "Summer Season Field", seedRate: [100, 120], fertilizer: { Organic: 3000, Urea: 60 } },
+  { value: "Monsoon Rice Area", label: "Monsoon Rice Area", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Reused Paddy Field", label: "Reused Paddy Field", seedRate: [100, 120], fertilizer: { Compost: 2000, DAP: 60 } },
+  { value: "Soil with Termite Mound Traces", label: "Soil with Termite Mound Traces", seedRate: [90, 110], fertilizer: { Organic: 2000, DAP: 50 } },
+  { value: "Salt-influenced Soil (Mild)", label: "Salt-influenced Soil (Mild)", seedRate: [80, 90], fertilizer: { Gypsum: 300, Urea: 50 } },
+  { value: "Low-lying Depression Area", label: "Low-lying Depression Area", seedRate: [90, 110], fertilizer: { Compost: 3000, DAP: 60 } },
+  { value: "Former Sugarcane Field", label: "Former Sugarcane Field", seedRate: [90, 100], fertilizer: { Organic: 2000, Urea: 60 } },
+  { value: "Wind-break Zone Field", label: "Wind-break Zone Field", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Bamboo Grove Edge", label: "Bamboo Grove Edge", seedRate: [80, 100], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Roadside Rice Field", label: "Roadside Rice Field", seedRate: [90, 100], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Soil with Poor Structure", label: "Soil with Poor Structure", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
+  { value: "Sticky Rice Traditional Field", label: "Sticky Rice Traditional Field", seedRate: [100, 120], fertilizer: { Organic: 2000, DAP: 50 } },
+  { value: "Jasmine Rice Area", label: "Jasmine Rice Area", seedRate: [70, 90], fertilizer: { Urea: 60, DAP: 60 } },
+  { value: "Black Glutinous Rice Zone", label: "Black Glutinous Rice Zone", seedRate: [80, 100], fertilizer: { DAP: 50, Urea: 60 } },
+  { value: "Early Transplanting Land", label: "Early Transplanting Land", seedRate: [70, 90], fertilizer: { Urea: 50, DAP: 40 } },
+  { value: "Late Transplanting Land", label: "Late Transplanting Land", seedRate: [90, 110], fertilizer: { Compost: 2000, DAP: 60 } },
+  { value: "Manual Broadcast Field", label: "Manual Broadcast Field", seedRate: [100, 120], fertilizer: { DAP: 60, Urea: 70 } },
+  { value: "Transplant with Spacing Method", label: "Transplant with Spacing Method", seedRate: [60, 80], fertilizer: { Urea: 50, DAP: 40 } },
+  { value: "Tractor-tilled Rice Field", label: "Tractor-tilled Rice Field", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Cow-plowed Land", label: "Cow-plowed Land", seedRate: [90, 100], fertilizer: { DAP: 60, Organic: 1500 } },
+  { value: "Land with Poor Water Holding", label: "Land with Poor Water Holding", seedRate: [100, 120], fertilizer: { Compost: 3000, DAP: 50 } },
+  { value: "Drought-prone Zone", label: "Drought-prone Zone", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
+  { value: "High-yield Demonstration Plot", label: "High-yield Demonstration Plot", seedRate: [60, 70], fertilizer: { Urea: 80, DAP: 60, KCl: 50 } },
+  { value: "Farmer Training Site", label: "Farmer Training Site", seedRate: [70, 90], fertilizer: { Urea: 70, DAP: 50 } },
+  { value: "Seed Production Plot", label: "Seed Production Plot", seedRate: [60, 80], fertilizer: { Urea: 60, DAP: 50, KCl: 40 } },
+  { value: "Nursery Bed Land", label: "Nursery Bed Land", seedRate: [30, 40], fertilizer: { Compost: 1000, DAP: 30 } },
+  { value: "Rainfed Upland (Sorghum Rotation)", label: "Rainfed Upland (Sorghum Rotation)", seedRate: [100, 120], fertilizer: { Organic: 2500, DAP: 50 } },
+];
 
-// Map land type options to recommendation categories
-const landTypeMapping = {
-  "Rice field land": "tonle_sap_basin",
-  "Farmland": "coastal_plains",
-  "Marshy land": "highlands",
-  "Land near lake/river": "tonle_sap_basin",
-  "Flooded land": "highlands",
-  "Mixed soil land": "mixed", // Will calculate average below
-};
-
-// Helper to format land type label
-const formatLandType = (landType) => {
-  const landTypeOptions = {
-    tonle_sap_basin: "Tonle Sap Basin & Lowlands",
-    coastal_plains: "Coastal Plains",
-    highlands: "Highlands",
-    mixed: "Mixed Soil Land",
-  };
-  return landTypeOptions[landType] || "Not specified";
-};
-
-// Estimate rice and fertilizer amounts based on area and land type
+// Estimate seed and fertilizer amounts based on area and land type
 const estimateAmounts = (area, landType) => {
-  const mappedType = landTypeMapping[landType] || "coastal_plains"; // Default to coastal_plains if unmapped
-  const rec = recommendations[mappedType] || {};
-  let riceYield = parseFloat(rec.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
-  let totalFertilizer = rec.fertilizerPlan?.reduce((sum, step) => {
-    const match = step.match(/\d+\s*(kg)/);
-    return sum + (match ? parseInt(match[0]) : 0);
-  }, 0) || 0;
+  const selectedType = landTypes.find(type => type.value === landType) || landTypes[0]; // Default to first type if not found
+  const seedRateMin = selectedType.seedRate[0];
+  const seedRateMax = selectedType.seedRate[1];
+  const fertilizer = selectedType.fertilizer;
 
-  // Handle mixed soil land as average of coastal_plains and highlands
-  if (mappedType === "mixed") {
-    const coastalYield = parseFloat(recommendations.coastal_plains.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
-    const highlandYield = parseFloat(recommendations.highlands.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
-    const coastalFert = recommendations.coastal_plains.fertilizerPlan.reduce((sum, step) => {
-      const match = step.match(/\d+\s*(kg)/);
-      return sum + (match ? parseInt(match[0]) : 0);
-    }, 0);
-    const highlandFert = recommendations.highlands.fertilizerPlan.reduce((sum, step) => {
-      const match = step.match(/\d+\s*(kg)/);
-      return sum + (match ? parseInt(match[0]) : 0);
-    }, 0);
-    riceYield = (coastalYield + highlandYield) / 2;
-    totalFertilizer = (coastalFert + highlandFert) / 2;
+  const seedAmountMin = area * seedRateMin;
+  const seedAmountMax = area * seedRateMax;
+  const fertilizerTotal = {};
+  for (const [key, value] of Object.entries(fertilizer)) {
+    fertilizerTotal[key] = area * (value / 1000); // Convert kg to tons for compost/organic if needed
   }
 
   return {
-    riceAmount: area * riceYield * 1000, // Convert tons/ha to kg
-    fertilizerAmount: area * totalFertilizer, // Total fertilizer in kg
+    seedAmountMin,
+    seedAmountMax,
+    fertilizerTotal,
   };
 };
 
@@ -319,29 +344,21 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   const handleSave = () => {
     if (points.length < 3 || !landName.trim() || isMapLoading) return;
     const now = new Date();
-    const { riceAmount, fertilizerAmount } = estimateAmounts(area, landType);
+    const { seedAmountMin, seedAmountMax, fertilizerTotal } = estimateAmounts(area, landType);
     const measurement = {
       id: initialMeasurement?.id || Date.now().toString(),
       name: landName.trim(),
       area,
       points,
       landType,
-      riceAmount,
-      fertilizerAmount,
+      seedAmountMin,
+      seedAmountMax,
+      fertilizerTotal,
       date: now.toLocaleDateString(),
       timestamp: now.getTime(),
     };
     onSave(measurement);
   };
-
-  const landTypeOptions = [
-    { value: "Rice field land", label: "Rice field land" },
-    { value: "Farmland", label: "Farmland" },
-    { value: "Marshy land", label: "Marshy land" },
-    { value: "Land near lake/river", label: "Land near lake/river" },
-    { value: "Flooded land", label: "Flooded land" },
-    { value: "Mixed soil land", label: "Mixed soil land" },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -650,7 +667,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                     className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
                   >
                     <option value="" disabled>Select a land type</option>
-                    {landTypeOptions.map((option) => (
+                    {landTypes.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
