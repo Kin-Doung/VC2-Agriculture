@@ -14,6 +14,7 @@ import {
   Ruler,
   Trash2,
   Wheat,
+  Search,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
@@ -62,7 +63,6 @@ const landTypes = [
   { value: "Triple-cropping Land", label: "Triple-cropping Land", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 50 } },
   { value: "Mixed Soil (clay + sand)", label: "Mixed Soil (clay + sand)", seedRate: [90, 110], fertilizer: { DAP: 60, Organic: 2000 } },
   { value: "Soil with Pest History", label: "Soil with Pest History", seedRate: [100, 120], fertilizer: { DAP: 60, KCl: 50 } },
-  // Adding remaining 70 types (51-100) as per the provided list
   { value: "Seasonal Wetland", label: "Seasonal Wetland", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 60 } },
   { value: "Near Main Canal", label: "Near Main Canal", seedRate: [80, 90], fertilizer: { Urea: 70, DAP: 50 } },
   { value: "Area with Natural Drainage", label: "Area with Natural Drainage", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
@@ -115,6 +115,55 @@ const landTypes = [
   { value: "Rainfed Upland (Sorghum Rotation)", label: "Rainfed Upland (Sorghum Rotation)", seedRate: [100, 120], fertilizer: { Organic: 2500, DAP: 50 } },
 ];
 
+// Expanded province data with approximate coordinates
+const provincesData = [
+  { value: "phnom_penh", label: "Phnom Penh", coords: [11.5564, 104.9282] },
+  { value: "kampong_cham", label: "Kampong Cham", coords: [12.0108, 105.4642] },
+  { value: "siem_reap", label: "Siem Reap", coords: [13.3618, 103.8602] },
+  { value: "battambang", label: "Battambang", coords: [13.1000, 103.2000] },
+  { value: "kampong_speu", label: "Kampong Speu", coords: [11.4535, 104.5192] },
+  { value: "kampong_thom", label: "Kampong Thom", coords: [12.7088, 104.8895] },
+  { value: "kandal", label: "Kandal", coords: [11.2257, 104.9070] },
+  { value: "prey_veng", label: "Prey Veng", coords: [11.4866, 105.3257] },
+  { value: "takeo", label: "Takeo", coords: [10.9865, 104.7850] },
+  { value: "kep", label: "Kep", coords: [10.4841, 104.3158] },
+  { value: "koh_kong", label: "Koh Kong", coords: [11.6154, 102.9835] },
+  { value: "kratie", label: "Kratie", coords: [12.4888, 106.0188] },
+  { value: "mondulkiri", label: "Mondulkiri", coords: [12.9262, 107.1788] },
+  { value: "odar_meanchey", label: "Odar Meanchey", coords: [14.1171, 103.4917] },
+  { value: "pursat", label: "Pursat", coords: [12.5388, 103.9192] },
+  { value: "preah_vihear", label: "Preah Vihear", coords: [13.9833, 104.9667] },
+  { value: "rattanakiri", label: "Rattanakiri", coords: [13.7333, 107.0000] },
+  { value: "stung_treng", label: "Stung Treng", coords: [13.5269, 105.9667] },
+  { value: "svay_rieng", label: "Svay Rieng", coords: [11.0860, 105.7992] },
+  { value: "kampot", label: "Kampot", coords: [10.6086, 104.1815] },
+  { value: "sihanoukville", label: "Sihanoukville", coords: [10.6109, 103.5303] },
+];
+
+const districts = {
+  phnom_penh: ["Chamkar Mon", "Doun Penh", "Prampir Makara"],
+  kampong_cham: ["Kampong Cham", "Krouch Chhmar", "Stung Trang"],
+  siem_reap: ["Siem Reap", "Sotr Nikum", "Angkor Thom"],
+  battambang: ["Battambang", "Sangkae", "Bavel"],
+  kampong_speu: ["Kampong Speu", "Odongk", "Samraong Tong"],
+  kampong_thom: ["Kampong Thom", "Stung Sen", "Sandan"],
+  kandal: ["Takmao", "Kandal Stueng", "Lvea Aem"],
+  prey_veng: ["Prey Veng", "Peam Chor", "Kampong Leav"],
+  takeo: ["Takeo", "Doun Kaev", "Samraong"],
+  kep: ["Kep", "Damnak Chang Aeur"],
+  koh_kong: ["Koh Kong", "Khemarak Phoumin", "Srae Ambel"],
+  kratie: ["Kratie", "Chhlong", "Snuol"],
+  mondulkiri: ["Senmonorom", "Kaoh Nheaek", "Pech Chreada"],
+  odar_meanchey: ["Samraong", "Trapeang Prasat", "Banteay Ampil"],
+  pursat: ["Pursat", "Krakor", "Phnum Kravanh"],
+  preah_vihear: ["Tbeng Meanchey", "Chey Saen", "Rovieng"],
+  rattanakiri: ["Banlung", "Lumphat", "Ou Ya Dav"],
+  stung_treng: ["Stung Treng", "Sesan", "Thala Borivat"],
+  svay_rieng: ["Svay Rieng", "Romeas Haek", "Svay Chrum"],
+  kampot: ["Kampot", "Chhuk", "Banteay Meas"],
+  sihanoukville: ["Sihanoukville", "Prey Nob", "Stueng Hav"],
+};
+
 // Estimate seed and fertilizer amounts based on area and land type
 const estimateAmounts = (area, landType) => {
   const selectedType = landTypes.find(type => type.value === landType) || landTypes[0]; // Default to first type if not found
@@ -165,6 +214,9 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [showInitialOverlay, setShowInitialOverlay] = useState(points.length === 0 && !isMapLoading);
   const [landType, setLandType] = useState(initialMeasurement?.landType || "");
+  const [provinceSearch, setProvinceSearch] = useState(initialMeasurement?.province || "");
+  const [district, setDistrict] = useState(initialMeasurement?.district || "");
+  const [suggestions, setSuggestions] = useState([]);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -186,6 +238,24 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       setShowInitialOverlay(points.length === 0);
     }
   }, []);
+
+  // Update map center and suggestions in real-time
+  useEffect(() => {
+    const matchedProvince = provincesData.find(p => 
+      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+    );
+    if (matchedProvince) {
+      setMapCenter(matchedProvince.coords);
+      setDistrict(""); // Reset district when province changes
+    }
+    // Show suggestions based on partial match
+    const filteredSuggestions = provincesData.filter(p =>
+      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+    ).map(p => p.label);
+    setSuggestions(filteredSuggestions);
+  }, [provinceSearch]);
 
   useEffect(() => {
     if (points.length < 3) {
@@ -351,6 +421,8 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       area,
       points,
       landType,
+      province: provinceSearch,
+      district,
       seedAmountMin,
       seedAmountMax,
       fertilizerTotal,
@@ -358,6 +430,11 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       timestamp: now.getTime(),
     };
     onSave(measurement);
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setProvinceSearch(suggestion);
+    setSuggestions([]);
   };
 
   return (
@@ -658,6 +735,49 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                     placeholder="e.g., North Field, Main Plot"
                     className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Province Search</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={provinceSearch}
+                      onChange={(e) => setProvinceSearch(e.target.value)}
+                      placeholder="Search province (e.g., Battambang)"
+                      className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-8"
+                    />
+                    <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {suggestions.length > 0 && (
+                      <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                        {suggestions.map((suggestion, index) => (
+                          <li
+                            key={index}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="px-2 py-1 hover:bg-gray-100 cursor-pointer text-sm"
+                          >
+                            {suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">District</label>
+                  <select
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    disabled={!provinceSearch || !provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase())}
+                  >
+                    <option value="" disabled>Select a district</option>
+                    {provinceSearch && provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()) && 
+                      districts[provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()).value].map((dist) => (
+                        <option key={dist} value={dist}>
+                          {dist}
+                        </option>
+                      ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Land Type</label>
