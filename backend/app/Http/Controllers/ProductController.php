@@ -13,13 +13,29 @@ class ProductController extends Controller
         return response()->json(Product::all(), 200);
     }
 
-    public function store(ProductRequest $request)
+    public function store(Request $request)
     {
-        $product = Product::create($request->validated());
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric',
+            'quantity' => 'required|integer',
+            'user_id' => 'required|integer',
+            'category_id' => 'required|integer',
+            'crop_id' => 'required|integer',
+            'available_from' => 'nullable|date',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('images', 'public');
+            $validated['image_path'] = $path;
+        }
+
+        $product = Product::create($validated);
 
         return response()->json($product, 201);
     }
-
     public function show($id)
     {
         $product = Product::find($id);
