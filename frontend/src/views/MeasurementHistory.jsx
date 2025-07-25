@@ -1,13 +1,94 @@
-// src/views/MeasurementHistory.jsx
 import { useState } from "react";
-import { ArrowLeft, Search, Filter, MapPin, Calendar, Ruler, FileText, Edit2, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Filter, MapPin, Calendar, Ruler, FileText, Edit2, Trash2, Wheat, ChevronDown } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
+
+// Recommendations object with staged fertilizer plans
+const recommendations = {
+  tonle_sap_basin: {
+    rice: "High-yield varieties like IR36, IR42, or Phka Romdoul (fragrant, export-quality). Yields >1 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 25 kg DAP + 500 kg compost",
+      "Tillering stage (20 days): 30 kg urea",
+      "Panicle initiation (40–50 days): 25 kg urea + 20 kg MOP",
+    ],
+  },
+  coastal_plains: {
+    rice: "Traditional varieties or improved strains like IR36. Yields ~0.8 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 20 kg DAP + 400 kg compost",
+      "Tillering stage (20 days): 25 kg urea",
+      "Panicle initiation (40–50 days): 20 kg urea + 15 kg MOP",
+    ],
+  },
+  highlands: {
+    rice: "Floating rice for flood-prone areas. Yields <0.6 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 15 kg DAP + 300 kg compost",
+      "Tillering stage (20 days): 20 kg urea",
+      "Panicle initiation (40–50 days): 15 kg urea + 10 kg MOP",
+    ],
+  },
+};
+
+// Map land type options to recommendation categories
+const landTypeMapping = {
+  "Rice field land": "tonle_sap_basin",
+  "Farmland": "coastal_plains",
+  "Marshy land": "highlands",
+  "Land near lake/river": "tonle_sap_basin",
+  "Flooded land": "highlands",
+  "Mixed soil land": "mixed",
+};
+
+// Helper to format land type label
+const formatLandType = (landType) => {
+  const landTypeOptions = {
+    tonle_sap_basin: "Tonle Sap Basin & Lowlands",
+    coastal_plains: "Coastal Plains",
+    highlands: "Highlands",
+    mixed: "Mixed Soil Land",
+  };
+  return landTypeOptions[landType] || "Not specified";
+};
+
+// Estimate rice and fertilizer amounts based on area and land type
+const estimateAmounts = (area, landType) => {
+  const mappedType = landTypeMapping[landType] || "coastal_plains"; // Default to coastal_plains if unmapped
+  const rec = recommendations[mappedType] || {};
+  let riceYield = parseFloat(rec.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
+  let totalFertilizer = rec.fertilizerPlan?.reduce((sum, step) => {
+    const match = step.match(/\d+\s*(kg)/);
+    return sum + (match ? parseInt(match[0]) : 0);
+  }, 0) || 0;
+
+  // Handle mixed soil land as average of coastal_plains and highlands
+  if (mappedType === "mixed") {
+    const coastalYield = parseFloat(recommendations.coastal_plains.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
+    const highlandYield = parseFloat(recommendations.highlands.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
+    const coastalFert = recommendations.coastal_plains.fertilizerPlan.reduce((sum, step) => {
+      const match = step.match(/\d+\s*(kg)/);
+      return sum + (match ? parseInt(match[0]) : 0);
+    }, 0);
+    const highlandFert = recommendations.highlands.fertilizerPlan.reduce((sum, step) => {
+      const match = step.match(/\d+\s*(kg)/);
+      return sum + (match ? parseInt(match[0]) : 0);
+    }, 0);
+    riceYield = (coastalYield + highlandYield) / 2;
+    totalFertilizer = (coastalFert + highlandFert) / 2;
+  }
+
+  return {
+    riceAmount: area * riceYield * 1000, // Convert tons/ha to kg
+    fertilizerAmount: area * totalFertilizer, // Total fertilizer in kg
+  };
+};
 
 export default function MeasurementHistory({ onBack, measurements, onDelete, onEdit, language }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [expandedDetails, setExpandedDetails] = useState({});
 
   // Ensure measurements is an array to prevent errors
   const filteredMeasurements = Array.isArray(measurements)
@@ -31,6 +112,10 @@ export default function MeasurementHistory({ onBack, measurements, onDelete, onE
           }
           return sortOrder === "asc" ? comparison : -comparison;
         })
+        .map((measurement) => ({
+          ...measurement,
+          ...estimateAmounts(measurement.area || 0, measurement.landType),
+        }))
     : [];
 
   // Calculate total area, handling empty or invalid measurements
@@ -55,6 +140,10 @@ export default function MeasurementHistory({ onBack, measurements, onDelete, onE
     link.setAttribute("href", encodeURI(csvContent));
     link.setAttribute("download", `${measurement.name || "measurement"}_points.csv`);
     link.click();
+  };
+
+  const toggleDetails = (id) => {
+    setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
@@ -151,68 +240,111 @@ export default function MeasurementHistory({ onBack, measurements, onDelete, onE
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <>
               {filteredMeasurements.map((measurement) => (
-                <Card key={measurement.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-xl font-semibold text-gray-900">{measurement.name || "Unnamed"}</h3>
-                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                            {(measurement.area || 0).toFixed(2)} ha
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-6 text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            {measurement.date || "N/A"}
-                          </div>
-                          <div className="flex items-center">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            {(measurement.points?.length || 0)} points
-                          </div>
-                          <div className="flex items-center">
-                            <Ruler className="w-4 h-4 mr-1" />
-                            {((measurement.area || 0) * 2.471).toFixed(2)} acres
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          onClick={() => exportToCSV(measurement)}
-                          variant="outline"
-                          size="sm"
-                          className="text-blue-600 hover:text-blue-700"
-                          disabled={!measurement.points?.length}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          CSV
-                        </Button>
-                        <Button
-                          onClick={() => onEdit(measurement)}
-                          variant="outline"
-                          size="sm"
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          <Edit2 className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          onClick={() => handleDelete(measurement.id, measurement.name)}
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
+                <div key={measurement.id} className="border border-blue-200 mb-4 rounded-lg overflow-hidden">
+                  <div className="bg-blue-50 p-4 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {measurement.name || "Unnamed"} ({measurement.area?.toFixed(2) || 0} ha)
+                      </span>
+                      <span className="text-gray-600 text-sm">
+                        <Calendar className="w-4 h-4 inline mr-1" /> {measurement.date || "N/A"}
+                      </span>
+                      <span className="text-gray-600 text-sm">
+                        <MapPin className="w-4 h-4 inline mr-1" /> {measurement.points?.length || 0} boundary points
+                      </span>
+                      <span className="text-gray-600 text-sm">
+                        <Ruler className="w-4 h-4 inline mr-1" /> {((measurement.area || 0) * 2.471).toFixed(2)} acres
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => onEdit(measurement)}
+                        variant="outline"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit2 className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        onClick={() => handleDelete(measurement.id, measurement.name)}
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="p-2 flex items-center">
+                    <Button
+                      onClick={() => toggleDetails(measurement.id)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-blue-600 hover:text-blue-700 flex items-center"
+                    >
+                      <Search className="w-4 h-4 mr-1" />
+                      View Details...
+                      <ChevronDown
+                        className={`w-4 h-4 ml-1 transition-transform ${expandedDetails[measurement.id] ? "rotate-180" : ""}`}
+                      />
+                    </Button>
+                  </div>
+                  {expandedDetails[measurement.id] && (
+                    <div className="p-4 bg-white border-t">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="border p-2 text-left">Farmland Name</th>
+                            <th className="border p-2 text-left">Area (ha)</th>
+                            <th className="border p-2 text-left">Amount of Rice (kg)</th>
+                            <th className="border p-2 text-left">Amount of Fertilizer (kg)</th>
+                            <th className="border p-2 text-left">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="hover:bg-gray-50">
+                            <td className="border p-2">{measurement.name || "Unnamed"}</td>
+                            <td className="border p-2">{measurement.area?.toFixed(2) || 0}</td>
+                            <td className="border p-2">{Math.round(measurement.riceAmount || 0)} kg</td>
+                            <td className="border p-2">{Math.round(measurement.fertilizerAmount || 0)} kg</td>
+                            <td className="border p-2">{measurement.date || "N/A"}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      {measurement.landType && (
+                        <div className="text-sm text-gray-600 mt-4">
+                          <div className="mb-2 flex items-center">
+                            <Wheat className="w-4 h-4 mr-1 text-yellow-600" />
+                            <span className="font-medium text-gray-700">Land Type: </span>
+                            {formatLandType(landTypeMapping[measurement.landType] || measurement.landType)}
+                          </div>
+                          {recommendations[landTypeMapping[measurement.landType]] && (
+                            <div>
+                              <div className="mb-2">
+                                <span className="font-medium text-gray-700">Recommended Rice Varieties:</span>
+                                <p>{recommendations[landTypeMapping[measurement.landType]].rice}</p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-700">Fertilizer Plan:</span>
+                                <ul className="list-disc pl-5 text-sm">
+                                  {recommendations[landTypeMapping[measurement.landType]].fertilizerPlan.map((step, index) => (
+                                    <li key={index}>{step}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))}
-            </div>
+            </>
           )}
         </div>
       </div>

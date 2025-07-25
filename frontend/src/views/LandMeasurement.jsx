@@ -1,4 +1,3 @@
-// src/views/LandMeasurement.jsx
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
@@ -14,6 +13,7 @@ import {
   MapPin,
   Ruler,
   Trash2,
+  Wheat,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
@@ -29,6 +29,87 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import leafletImage from "leaflet-image";
+
+// Recommendations object for land types
+const recommendations = {
+  tonle_sap_basin: {
+    rice: "High-yield varieties like IR36, IR42, or Phka Romdoul (fragrant, export-quality). Yields >1 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 25 kg DAP + 500 kg compost",
+      "Tillering stage (20 days): 30 kg urea",
+      "Panicle initiation (40–50 days): 25 kg urea + 20 kg MOP",
+    ],
+  },
+  coastal_plains: {
+    rice: "Traditional varieties or improved strains like IR36. Yields ~0.8 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 20 kg DAP + 400 kg compost",
+      "Tillering stage (20 days): 25 kg urea",
+      "Panicle initiation (40–50 days): 20 kg urea + 15 kg MOP",
+    ],
+  },
+  highlands: {
+    rice: "Floating rice for flood-prone areas. Yields <0.6 ton/ha.",
+    fertilizerPlan: [
+      "Before planting: 15 kg DAP + 300 kg compost",
+      "Tillering stage (20 days): 20 kg urea",
+      "Panicle initiation (40–50 days): 15 kg urea + 10 kg MOP",
+    ],
+  },
+};
+
+// Map land type options to recommendation categories
+const landTypeMapping = {
+  "Rice field land": "tonle_sap_basin",
+  "Farmland": "coastal_plains",
+  "Marshy land": "highlands",
+  "Land near lake/river": "tonle_sap_basin",
+  "Flooded land": "highlands",
+  "Mixed soil land": "mixed", // Will calculate average below
+};
+
+// Helper to format land type label
+const formatLandType = (landType) => {
+  const landTypeOptions = {
+    tonle_sap_basin: "Tonle Sap Basin & Lowlands",
+    coastal_plains: "Coastal Plains",
+    highlands: "Highlands",
+    mixed: "Mixed Soil Land",
+  };
+  return landTypeOptions[landType] || "Not specified";
+};
+
+// Estimate rice and fertilizer amounts based on area and land type
+const estimateAmounts = (area, landType) => {
+  const mappedType = landTypeMapping[landType] || "coastal_plains"; // Default to coastal_plains if unmapped
+  const rec = recommendations[mappedType] || {};
+  let riceYield = parseFloat(rec.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
+  let totalFertilizer = rec.fertilizerPlan?.reduce((sum, step) => {
+    const match = step.match(/\d+\s*(kg)/);
+    return sum + (match ? parseInt(match[0]) : 0);
+  }, 0) || 0;
+
+  // Handle mixed soil land as average of coastal_plains and highlands
+  if (mappedType === "mixed") {
+    const coastalYield = parseFloat(recommendations.coastal_plains.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
+    const highlandYield = parseFloat(recommendations.highlands.rice.match(/Yields\s*([0-9.]+)\s*ton\/ha/)?.[1] || "0");
+    const coastalFert = recommendations.coastal_plains.fertilizerPlan.reduce((sum, step) => {
+      const match = step.match(/\d+\s*(kg)/);
+      return sum + (match ? parseInt(match[0]) : 0);
+    }, 0);
+    const highlandFert = recommendations.highlands.fertilizerPlan.reduce((sum, step) => {
+      const match = step.match(/\d+\s*(kg)/);
+      return sum + (match ? parseInt(match[0]) : 0);
+    }, 0);
+    riceYield = (coastalYield + highlandYield) / 2;
+    totalFertilizer = (coastalFert + highlandFert) / 2;
+  }
+
+  return {
+    riceAmount: area * riceYield * 1000, // Convert tons/ha to kg
+    fertilizerAmount: area * totalFertilizer, // Total fertilizer in kg
+  };
+};
 
 function ChangeMapView({ center }) {
   const map = useMap();
@@ -58,6 +139,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   const [newPointId, setNewPointId] = useState(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [showInitialOverlay, setShowInitialOverlay] = useState(points.length === 0 && !isMapLoading);
+  const [landType, setLandType] = useState(initialMeasurement?.landType || "");
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -140,7 +222,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
         setMapCenter([newPoint.lat, newPoint.lng]);
         setNewPointId(newPoint.id);
         setTimeout(() => setNewPointId(null), 3000);
-        setShowInitialOverlay(false); // Hide overlay after successful GPS
+        setShowInitialOverlay(false);
         setIsGPSActive(false);
       },
       (error) => {
@@ -174,19 +256,19 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       isGPS: false,
     };
     setPoints((prev) => [...prev, newPoint]);
-    setShowInitialOverlay(false); // Hide overlay after map click
+    setShowInitialOverlay(false);
   };
 
   const removePoint = (id) => {
     setPoints((prev) => prev.filter((point) => point.id !== id));
     setGpsError(null);
-    setShowInitialOverlay(points.length === 1 && !isMapLoading); // Show overlay if no points remain
+    setShowInitialOverlay(points.length === 1 && !isMapLoading);
   };
 
   const clearAllPoints = () => {
     setPoints([]);
     setGpsError(null);
-    setShowInitialOverlay(true); // Show overlay when clearing all points
+    setShowInitialOverlay(true);
   };
 
   const exportMapImage = () => {
@@ -237,16 +319,29 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   const handleSave = () => {
     if (points.length < 3 || !landName.trim() || isMapLoading) return;
     const now = new Date();
+    const { riceAmount, fertilizerAmount } = estimateAmounts(area, landType);
     const measurement = {
       id: initialMeasurement?.id || Date.now().toString(),
       name: landName.trim(),
       area,
       points,
+      landType,
+      riceAmount,
+      fertilizerAmount,
       date: now.toLocaleDateString(),
       timestamp: now.getTime(),
     };
     onSave(measurement);
   };
+
+  const landTypeOptions = [
+    { value: "Rice field land", label: "Rice field land" },
+    { value: "Farmland", label: "Farmland" },
+    { value: "Marshy land", label: "Marshy land" },
+    { value: "Land near lake/river", label: "Land near lake/river" },
+    { value: "Flooded land", label: "Flooded land" },
+    { value: "Mixed soil land", label: "Mixed soil land" },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -546,6 +641,21 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                     placeholder="e.g., North Field, Main Plot"
                     className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Land Type</label>
+                  <select
+                    value={landType}
+                    onChange={(e) => setLandType(e.target.value)}
+                    className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                  >
+                    <option value="" disabled>Select a land type</option>
+                    {landTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <Button
                   onClick={handleSave}
