@@ -5,12 +5,8 @@ import { Link } from "react-router-dom"
 import { useEffect, useState } from "react"
 import axios from "axios"
 
-// Simple cache variable outside component
-let cachedProducts = null
-
 const PublicProducts = ({ language }) => {
-  // Initialize products state from cache if available
-  const [products, setProducts] = useState(cachedProducts || [])
+  const [products, setProducts] = useState([])
 
   const translations = {
     en: {
@@ -118,18 +114,10 @@ const PublicProducts = ({ language }) => {
   const t = translations[language] || translations.en
 
   useEffect(() => {
-    // Only fetch if we have no cached data
-    if (!cachedProducts) {
-      axios
-        .get("http://127.0.0.1:8000/api/products")
-        .then((res) => {
-          cachedProducts = res.data // save to cache
-          setProducts(res.data) // update state
-        })
-        .catch((err) => {
-          console.error("Failed to fetch products:", err)
-        })
-    }
+    axios
+      .get("http://127.0.0.1:8000/api/products")
+      .then((res) => setProducts(res.data))
+      .catch((err) => console.error("Failed to fetch products:", err))
   }, [])
 
   return (
@@ -174,8 +162,7 @@ const PublicProducts = ({ language }) => {
               ))}
             </div>
           ) : (
-            // Show nothing if no products yet — no loading UI
-            null
+            <p className="text-center text-gray-500">No products available.</p>
           )}
         </div>
       </section>
@@ -183,7 +170,9 @@ const PublicProducts = ({ language }) => {
       {/* Features Section */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-16">{t.features.title}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-16">
+            {t.features.title}
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {t.features.items.map((feature, index) => (
