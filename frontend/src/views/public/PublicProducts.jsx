@@ -1,13 +1,16 @@
 "use client"
 
-import { Smartphone, Cloud, BarChart3, Users, Shield, Zap, Check, ArrowRight } from "lucide-react"
+import { Smartphone, Cloud, BarChart3, Users, Shield, Zap, ArrowRight } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useEffect, useState } from "react"
 import axios from "axios"
 
+// Simple cache variable outside component
+let cachedProducts = null
 
 const PublicProducts = ({ language }) => {
-  const [products, setProducts] = useState([])
+  // Initialize products state from cache if available
+  const [products, setProducts] = useState(cachedProducts || [])
 
   const translations = {
     en: {
@@ -115,14 +118,18 @@ const PublicProducts = ({ language }) => {
   const t = translations[language] || translations.en
 
   useEffect(() => {
-    axios
-      .get("http://127.0.0.1:8000/api/products")
-      .then((res) => {
-        setProducts(res.data)
-      })
-      .catch((err) => {
-        console.error("Failed to fetch products:", err)
-      })
+    // Only fetch if we have no cached data
+    if (!cachedProducts) {
+      axios
+        .get("http://127.0.0.1:8000/api/products")
+        .then((res) => {
+          cachedProducts = res.data // save to cache
+          setProducts(res.data) // update state
+        })
+        .catch((err) => {
+          console.error("Failed to fetch products:", err)
+        })
+    }
   }, [])
 
   return (
@@ -142,28 +149,34 @@ const PublicProducts = ({ language }) => {
             {t.products.title}
           </h2>
           <p className="text-center text-gray-600 mb-12">{t.products.subtitle}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {products.map((product, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <img
-                  src={`http://127.0.0.1:8000/storage/${product.image_path}`}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-6 text-center">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">{product.name}</h3>
-                  <p className="text-gray-600 mb-4">{product.description}</p>
-                  <p className="text-2xl font-bold text-green-600">{product.price} KHR</p>
-                  <Link
-                    to={`/product-details/${product.id}`}
-                    className="mt-4 inline-block bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                  >
-                    View Details
-                  </Link>
+
+          {products.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products.map((product, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <img
+                    src={`http://127.0.0.1:8000/storage/${product.image_path}`}
+                    alt={product.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="p-6 text-center">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{product.name}</h3>
+                    <p className="text-gray-600 mb-4">{product.description}</p>
+                    <p className="text-2xl font-bold text-green-600">{product.price} KHR</p>
+                    <Link
+                      to={`/product-details/${product.id}`}
+                      className="mt-4 inline-block bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                    >
+                      View Details
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            // Show nothing if no products yet — no loading UI
+            null
+          )}
         </div>
       </section>
 
