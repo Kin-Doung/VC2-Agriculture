@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card"
-import { Scan, CheckCircle, AlertCircle, Eye, ContrastIcon as Compare } from "lucide-react"
+import { Scan, CheckCircle, AlertCircle, Eye, ContrastIcon as Compare, Cpu, Code, Zap } from "lucide-react"
 
 export default function ScanResults({ result, error, isScanning }) {
   const [showComparison, setShowComparison] = useState(false)
+  const [showPythonDetails, setShowPythonDetails] = useState(false)
 
   const getConfidenceColor = (confidence) => {
     if (confidence >= 0.8) return "text-green-600"
@@ -18,6 +19,26 @@ export default function ScanResults({ result, error, isScanning }) {
       return <CheckCircle className="w-5 h-5 text-green-600" />
     }
     return <AlertCircle className="w-5 h-5 text-yellow-600" />
+  }
+
+  const getAnalysisMethodIcon = (method) => {
+    if (method?.includes("Python") || method?.includes("Computer Vision")) {
+      return <Cpu className="w-4 h-4 text-blue-600" />
+    }
+    if (method?.includes("JavaScript")) {
+      return <Code className="w-4 h-4 text-orange-600" />
+    }
+    return <Zap className="w-4 h-4 text-gray-600" />
+  }
+
+  const getAnalysisMethodColor = (method) => {
+    if (method?.includes("Python") || method?.includes("Computer Vision")) {
+      return "bg-blue-50 border-blue-200 text-blue-800"
+    }
+    if (method?.includes("JavaScript")) {
+      return "bg-orange-50 border-orange-200 text-orange-800"
+    }
+    return "bg-gray-50 border-gray-200 text-gray-800"
   }
 
   const getReferenceImage = (riceType) => {
@@ -40,6 +61,14 @@ export default function ScanResults({ result, error, isScanning }) {
         <CardTitle className="flex items-center gap-2">
           <Scan className="w-5 h-5" />
           Scan Results
+          {result?.analysis_method && (
+            <div
+              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getAnalysisMethodColor(result.analysis_method)}`}
+            >
+              {getAnalysisMethodIcon(result.analysis_method)}
+              <span>{result.analysis_method}</span>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -48,7 +77,7 @@ export default function ScanResults({ result, error, isScanning }) {
             <div className="text-center">
               <Scan className="w-12 h-12 mx-auto mb-4 animate-spin text-green-600" />
               <p className="text-lg font-medium text-gray-700">Analyzing rice image...</p>
-              <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
+              <p className="text-sm text-gray-500 mt-2">Using Python computer vision + JavaScript fallback</p>
             </div>
           </div>
         )}
@@ -104,7 +133,7 @@ export default function ScanResults({ result, error, isScanning }) {
 
               {/* Action Buttons */}
               {result.type !== "Not Rice Detected" && result.type !== "Analysis Failed" && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => setShowComparison(!showComparison)}
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
@@ -116,9 +145,100 @@ export default function ScanResults({ result, error, isScanning }) {
                     <Eye className="w-4 h-4" />
                     View Details
                   </button>
+                  {result.python_analysis && (
+                    <button
+                      onClick={() => setShowPythonDetails(!showPythonDetails)}
+                      className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                    >
+                      <Cpu className="w-4 h-4" />
+                      Python Analysis
+                    </button>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Python Analysis Details */}
+            {showPythonDetails && result.python_analysis && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                  <Cpu className="w-5 h-5" />
+                  Python Computer Vision Analysis
+                </h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-medium text-purple-700 mb-2">Detection Method:</h5>
+                    <p className="text-sm text-purple-600 mb-3">{result.python_analysis.method}</p>
+
+                    <h5 className="font-medium text-purple-700 mb-2">Grain Analysis:</h5>
+                    <ul className="text-sm text-purple-600 space-y-1">
+                      <li>• Grains detected: {result.python_analysis.grain_count}</li>
+                      <li>• Avg aspect ratio: {result.python_analysis.avg_aspect_ratio}</li>
+                      <li>• Dominant color: RGB({result.python_analysis.dominant_color?.join(", ")})</li>
+                      <li>• Brightness: {result.python_analysis.brightness}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-purple-700 mb-2">Features Analyzed:</h5>
+                    <ul className="text-sm text-purple-600 space-y-1">
+                      {result.python_analysis.features_analyzed?.map((feature, index) => (
+                        <li key={index}>• {feature}</li>
+                      ))}
+                    </ul>
+
+                    {result.python_analysis.classification_scores && (
+                      <div className="mt-3">
+                        <h5 className="font-medium text-purple-700 mb-2">Classification Scores:</h5>
+                        <div className="text-xs text-purple-600">
+                          {Object.entries(result.python_analysis.classification_scores).map(([type, score]) => (
+                            <div key={type} className="flex justify-between">
+                              <span>{type}:</span>
+                              <span>{(score * 100).toFixed(1)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Cooking Information */}
+            {result.cooking_info && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-amber-800 mb-3">Cooking Information</h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <h5 className="font-medium text-amber-700 mb-1">Cooking Time:</h5>
+                    <p className="text-amber-600">{result.cooking_info.time}</p>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-amber-700 mb-1">Water Ratio:</h5>
+                    <p className="text-amber-600">{result.cooking_info.water_ratio}</p>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-amber-700 mb-1">Best For:</h5>
+                    <p className="text-amber-600">{result.cooking_info.best_for}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Alternative Matches */}
+            {result.alternative_matches && result.alternative_matches.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-blue-800 mb-3">Alternative Matches</h4>
+                <div className="space-y-2">
+                  {result.alternative_matches.map((match, index) => (
+                    <div key={index} className="flex justify-between items-center bg-white rounded p-2">
+                      <span className="text-blue-700 font-medium">{match.type}</span>
+                      <span className="text-blue-600">{(match.confidence * 100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Visual Comparison */}
             {showComparison && result.type !== "Not Rice Detected" && result.type !== "Analysis Failed" && (
@@ -198,22 +318,62 @@ export default function ScanResults({ result, error, isScanning }) {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Complexity Score:</span>
-                      <span className="ml-2 font-medium">{result.analysis_details.complexity_score}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Color Variety:</span>
-                      <span className="ml-2 font-medium">{result.analysis_details.color_variety}</span>
-                    </div>
-                    <div>
                       <span className="text-gray-600">Brightness:</span>
                       <span className="ml-2 font-medium">{result.analysis_details.brightness}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Texture Score:</span>
-                      <span className="ml-2 font-medium">{result.analysis_details.texture_score}</span>
+                      <span className="text-gray-600">Entropy:</span>
+                      <span className="ml-2 font-medium">{result.analysis_details.entropy}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Unique Chars:</span>
+                      <span className="ml-2 font-medium">{result.analysis_details.unique_chars}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Image Size:</span>
+                      <span className="ml-2 font-medium">{result.analysis_details.image_size} bytes</span>
                     </div>
                   </div>
+                  {result.analysis_details.selection_reason && (
+                    <div className="mt-3 pt-3 border-t">
+                      <span className="text-gray-600 text-sm">Selection Reason: </span>
+                      <span className="text-gray-700 text-sm font-medium">
+                        {result.analysis_details.selection_reason}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Python Error Info */}
+            {result.python_error && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  Python Analysis Status
+                </h4>
+                <p className="text-yellow-700 text-sm mb-2">
+                  Python computer vision analysis was attempted but failed. Using JavaScript fallback.
+                </p>
+                <details className="text-yellow-600 text-xs">
+                  <summary className="cursor-pointer font-medium">Show Python Error Details</summary>
+                  <div className="mt-2 p-2 bg-yellow-100 rounded">
+                    <code>{result.python_error}</code>
+                  </div>
+                </details>
+                <div className="mt-3 text-yellow-700 text-sm">
+                  <p className="font-medium">To enable Python analysis:</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>
+                      Run: <code className="bg-yellow-100 px-1 rounded">python scripts/install_cv_dependencies.py</code>
+                    </li>
+                    <li>
+                      Test:{" "}
+                      <code className="bg-yellow-100 px-1 rounded">python scripts/test_python_integration.py</code>
+                    </li>
+                    <li>Ensure Python and OpenCV are properly installed</li>
+                  </ul>
                 </div>
               </div>
             )}
@@ -224,8 +384,8 @@ export default function ScanResults({ result, error, isScanning }) {
           <div className="text-center py-12">
             <Scan className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <p className="text-gray-500 text-lg">Upload or capture an image to identify rice type</p>
-            <p className="text-gray-400 text-sm mt-2">Make sure the rice grains are clearly visible in good lighting</p>
-            <p className="text-gray-400 text-sm">Check the reference guide below for examples</p>
+            <p className="text-gray-400 text-sm mt-2">Advanced Python computer vision + JavaScript fallback</p>
+            <p className="text-gray-400 text-sm">Make sure the rice grains are clearly visible in good lighting</p>
           </div>
         )}
       </CardContent>

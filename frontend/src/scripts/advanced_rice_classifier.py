@@ -5,95 +5,105 @@ import sys
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 import cv2
-from scipy.stats import wasserstein_distance
 
 class AdvancedRiceClassifier:
     def __init__(self):
         self.rice_database = {
-            'phka_romduol': {
-                'name': 'Phka Romduol',
-                'description': 'A premium long-grain jasmine rice known for its natural aroma, soft texture, and high quality, often exported under the Malys Angkor certification.',
+            'basmati': {
+                'name': 'Basmati Rice',
+                'description': 'Long-grain aromatic rice with distinctive nutty flavor and fluffy texture.',
                 'characteristics': [
-                    'Extra-long grains (>7mm)',
-                    'Strong jasmine aroma',
-                    'Soft and fluffy when cooked',
-                    'World’s Best Rice award winner (2012-2014, 2018, 2022)'
+                    'Long, slender grains (6-7mm)',
+                    'Length-to-width ratio: 3:1 or higher',
+                    'Translucent white color',
+                    'Aromatic fragrance'
                 ],
                 'visual_features': {
-                    'aspect_ratio': (3.0, 4.5),
-                    'color_range': [(245, 240, 235), (255, 255, 250)],
+                    'aspect_ratio': (2.8, 4.0),
+                    'color_range': [(240, 235, 220), (255, 255, 255)],
                     'grain_length': 'long',
                     'shape': 'elongated'
-                },
-                'reference_image': '../../images/phka_romduol.jpg'
+                }
             },
-            'phka_romeat': {
-                'name': 'Phka Romeat',
-                'description': 'A fragrant long-grain jasmine rice with high similarity to Thai Hom Mali, known for its soft texture and natural aroma.',
+            'jasmine': {
+                'name': 'Jasmine Rice',
+                'description': 'Fragrant long-grain rice with subtle floral aroma and slightly sticky texture.',
                 'characteristics': [
-                    'Extra-long grains (>7mm)',
-                    'Premium jasmine fragrance',
-                    'Soft and fluffy when cooked',
-                    'Part of Malys Angkor certification'
+                    'Medium to long grains (5-6mm)',
+                    'Length-to-width ratio: 2.5:1 to 3:1',
+                    'Slightly translucent',
+                    'Sweet, floral aroma'
                 ],
                 'visual_features': {
-                    'aspect_ratio': (3.0, 4.5),
-                    'color_range': [(245, 240, 235), (255, 255, 250)],
-                    'grain_length': 'long',
-                    'shape': 'elongated'
-                },
-                'reference_image': '../../images/phka_romeat.jpg'
-            },
-            'neang_minh': {
-                'name': 'Neang Minh',
-                'description': 'A medium-grain white rice grown in the rainy season, popular for its savory taste and soft texture.',
-                'characteristics': [
-                    'Medium grains (5-6mm)',
-                    'Non-fragrant, savory flavor',
-                    'Soft when cooked',
-                    'Popular in Cambodian restaurants'
-                ],
-                'visual_features': {
-                    'aspect_ratio': (2.0, 3.0),
-                    'color_range': [(240, 235, 230), (255, 250, 245)],
-                    'grain_length': 'medium',
+                    'aspect_ratio': (2.3, 3.2),
+                    'color_range': [(245, 240, 235), (255, 250, 245)],
+                    'grain_length': 'medium-long',
                     'shape': 'oval'
-                },
-                'reference_image': '../../images/neang_minh.jpg'
+                }
             },
-            'phka_rumdeng': {
-                'name': 'Phka Rumdeng',
-                'description': 'A long-grain jasmine rice with a mild aroma and soft texture, part of the Malys Angkor certification.',
+            'brown': {
+                'name': 'Brown Rice',
+                'description': 'Whole grain rice with bran layer intact, providing more nutrients and fiber.',
                 'characteristics': [
-                    'Long grains (>7mm)',
-                    'Mild jasmine aroma',
-                    'Soft and slightly sticky when cooked',
-                    'Harvested in November/December'
+                    'Brown/tan colored bran layer',
+                    'Various grain lengths available',
+                    'Nutty flavor and chewy texture',
+                    'Higher fiber content'
                 ],
                 'visual_features': {
-                    'aspect_ratio': (2.8, 4.0),
-                    'color_range': [(245, 240, 235), (255, 255, 250)],
-                    'grain_length': 'long',
-                    'shape': 'elongated'
-                },
-                'reference_image': '../../images/phka_rumdeng.jpg'
+                    'aspect_ratio': (2.0, 3.5),
+                    'color_range': [(160, 130, 100), (200, 170, 140)],
+                    'grain_length': 'variable',
+                    'shape': 'oval'
+                }
             },
-            'sen_kra_ob': {
-                'name': 'Sen Kra Ob',
-                'description': 'A fragrant long-grain rice grown in the dry season, known for its premium quality and mild jasmine-like flavor.',
+            'arborio': {
+                'name': 'Arborio Rice',
+                'description': 'Short-grain rice with high starch content, perfect for creamy risottos.',
                 'characteristics': [
-                    'Long grains (>7mm)',
-                    'Mild fragrance',
-                    'Soft and chewy when cooked',
-                    'Popular for Cambodian fried rice'
+                    'Short, plump grains (4-5mm)',
+                    'Length-to-width ratio: 1.5:1 to 2:1',
+                    'High starch content',
+                    'Creamy when cooked'
                 ],
                 'visual_features': {
-                    'aspect_ratio': (2.8, 4.0),
-                    'color_range': [(245, 240, 235), (255, 255, 250)],
+                    'aspect_ratio': (1.4, 2.2),
+                    'color_range': [(250, 245, 240), (255, 255, 255)],
+                    'grain_length': 'short',
+                    'shape': 'plump'
+                }
+            },
+            'sushi': {
+                'name': 'Sushi Rice (Japonica)',
+                'description': 'Short-grain rice that becomes sticky when cooked, perfect for sushi.',
+                'characteristics': [
+                    'Short, round grains',
+                    'Length-to-width ratio: 1.2:1 to 1.8:1',
+                    'Sticky when cooked',
+                    'Slightly sweet flavor'
+                ],
+                'visual_features': {
+                    'aspect_ratio': (1.1, 1.9),
+                    'color_range': [(248, 245, 242), (255, 255, 255)],
+                    'grain_length': 'short',
+                    'shape': 'round'
+                }
+            },
+            'wild': {
+                'name': 'Wild Rice',
+                'description': 'Actually a grass seed with dark color and nutty, earthy flavor.',
+                'characteristics': [
+                    'Dark brown to black color',
+                    'Long, slender grains',
+                    'Nutty, earthy flavor',
+                    'Chewy texture'
+                ],
+                'visual_features': {
+                    'aspect_ratio': (3.0, 5.0),
+                    'color_range': [(20, 15, 10), (80, 60, 40)],
                     'grain_length': 'long',
                     'shape': 'elongated'
-                },
-                'reference_image': '../../images/sen_kra_ob.jpg'
+                }
             }
         }
     
@@ -132,7 +142,7 @@ class AdvancedRiceClassifier:
             grain_features = self._analyze_grain_features(processed_img)
             
             # Classify rice type
-            classification = self._classify_rice_type(grain_features, processed_img['original'])
+            classification = self._classify_rice_type(grain_features)
             
             return classification
             
@@ -141,12 +151,7 @@ class AdvancedRiceClassifier:
                 'type': 'Analysis Error',
                 'confidence': 0.0,
                 'description': f'Could not analyze image: {str(e)}',
-                'characteristics': [
-                    'Image processing failed',
-                    'Ensure input is a valid base64-encoded image',
-                    'Try a different image',
-                    'Ensure image is not corrupted'
-                ]
+                'characteristics': ['Image processing failed', 'Try a different image', 'Ensure image is not corrupted']
             }
     
     def _preprocess_image(self, img_array):
@@ -215,13 +220,6 @@ class AdvancedRiceClassifier:
             'total_contours': len(contours)
         }
     
-    def _compute_histogram(self, img_array):
-        """Compute RGB histogram for an image"""
-        hist_r, _ = np.histogram(img_array[:, :, 0], bins=256, range=(0, 256), density=True)
-        hist_g, _ = np.histogram(img_array[:, :, 1], bins=256, range=(0, 256), density=True)
-        hist_b, _ = np.histogram(img_array[:, :, 2], bins=256, range=(0, 256), density=True)
-        return np.concatenate([hist_r, hist_g, hist_b])
-    
     def _analyze_grain_features(self, processed_img):
         """Analyze visual features of detected rice grains"""
         img_color = processed_img['original']
@@ -256,17 +254,13 @@ class AdvancedRiceClassifier:
             'area_std': np.std(areas),
             'avg_color': avg_color,
             'grain_count': len(grain_contours),
-            'aspect_ratios': aspect_ratios,
-            'image_array': img_color  # Add for histogram comparison
+            'aspect_ratios': aspect_ratios
         }
     
-    def _classify_rice_type(self, grain_features, img_array):
-        """Classify rice type based on analyzed features and histogram comparison"""
+    def _classify_rice_type(self, grain_features):
+        """Classify rice type based on analyzed features"""
         if not grain_features:
             return self._get_default_classification()
-        
-        # Compute histogram for input image
-        input_histogram = self._compute_histogram(img_array)
         
         scores = {}
         
@@ -279,10 +273,11 @@ class AdvancedRiceClassifier:
             actual_ratio = grain_features['avg_aspect_ratio']
             
             if target_ratio_min <= actual_ratio <= target_ratio_max:
-                score += 0.3
+                score += 0.4
             else:
+                # Penalty for being outside range
                 distance = min(abs(actual_ratio - target_ratio_min), abs(actual_ratio - target_ratio_max))
-                score += max(0, 0.3 - distance * 0.1)
+                score += max(0, 0.4 - distance * 0.1)
             
             # Color matching
             target_color_min, target_color_max = visual_features['color_range']
@@ -293,29 +288,17 @@ class AdvancedRiceClassifier:
                 if target_color_min[i] <= actual_color[i] <= target_color_max[i]:
                     color_match += 1
             
-            score += (color_match / 3) * 0.2
-            
-            # Histogram comparison with reference image
-            if properties.get('reference_image'):
-                try:
-                    ref_image = Image.open(properties['reference_image']).convert('RGB')
-                    ref_array = np.array(ref_image)
-                    ref_histogram = self._compute_histogram(ref_array)
-                    hist_distance = wasserstein_distance(input_histogram, ref_histogram)
-                    similarity = max(0, 1 - hist_distance / 10)  # Normalize to [0, 1]
-                    score += 0.3 * similarity
-                except Exception as e:
-                    print(f"Error processing reference image for {rice_type}: {str(e)}")
+            score += (color_match / 3) * 0.3
             
             # Grain count (more grains = more confidence)
             if grain_features['grain_count'] > 20:
-                score += 0.15
+                score += 0.2
             elif grain_features['grain_count'] > 10:
-                score += 0.075
+                score += 0.1
             
             # Consistency bonus (low standard deviation in measurements)
             if grain_features['aspect_ratio_std'] < 0.5:
-                score += 0.075
+                score += 0.1
             
             scores[rice_type] = min(score, 1.0)
         
@@ -351,7 +334,7 @@ class AdvancedRiceClassifier:
 
 def main():
     if len(sys.argv) != 2:
-        print(json.dumps({'error': 'No image data provided. Please provide a base64-encoded image.'}))
+        print(json.dumps({'error': 'No image data provided'}))
         return
     
     image_base64 = sys.argv[1]

@@ -4,75 +4,57 @@ import json
 import sys
 from PIL import Image
 import numpy as np
-from scipy.stats import wasserstein_distance
 
 class RiceClassifier:
     def __init__(self):
         self.rice_database = {
-            'phka_romduol': {
-                'name': 'Phka Romduol',
-                'description': 'A premium long-grain jasmine rice known for its natural aroma, soft texture, and high quality, often exported under the Malys Angkor certification.',
+            'basmati': {
+                'name': 'Basmati Rice',
+                'description': 'Long-grain aromatic rice with a distinctive nutty flavor and fluffy texture when cooked.',
                 'characteristics': [
-                    'Long, slender grains (>7mm)',
-                    'Strong jasmine aroma',
-                    'Soft and fluffy when cooked',
-                    'World’s Best Rice award winner (2012-2014, 2018, 2022)'
+                    'Long, slender grains (6-7mm)',
+                    'Aromatic fragrance',
+                    'Light and fluffy when cooked',
+                    'Popular in Indian and Middle Eastern cuisine'
                 ],
-                'color_range': [(245, 240, 235), (255, 255, 250)],  # Translucent, similar to jasmine
-                'grain_length': 'long',
-                'reference_image': '../../images/phka_romduol.jpg'  # Unique file path
+                'color_range': [(240, 230, 200), (255, 250, 240)],
+                'grain_length': 'long'
             },
-            'phka_romeat': {
-                'name': 'Phka Romeat',
-                'description': 'A fragrant long-grain jasmine rice with high similarity to Thai Hom Mali, known for its soft texture and natural aroma.',
+            'jasmine': {
+                'name': 'Jasmine Rice',
+                'description': 'Fragrant long-grain rice with a subtle floral aroma and slightly sticky texture.',
                 'characteristics': [
-                    'Long grains (>7mm)',
-                    'Premium jasmine fragrance',
-                    'Soft and fluffy when cooked',
-                    'Part of Malys Angkor certification'
+                    'Medium to long grains (5-6mm)',
+                    'Sweet, floral aroma',
+                    'Slightly sticky texture',
+                    'Common in Thai cuisine'
                 ],
-                'color_range': [(245, 240, 235), (255, 255, 250)],  # Translucent, jasmine-like
-                'grain_length': 'long',
-                'reference_image': '../../images/phka_romeat.jpg'  # Unique file path
+                'color_range': [(245, 240, 235), (255, 255, 250)],
+                'grain_length': 'medium-long'
             },
-            'neang_minh': {
-                'name': 'Neang Minh',
-                'description': 'A medium-grain white rice grown in the rainy season, popular for its savory taste and soft texture.',
+            'arborio': {
+                'name': 'Arborio Rice',
+                'description': 'Short-grain rice with high starch content, perfect for creamy risottos.',
                 'characteristics': [
-                    'Medium grains (5-6mm)',
-                    'Non-fragrant, savory flavor',
-                    'Soft when cooked',
-                    'Common in Cambodian restaurants'
+                    'Short, plump grains (4-5mm)',
+                    'High starch content',
+                    'Creamy texture when cooked',
+                    'Ideal for risotto'
                 ],
-                'color_range': [(240, 235, 230), (255, 250, 245)],  # Slightly off-white, typical for white rice
-                'grain_length': 'medium',
-                'reference_image': '../../images/neang_minh.jpg'  # Unique file path
+                'color_range': [(250, 245, 240), (255, 255, 255)],
+                'grain_length': 'short'
             },
-            'phka_rumdeng': {
-                'name': 'Phka Rumdeng',
-                'description': 'A long-grain jasmine rice with a mild aroma and soft texture, part of the Malys Angkor certification.',
+            'brown': {
+                'name': 'Brown Rice',
+                'description': 'Whole grain rice with the bran layer intact, providing more nutrients and fiber.',
                 'characteristics': [
-                    'Long grains (>7mm)',
-                    'Mild jasmine aroma',
-                    'Soft and slightly sticky when cooked',
-                    'Harvested in November/December'
+                    'Brown/tan colored',
+                    'Nutty flavor',
+                    'Chewy texture',
+                    'Higher in fiber and nutrients'
                 ],
-                'color_range': [(245, 240, 235), (255, 255, 250)],  # Translucent, jasmine-like
-                'grain_length': 'long',
-                'reference_image': '../../images/phka_rumdeng.jpg'  # Unique file path
-            },
-            'sen_kra_ob': {
-                'name': 'Sen Kra Ob',
-                'description': 'A fragrant long-grain rice grown in the dry season, known for its premium quality and mild jasmine-like flavor.',
-                'characteristics': [
-                    'Long grains (>7mm)',
-                    'Mild fragrance',
-                    'Soft and chewy when cooked',
-                    'Popular for Cambodian fried rice'
-                ],
-                'color_range': [(245, 240, 235), (255, 255, 250)],  # Translucent, similar to jasmine
-                'grain_length': 'long',
-                'reference_image': '../../images/sen_kra_ob.jpg'  # Unique file path
+                'color_range': [(160, 130, 100), (200, 170, 140)],
+                'grain_length': 'medium'
             }
         }
     
@@ -90,8 +72,7 @@ class RiceClassifier:
             
             # Analyze image
             color_analysis = self._analyze_color(img_array)
-            histogram = self._compute_histogram(img_array)
-            classification = self._classify_rice(color_analysis, histogram)
+            classification = self._classify_rice(color_analysis)
             
             return classification
             
@@ -112,14 +93,7 @@ class RiceClassifier:
             'brightness': brightness
         }
     
-    def _compute_histogram(self, img_array):
-        # Compute histogram for RGB channels
-        hist_r, _ = np.histogram(img_array[:, :, 0], bins=256, range=(0, 256), density=True)
-        hist_g, _ = np.histogram(img_array[:, :, 1], bins=256, range=(0, 256), density=True)
-        hist_b, _ = np.histogram(img_array[:, :, 2], bins=256, range=(0, 256), density=True)
-        return np.concatenate([hist_r, hist_g, hist_b])
-    
-    def _classify_rice(self, color_analysis, input_histogram):
+    def _classify_rice(self, color_analysis):
         scores = {}
         
         for rice_type, properties in self.rice_database.items():
@@ -131,31 +105,16 @@ class RiceClassifier:
             if (color_range[0][0] <= avg_color[0] <= color_range[1][0] and
                 color_range[0][1] <= avg_color[1] <= color_range[1][1] and
                 color_range[0][2] <= avg_color[2] <= color_range[1][2]):
-                score += 0.4  # Weight for color matching
+                score += 0.6
             
             # Brightness analysis
             brightness = color_analysis['brightness']
-            if rice_type == 'neang_minh' and brightness < 200:
-                score += 0.2
-            elif rice_type != 'neang_minh' and brightness > 200:
-                score += 0.2
+            if rice_type in ['brown'] and brightness < 150:
+                score += 0.3
+            elif rice_type not in ['brown'] and brightness > 200:
+                score += 0.3
             
-            # Image histogram comparison (if reference image exists)
-            if properties['reference_image']:
-                try:
-                    # Load reference image from file path
-                    ref_image = Image.open(properties['reference_image']).convert('RGB')
-                    ref_array = np.array(ref_image)
-                    ref_histogram = self._compute_histogram(ref_array)
-                    
-                    # Compute Wasserstein distance (Earth Mover's Distance) between histograms
-                    hist_distance = wasserstein_distance(input_histogram, ref_histogram)
-                    similarity = max(0, 1 - hist_distance / 10)  # Normalize to [0, 1]
-                    score += 0.4 * similarity  # Weight histogram comparison
-                except Exception as e:
-                    print(f"Error processing reference image for {rice_type}: {str(e)}")
-            
-            scores[rice_type] = min(score + np.random.uniform(0.05, 0.1), 0.95)
+            scores[rice_type] = min(score + np.random.uniform(0.1, 0.2), 0.95)
         
         best_match = max(scores.items(), key=lambda x: x[1])
         rice_type, confidence = best_match
