@@ -1,77 +1,27 @@
 "use client"
 
 import { ShoppingCart, Plus, Search, Filter, Star, X, Upload, MoreVertical, Eye, Edit, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 const Marketplace = ({ language = "en" }) => {
+  // State management
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("") // New state for category filter
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [activeMenu, setActiveMenu] = useState(null)
   const [selectedProduct, setSelectedProduct] = useState(null)
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: "Organic Rice",
-      price: "$0.85",
-      image: "/placeholder.svg?height=400&width=400&text=Organic+Rice",
-      seller: "John Farmer",
-      rating: 4.8,
-      stock: "In Stock",
-      description: "Premium organic rice from our farm",
-    },
-    {
-      id: 2,
-      name: "Fresh Tomatoes",
-      price: "$2.30",
-      image: "/placeholder.svg?height=400&width=400&text=Fresh+Tomatoes",
-      seller: "Mary's Garden",
-      rating: 4.6,
-      stock: "In Stock",
-      description: "Freshly harvested tomatoes",
-    },
-    {
-      id: 3,
-      name: "Sweet Corn",
-      price: "$1.20",
-      image: "/placeholder.svg?height=400&width=400&text=Sweet+Corn",
-      seller: "Green Valley Farm",
-      rating: 4.9,
-      stock: "Out of Stock",
-      description: "Sweet and tender corn",
-    },
-    {
-      id: 4,
-      name: "Red Onions",
-      price: "$1.80",
-      image: "/placeholder.svg?height=400&width=400&text=Red+Onions",
-      seller: "Sunny Acres",
-      rating: 4.5,
-      stock: "In Stock",
-      description: "Fresh red onions",
-    },
-    {
-      id: 5,
-      name: "Green Beans",
-      price: "$3.20",
-      image: "/placeholder.svg?height=400&width=400&text=Green+Beans",
-      seller: "Farm Fresh Co",
-      rating: 4.7,
-      stock: "In Stock",
-      description: "Crisp and fresh green beans",
-    },
-    {
-      id: 6,
-      name: "Carrots",
-      price: "$1.50",
-      image: "/placeholder.svg?height=400&width=400&text=Carrots",
-      seller: "Orange Grove Farm",
-      rating: 4.4,
-      stock: "In Stock",
-      description: "Sweet and crunchy carrots",
-    },
-  ])
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([
+    { id: 1, name: "Rice" },
+    { id: 2, name: "Corn" },
+    { id: 3, name: "Beans" },
+    { id: 4, name: "Potatoes" },
+    { id: 5, name: "Fruits" },
+  ]) // State for categories
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -79,6 +29,8 @@ const Marketplace = ({ language = "en" }) => {
     description: "",
     stock: "In Stock",
     image: "",
+    imageFile: null,
+    category_id: "",
   })
 
   const [editProduct, setEditProduct] = useState({
@@ -88,8 +40,11 @@ const Marketplace = ({ language = "en" }) => {
     description: "",
     stock: "In Stock",
     image: "",
+    imageFile: null,
+    category_id: "",
   })
 
+  // Translations for multilingual support
   const translations = {
     en: {
       title: "Marketplace",
@@ -113,6 +68,8 @@ const Marketplace = ({ language = "en" }) => {
       productPrice: "Price per kg",
       productDescription: "Description",
       productStock: "Stock Status",
+      productCategory: "Category",
+      selectCategory: "Select a category",
       uploadImage: "Upload Image",
       cancel: "Cancel",
       save: "Save Product",
@@ -124,6 +81,8 @@ const Marketplace = ({ language = "en" }) => {
       noProductsFound: "No products found matching your search.",
       confirmDelete: "Are you sure you want to delete this product?",
       seller: "Seller",
+      loading: "Loading products...",
+      error: "Failed to load products. Please try again later.",
     },
     km: {
       title: "ទីផ្សារ",
@@ -139,7 +98,7 @@ const Marketplace = ({ language = "en" }) => {
       delete: "លុប",
       view: "មើល",
       contact: "ទាក់ទងអ្នកលក់",
-      rating: "ការវាយតម្លៃ",
+      rating: "ការវាឯតម្លៃ",
       addNewProduct: "បន្ថែមផលិតផលថ្មី",
       editProduct: "កែប្រែផលិតផល",
       viewProduct: "ព័ត៌មានលម្អិតផលិតផល",
@@ -147,6 +106,8 @@ const Marketplace = ({ language = "en" }) => {
       productPrice: "តម្លៃក្នុងមួយគីឡូក្រាម",
       productDescription: "ការពិពណ៌នា",
       productStock: "ស្ថានភាពស្តុក",
+      productCategory: "ប្រភេទ",
+      selectCategory: "ជ្រើសរើសប្រភេទ",
       uploadImage: "ផ្ទុករូបភាព",
       cancel: "បោះបង់",
       save: "រក្សាទុកផលិតផល",
@@ -158,48 +119,140 @@ const Marketplace = ({ language = "en" }) => {
       noProductsFound: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
       seller: "អ្នកលក់",
+      loading: "កំពុងផ្ទុកផលិតផល...",
+      error: "បរាជ័យក្នុងការផ្ទុកផលិតផល។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
     },
   }
 
   const t = translations[language] || translations.en
+  const API_URL = "http://127.0.0.1:8000/api/products"
+  const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories"
 
+  // Fetch products and categories from API
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        // Fetch products
+        console.log("Fetching products from:", API_URL)
+        const productResponse = await fetch(API_URL, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        if (!productResponse.ok) {
+          const text = await productResponse.text()
+          throw new Error(`HTTP error! Status: ${productResponse.status} ${productResponse.statusText}`)
+        }
+        const productData = await productResponse.json()
+        if (!Array.isArray(productData)) {
+          throw new Error("API response is not an array")
+        }
+        const transformedProducts = productData.map((item) => ({
+          id: item.id,
+          name: item.name || "Unnamed Product",
+          price: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
+          image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
+          seller: item.user?.name || "Unknown Seller",
+          rating: 0,
+          stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
+          description: item.description || "No description available",
+          category: item.category?.name || "Uncategorized",
+          category_id: item.category_id,
+        }))
+        setProducts(transformedProducts)
+
+        // Fetch categories
+        console.log("Fetching categories from:", CATEGORIES_API_URL)
+        const categoryResponse = await fetch(CATEGORIES_API_URL, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        if (!categoryResponse.ok) {
+          const text = await categoryResponse.text()
+          throw new Error(`HTTP error! Status: ${categoryResponse.status} ${categoryResponse.statusText}`)
+        }
+        const categoryData = await categoryResponse.json()
+        if (!Array.isArray(categoryData)) {
+          throw new Error("Categories API response is not an array")
+        }
+        setCategories(categoryData)
+      } catch (err) {
+        console.error("Fetch data error:", err)
+        setError(`${t.error}: ${err.message}`)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [t.error])
+
+  // Filter products based on search term and selected category
   const filteredProducts = products.filter(
     (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.seller.toLowerCase().includes(searchTerm.toLowerCase()),
+      product &&
+      ((product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (product.seller && product.seller.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+      (!selectedCategory || product.category_id === parseInt(selectedCategory)),
   )
 
+  // Toggle dropdown menu for product actions
   const toggleMenu = (productId) => {
     setActiveMenu(activeMenu === productId ? null : productId)
   }
 
+  // View product details
   const handleViewProduct = (product) => {
     setSelectedProduct(product)
     setShowViewModal(true)
     setActiveMenu(null)
   }
 
+  // Prepare product for editing
   const handleEditProduct = (product) => {
     setEditProduct({
       id: product.id,
-      name: product.name,
-      price: product.price.replace("$", ""),
-      description: product.description,
-      stock: product.stock,
-      image: product.image,
+      name: product.name || "",
+      price: product.price ? product.price.replace("$", "") : "",
+      description: product.description || "",
+      stock: product.stock || "In Stock",
+      image: product.image || "",
+      imageFile: null,
+      category_id: product.category_id || "",
     })
     setShowEditModal(true)
     setActiveMenu(null)
   }
 
-  const handleDeleteProduct = (productId) => {
+  // Delete product
+  const handleDeleteProduct = async (productId) => {
     if (window.confirm(t.confirmDelete)) {
-      setProducts(products.filter((product) => product.id !== productId))
+      try {
+        console.log("Deleting product:", productId)
+        const response = await fetch(`${API_URL}/${productId}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`)
+        }
+        setProducts(products.filter((product) => product.id !== productId))
+      } catch (err) {
+        console.error("Delete product error:", err)
+        alert(`${t.error}: ${err.message}`)
+      }
     }
     setActiveMenu(null)
   }
 
+  // Handle input changes for new product form
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setNewProduct((prev) => ({
@@ -208,6 +261,7 @@ const Marketplace = ({ language = "en" }) => {
     }))
   }
 
+  // Handle input changes for edit product form
   const handleEditInputChange = (e) => {
     const { name, value } = e.target
     setEditProduct((prev) => ({
@@ -216,6 +270,7 @@ const Marketplace = ({ language = "en" }) => {
     }))
   }
 
+  // Handle image upload for new product
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -224,12 +279,14 @@ const Marketplace = ({ language = "en" }) => {
         setNewProduct((prev) => ({
           ...prev,
           image: e.target.result,
+          imageFile: file,
         }))
       }
       reader.readAsDataURL(file)
     }
   }
 
+  // Handle image upload for edit product
   const handleEditImageUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -238,69 +295,147 @@ const Marketplace = ({ language = "en" }) => {
         setEditProduct((prev) => ({
           ...prev,
           image: e.target.result,
+          imageFile: file,
         }))
       }
       reader.readAsDataURL(file)
     }
   }
 
-  const handleAddProduct = (e) => {
+  // Add new product
+  const handleAddProduct = async (e) => {
     e.preventDefault()
-    if (!newProduct.name || !newProduct.price || !newProduct.description) {
-      alert("Please fill in all required fields")
+    if (!newProduct.name || !newProduct.price || !newProduct.description || !newProduct.category_id) {
+      alert("Please fill in all required fields, including category")
       return
     }
-    const product = {
-      id: products.length + 1,
-      name: newProduct.name,
-      price: `$${newProduct.price}`,
-      image: newProduct.image || "/placeholder.svg?height=400&width=400&text=Product+Image",
-      seller: "You",
-      rating: 5.0,
-      stock: newProduct.stock,
-      description: newProduct.description,
+
+    const formData = new FormData()
+    formData.append("name", newProduct.name)
+    formData.append("price", newProduct.price)
+    formData.append("description", newProduct.description)
+    formData.append("quantity", newProduct.stock === "In Stock" ? 10 : 0)
+    formData.append("user_id", 1)
+    formData.append("category_id", newProduct.category_id)
+    formData.append("crop_id", 1)
+    if (newProduct.imageFile) {
+      formData.append("image", newProduct.imageFile)
     }
-    setProducts((prev) => [product, ...prev])
-    setNewProduct({
-      name: "",
-      price: "",
-      description: "",
-      stock: "In Stock",
-      image: "",
-    })
-    setShowAddModal(false)
+
+    try {
+      console.log("Adding product with data:", Object.fromEntries(formData))
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: formData,
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`)
+      }
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        setError(`${t.error}: Response is not JSON: ${text.slice(0, 100)}...`)
+        return
+      }
+      const savedProduct = await response.json()
+      const transformedProduct = {
+        id: savedProduct.id,
+        name: savedProduct.name || "Unnamed Product",
+        price: savedProduct.price ? `$${Number(savedProduct.price).toFixed(2)}` : "$0.00",
+        image: savedProduct.image_path ? `/storage/${savedProduct.image_path}` : "/placeholder.svg?height=400&width=400&text=Product+Image",
+        seller: savedProduct.user?.name || "Unknown Seller",
+        rating: 0,
+        stock: savedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
+        description: savedProduct.description || "No description available",
+        category: savedProduct.category?.name || "Uncategorized",
+        category_id: savedProduct.category_id,
+      }
+      setProducts((prev) => [transformedProduct, ...prev])
+      setNewProduct({
+        name: "",
+        price: "",
+        description: "",
+        stock: "In Stock",
+        image: "",
+        imageFile: null,
+        category_id: "",
+      })
+      setShowAddModal(false)
+    } catch (err) {
+      console.error("Add product error:", err)
+      setError(`${t.error}: ${err.message}`)
+    }
   }
 
-  const handleUpdateProduct = (e) => {
+  // Update existing product
+  const handleUpdateProduct = async (e) => {
     e.preventDefault()
-    if (!editProduct.name || !editProduct.price || !editProduct.description) {
-      alert("Please fill in all required fields")
+    if (!editProduct.name || !editProduct.price || !editProduct.description || !editProduct.category_id) {
+      alert("Please fill in all required fields, including category")
       return
     }
-    const updatedProducts = products.map((product) =>
-      product.id === editProduct.id
-        ? {
-            ...product,
-            name: editProduct.name,
-            price: `$${editProduct.price}`,
-            description: editProduct.description,
-            stock: editProduct.stock,
-            image: editProduct.image,
-          }
-        : product,
-    )
-    setProducts(updatedProducts)
-    setShowEditModal(false)
-    setEditProduct({
-      id: null,
-      name: "",
-      price: "",
-      description: "",
-      stock: "In Stock",
-      image: "",
-    })
+
+    const formData = new FormData()
+    formData.append("name", editProduct.name)
+    formData.append("price", editProduct.price)
+    formData.append("description", editProduct.description)
+    formData.append("quantity", editProduct.stock === "In Stock" ? 10 : 0)
+    formData.append("user_id", 1)
+    formData.append("category_id", editProduct.category_id)
+    formData.append("crop_id", 1)
+    if (editProduct.imageFile) {
+      formData.append("image", editProduct.imageFile)
+    }
+
+    try {
+      console.log("Updating product with data:", Object.fromEntries(formData))
+      const response = await fetch(`${API_URL}/${editProduct.id}`, {
+        method: "PUT",
+        body: formData,
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`)
+      }
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        setError(`${t.error}: Response is not JSON: ${text.slice(0, 100)}...`)
+        return
+      }
+      const updatedProduct = await response.json()
+      const transformedProduct = {
+        id: updatedProduct.id,
+        name: updatedProduct.name || "Unnamed Product",
+        price: updatedProduct.price ? `$${Number(updatedProduct.price).toFixed(2)}` : "$0.00",
+        image: updatedProduct.image_path ? `/storage/${updatedProduct.image_path}` : "/placeholder.svg?height=400&width=400&text=Product+Image",
+        seller: updatedProduct.user?.name || "Unknown Seller",
+        rating: 0,
+        stock: updatedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
+        description: updatedProduct.description || "No description available",
+        category: updatedProduct.category?.name || "Uncategorized",
+        category_id: updatedProduct.category_id,
+      }
+      setProducts(products.map((product) => (product.id === editProduct.id ? transformedProduct : product)))
+      setEditProduct({
+        id: null,
+        name: "",
+        price: "",
+        description: "",
+        stock: "In Stock",
+        image: "",
+        imageFile: null,
+        category_id: "",
+      })
+      setShowEditModal(false)
+    } catch (err) {
+      console.error("Update product error:", err)
+      setError(`${t.error}: ${err.message}`)
+    }
   }
 
+  // Handle clicking outside to close menu
   const handleClickOutside = () => {
     setActiveMenu(null)
   }
@@ -336,6 +471,18 @@ const Marketplace = ({ language = "en" }) => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="">{t.selectCategory}</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
             <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
               <Filter className="h-4 w-4" />
               {t.filter}
@@ -343,8 +490,22 @@ const Marketplace = ({ language = "en" }) => {
           </div>
         </div>
 
-        {/* Products Grid */}
-        {filteredProducts.length === 0 ? (
+        {/* Loading and Error States */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="text-gray-500 text-lg">{t.loading}</div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <div className="text-red-500 text-lg">{error}</div>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg">{t.noProductsFound}</div>
           </div>
@@ -417,7 +578,7 @@ const Marketplace = ({ language = "en" }) => {
                 <div className="relative w-full h-full">
                   <img
                     src={product.image || "/placeholder.svg?height=400&width=400"}
-                    alt={product.name}
+                    alt={product.name || "Product"}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
 
@@ -439,7 +600,7 @@ const Marketplace = ({ language = "en" }) => {
                     >
                       {product.description}
                     </p>
-
+                    <p className="text-xs text-gray-300 mb-2">{t.productCategory}: {product.category}</p>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-yellow-400 fill-current" />
@@ -451,7 +612,6 @@ const Marketplace = ({ language = "en" }) => {
                         <span className="text-xs text-gray-300">{t.perKg}</span>
                       </div>
                     </div>
-
                     <button className="w-full px-3 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium">
                       <ShoppingCart className="h-3 w-3" />
                       {t.contact}
@@ -513,6 +673,23 @@ const Marketplace = ({ language = "en" }) => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.productCategory} *</label>
+                  <select
+                    name="category_id"
+                    value={newProduct.category_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">{t.selectCategory}</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">{t.productStock}</label>
                   <select
                     name="stock"
@@ -543,7 +720,7 @@ const Marketplace = ({ language = "en" }) => {
                     </label>
                     {newProduct.image && (
                       <img
-                        src={newProduct.image || "/placeholder.svg"}
+                        src={newProduct.image}
                         alt="Preview"
                         className="h-12 w-12 object-cover rounded-lg"
                       />
@@ -570,7 +747,7 @@ const Marketplace = ({ language = "en" }) => {
           </div>
         )}
 
-        {/* Edit Product Modal - BIGGER SIZE */}
+        {/* Edit Product Modal */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -605,7 +782,7 @@ const Marketplace = ({ language = "en" }) => {
                         {editProduct.image && (
                           <div className="mt-4">
                             <img
-                              src={editProduct.image || "/placeholder.svg"}
+                              src={editProduct.image}
                               alt="Preview"
                               className="w-full h-64 object-cover rounded-lg border"
                             />
@@ -656,6 +833,23 @@ const Marketplace = ({ language = "en" }) => {
                       />
                     </div>
                     <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-3">{t.productCategory} *</label>
+                      <select
+                        name="category_id"
+                        value={editProduct.category_id}
+                        onChange={handleEditInputChange}
+                        className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">{t.selectCategory}</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-lg font-medium text-gray-700 mb-3">{t.productStock}</label>
                       <select
                         name="stock"
@@ -690,7 +884,7 @@ const Marketplace = ({ language = "en" }) => {
           </div>
         )}
 
-        {/* View Product Modal - BIGGER SIZE */}
+        {/* View Product Modal */}
         {showViewModal && selectedProduct && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -707,7 +901,7 @@ const Marketplace = ({ language = "en" }) => {
                     <div className="text-center">
                       <img
                         src={selectedProduct.image || "/placeholder.svg"}
-                        alt={selectedProduct.name}
+                        alt={selectedProduct.name || "Product"}
                         className="w-full h-96 object-cover rounded-lg border shadow-lg"
                       />
                     </div>
@@ -718,6 +912,10 @@ const Marketplace = ({ language = "en" }) => {
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.productName}</label>
                       <p className="text-2xl font-bold text-gray-900">{selectedProduct.name}</p>
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.productCategory}</label>
+                      <p className="text-xl text-gray-900">{selectedProduct.category}</p>
                     </div>
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.price}</label>
