@@ -743,7 +743,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                       type="text"
                       value={provinceSearch}
                       onChange={(e) => setProvinceSearch(e.target.value)}
-                      placeholder="Search province (e.g., Battambang)"
+                      placeholder="Search province  "
                       className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-8"
                     />
                     <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
