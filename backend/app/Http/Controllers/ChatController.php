@@ -27,7 +27,7 @@ class ChatController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Chat $chat)
+    public function show(string $id)
     {
         //
     }
@@ -35,7 +35,7 @@ class ChatController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Chat $chat)
+    public function update(Request $request, string $id)
     {
         //
     }
@@ -43,7 +43,7 @@ class ChatController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Chat $chat)
+    public function destroy(string $id)
     {
         //
     }
