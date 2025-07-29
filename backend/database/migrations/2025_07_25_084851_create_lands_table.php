@@ -13,7 +13,12 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('data_area_ha', 8, 2);
             $table->decimal('data_area_acres', 8, 2);
-            $table->text('boundary_points');
+            $table->decimal('seed_amount_min', 8, 2);
+            $table->decimal('seed_amount_max', 8, 2);
+            $table->jsonb('fertilizer_total');
+            $table->date('date');
+            $table->string('land_type');
+            $table->jsonb('boundary_points');
             $table->timestamps();
         });
     }
