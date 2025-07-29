@@ -56,13 +56,21 @@ export const insertMeasurement = async (measurement) => {
   }
 };
 
-export const deleteLand = async (id) => {
+export const deleteLand = async (id, callback) => {
   try {
     const response = await api.delete(`/lands/${id}`);
-    return response.data;
+    if (callback && typeof callback === 'function') {
+      callback();
+    }
+    return {
+      success: true,
+      message: `Land with ID ${id} deleted successfully`,
+      data: response.data,
+    };
   } catch (error) {
-    console.error(`Error deleting land with ID ${id}:`, error.response?.data || error.message);
-    throw error;
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to delete land';
+    console.error(`Error deleting land with ID ${id}:`, errorMessage);
+    throw new Error(errorMessage);
   }
 };
 

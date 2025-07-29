@@ -1,169 +1,270 @@
+"use client"
 
-import React, { useState, useEffect } from "react";
-import { Button } from "../components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
-import { Map as MapIcon, Clock, Wheat, AlertCircle } from "lucide-react";
-import { getLands } from "../api"; // Assuming the API module is in a file named api.js
+import { useState, useEffect } from "react"
+import { Button } from "../components/ui/Button"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card"
+import {
+  Wheat,
+  Compass,
+  History,
+  TrendingUp,
+  MapPin,
+  Ruler,
+  Sprout,
+  BarChart3,
+  Calendar,
+  Loader2,
+  AlertTriangle,
+  Plus,
+  Eye,
+  Layers,
+  Target,
+} from "lucide-react"
+import { getLands } from "../api"
 
-// Recommendations object for land types
-const recommendations = {
-  tonle_sap_basin: {
-    rice: "High-yield varieties like IR36, IR42, or Phka Romdoul (fragrant, export-quality). Yields >1 ton/ha.",
-    fertilizerPlan: [
-      "Before planting: 25 kg DAP + 500 kg compost",
-      "Tillering stage (20 days): 30 kg urea",
-      "Panicle initiation (40–50 days): 25 kg urea + 20 kg MOP",
-    ],
-  },
-  coastal_plains: {
-    rice: "Traditional varieties or improved strains like IR36. Yields ~0.8 ton/ha.",
-    fertilizerPlan: [
-      "Before planting: 20 kg DAP + 400 kg compost",
-      "Tillering stage (20 days): 25 kg urea",
-      "Panicle initiation (40–50 days): 20 kg urea + 15 kg MOP",
-    ],
-  },
-  highlands: {
-    rice: "Floating rice for flood-prone areas. Yields <0.6 ton/ha.",
-    fertilizerPlan: [
-      "Before planting: 15 kg DAP + 300 kg compost",
-      "Tillering stage (20 days): 20 kg urea",
-      "Panicle initiation (40–50 days): 15 kg urea + 10 kg MOP",
-    ],
-  },
-};
-
-// Helper to format land type label
+// Helper to format land type label (aligned with LandMeasurement landTypes)
 const formatLandType = (landType) => {
   const landTypeOptions = {
-    tonle_sap_basin: "Tonle Sap Basin & Lowlands",
-    coastal_plains: "Coastal Plains",
-    highlands: "Highlands",
-  };
-  return landTypeOptions[landType] || landType || "Not specified";
-};
+    "Lowland Rainfed": "Lowland Rainfed",
+    "Irrigated Paddy Field": "Irrigated Paddy Field",
+    // Add more mappings as needed for display purposes
+  }
+  return landTypeOptions[landType] || landType || "Not specified"
+}
+
+// Helper to format fertilizer_total JSON into a readable string (in kilograms)
+const formatFertilizer = (fertilizerTotal) => {
+  try {
+    if (!fertilizerTotal || typeof fertilizerTotal !== "object" || Array.isArray(fertilizerTotal)) {
+      return "Not specified"
+    }
+    let parsedFertilizer = fertilizerTotal
+    if (typeof fertilizerTotal === "string") {
+      parsedFertilizer = JSON.parse(fertilizerTotal)
+    }
+    if (!parsedFertilizer || typeof parsedFertilizer !== "object") {
+      return "Not specified"
+    }
+    return (
+      Object.entries(parsedFertilizer)
+        .map(([key, value]) => {
+          const numValue = Number.parseFloat(value)
+          if (isNaN(numValue)) return null
+          // Convert tonnes to kilograms (multiply by 1000) and format to 2 decimal places
+          return `${key}: ${(numValue * 1000).toFixed(2)} Kg`
+        })
+        .filter(Boolean)
+        .join(", ") || "Not specified"
+    )
+  } catch (error) {
+    console.error("Error formatting fertilizer_total:", error, { fertilizerTotal })
+    return "Error formatting fertilizer"
+  }
+}
+
+// Helper to safely format data_area_ha
+const formatArea = (dataAreaHa) => {
+  try {
+    if (dataAreaHa == null || typeof dataAreaHa === "object" || Array.isArray(dataAreaHa)) {
+      console.warn("Invalid data_area_ha value:", dataAreaHa)
+      return "0.00"
+    }
+    const parsedArea = Number.parseFloat(dataAreaHa)
+    return isNaN(parsedArea) ? "0.00" : parsedArea.toFixed(2)
+  } catch (error) {
+    console.error("Error formatting data_area_ha:", error, { dataAreaHa })
+    return "0.00"
+  }
+}
 
 export default function MeasureLand({ onMeasure, onHistory, language }) {
-  const [measurements, setMeasurements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [measurements, setMeasurements] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // Fetch land data from API on component mount
   useEffect(() => {
     const fetchLands = async () => {
       try {
-        setLoading(true);
-        const data = await getLands(); // Using the getLands function from the API module
-        setMeasurements(Array.isArray(data) ? data : []);
-        setLoading(false);
+        setLoading(true)
+        const data = await getLands()
+        console.log("API response from getLands:", data)
+        setMeasurements(Array.isArray(data) ? data : [])
+        setLoading(false)
       } catch (err) {
-        setError("Failed to fetch land data. Please try again later.");
-        setLoading(false);
+        const errorMessage =
+          err.response?.data?.message || err.message || "Failed to fetch land data. Please try again later."
+        console.error("Error fetching lands:", err.response?.data || err)
+        setError(errorMessage)
+        setLoading(false)
       }
-    };
-    fetchLands();
-  }, []);
+    }
+    fetchLands()
+  }, [])
 
   // Calculate total area, number of fields, and average size
-  const totalArea = measurements.reduce((sum, m) => sum + (m.area || 0), 0);
-  const numberOfFields = measurements.length;
-  const averageSize = numberOfFields > 0 ? (totalArea / numberOfFields).toFixed(2) : "0";
+  const totalArea = measurements.reduce((sum, m) => {
+    const area = Number.parseFloat(m.data_area_ha)
+    if (isNaN(area)) {
+      console.warn("Invalid data_area_ha in measurement:", m)
+      return sum
+    }
+    return sum + area
+  }, 0)
+
+  const numberOfFields = measurements.length
+  const averageSize = numberOfFields > 0 ? (totalArea / numberOfFields).toFixed(2) : "0.00"
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          Measure, track, and manage your agricultural land efficiently
-        </h1>
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-green-600 mb-1">{totalArea.toFixed(2)} hectares</div>
-              <div className="text-gray-600">Total Land Measured</div>
+        <div className="flex items-center gap-3 mb-6">
+          <Wheat className="w-8 h-8 text-green-600" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Measure, track, and manage your agricultural land efficiently
+          </h1>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="flex items-center justify-center mb-3">
+                <Layers className="w-8 h-8 mr-2" />
+                <div className="text-xl sm:text-2xl font-bold">{isNaN(totalArea) ? "0.00" : totalArea.toFixed(2)}</div>
+              </div>
+              <div className="text-green-100 text-sm sm:text-base">Total Land Measured (hectares)</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-blue-600 mb-1">{numberOfFields}</div>
-              <div className="text-gray-600">Number of Fields</div>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="flex items-center justify-center mb-3">
+                <Target className="w-8 h-8 mr-2" />
+                <div className="text-xl sm:text-2xl font-bold">{numberOfFields}</div>
+              </div>
+              <div className="text-blue-100 text-sm sm:text-base">Number of Fields</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-purple-600 mb-1">{averageSize} ha</div>
-              <div className="text-gray-600">Average Field Size</div>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="flex items-center justify-center mb-3">
+                <BarChart3 className="w-8 h-8 mr-2" />
+                <div className="text-xl sm:text-2xl font-bold">{averageSize}</div>
+              </div>
+              <div className="text-purple-100 text-sm sm:text-base">Average Field Size (ha)</div>
             </CardContent>
           </Card>
         </div>
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <MapIcon className="w-12 h-12 text-green-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Measure My Land</h3>
-              <p className="text-gray-600 mb-4">
-                Use GPS and interactive maps to accurately measure your land area. Draw boundaries and get precise calculations.
+
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Compass className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Measure My Land</h3>
+              <p className="text-gray-600 mb-3 sm:mb-4 text-sm sm:text-base">
+                Use GPS and interactive maps to accurately measure your land area. Draw boundaries and get precise
+                calculations.
               </p>
-              <Button onClick={onMeasure} className="bg-green-600 hover:bg-green-700 w-full">
-                + Start Measuring
+              <Button
+                onClick={onMeasure}
+                className="bg-green-600 hover:bg-green-700 w-full text-sm sm:text-base py-2 sm:py-3 shadow-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Start Measuring
               </Button>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Clock className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Measurement History</h3>
-              <p className="text-gray-600 mb-4">
-                View, edit, and manage all your saved land measurements. Track changes over time and organize your fields.
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <History className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Measurement History</h3>
+              <p className="text-gray-600 mb-3 sm:mb-4 text-sm sm:text-base">
+                View, edit, and manage all your saved land measurements. Track changes over time and organize your
+                fields.
               </p>
-              <Button onClick={onHistory} variant="outline" className="w-full">
-                <span className="mr-1">View History</span>
+              <Button
+                onClick={onHistory}
+                variant="outline"
+                className="w-full text-sm sm:text-base py-2 sm:py-3 border-2 hover:bg-blue-50 bg-transparent"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View History
               </Button>
             </CardContent>
           </Card>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Measurements</h3>
+
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
+            <CardTitle className="text-base sm:text-lg flex items-center">
+              <Sprout className="w-5 h-5 mr-2 text-green-600" />
+              Recent Measurements
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
             {loading ? (
-              <p className="text-gray-600 text-center">Loading measurements...</p>
+              <div className="text-center py-8">
+                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+                <p className="text-gray-600 text-sm sm:text-base">Loading measurements...</p>
+              </div>
             ) : error ? (
-              <p className="text-red-600 flex items-center justify-center">
-                <AlertCircle className="w-4 h-4 mr-2" />
-                {error}
-              </p>
+              <div className="text-center py-8">
+                <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+                <p className="text-red-600 text-sm sm:text-base">{error}</p>
+              </div>
             ) : measurements.length === 0 ? (
-              <p className="text-gray-600 text-center">No recent measurements available.</p>
+              <div className="text-center py-8">
+                <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Ruler className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  No measurements available. Start measuring your land!
+                </p>
+              </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Name</th>
-                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Area (ha)</th>
-                      <th className="border p-2 text-left text-sm font-medium text-gray-700">District</th>
-                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Fertilizer Amount</th>
-                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Land Type</th>
-                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {measurements.map((measurement) => (
-                      <tr key={measurement.id} className="hover:bg-gray-50">
-                        <td className="border p-2 text-sm">{measurement.name || "Unnamed"}</td>
-                        <td className="border p-2 text-sm">{measurement.area?.toFixed(2) || 0}</td>
-                        <td className="border p-2 text-sm">{formatLandType(measurement.landType)}</td>
-                        <td className="border p-2 text-sm">{measurement.fertilizer_tot || "Not specified"}</td>
-                        <td className="border p-2 text-sm">{measurement.land_type || "Not specified"}</td>
-                        <td className="border p-2">{measurement.date ? measurement.date.slice(0, 10) : "N/A"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-3">
+                {measurements.map((measurement) => (
+                  <div
+                    key={measurement.id}
+                    className="bg-white p-4 rounded-lg border border-gray-200 flex justify-between items-center hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-green-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                        <MapPin className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{measurement.name || "Unnamed Field"}</p>
+                        <div className="flex items-center text-xs text-gray-600">
+                          <Ruler className="w-3 h-3 mr-1" />
+                          {measurement.data_area_ha} hectares
+                          <Calendar className="w-3 h-3 ml-3 mr-1" />
+                          {measurement.date ? measurement.date.slice(0, 10) : "N/A"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="bg-gradient-to-r from-green-100 to-green-200 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+                        {measurement.data_area_ha} ha
+                      </span>
+                      <TrendingUp className="w-4 h-4 text-green-600 ml-2" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
     </div>
-  );
+  )
 }
