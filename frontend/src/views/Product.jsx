@@ -53,7 +53,6 @@ const Product = ({ language = "en" }) => {
       delete: "Delete",
       view: "View",
       contact: "Contact Seller",
-      rating: "Rating",
       addNewProduct: "Add New Product",
       editProduct: "Edit Product",
       viewProduct: "Product Details",
@@ -73,7 +72,6 @@ const Product = ({ language = "en" }) => {
       enterDescription: "Enter product description...",
       noProductsFound: "No products found matching your search.",
       confirmDelete: "Are you sure you want to delete this product?",
-      seller: "Seller",
       loading: "Loading products...",
       error: "Failed to load data. Please try again later.",
       updateError: "Failed to update product. Please try again.",
@@ -98,7 +96,6 @@ const Product = ({ language = "en" }) => {
       delete: "លុប",
       view: "មើល",
       contact: "ទាក់ទងអ្នកលក់",
-      rating: "ការវាឯតម្លៃ",
       addNewProduct: "បន្ថែមផលិតផលថ្មី",
       editProduct: "កែប្រែផលិតផល",
       viewProduct: "ព័ត៌មានលម្អិតផលិតផល",
@@ -118,7 +115,6 @@ const Product = ({ language = "en" }) => {
       enterDescription: "បញ្ចូលការពិពណ៌នាផលិតផល...",
       noProductsFound: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
-      seller: "អ្នកលក់",
       loading: "Loading products...",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពផលិតផល។ សូមព្យាឯយាមម្តងទៀត។",
@@ -152,8 +148,6 @@ const Product = ({ language = "en" }) => {
           name: item.name || "Unnamed Product",
           price: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
           image: item.image_url || "/placeholder.svg",
-          seller: item.user?.name || "Unknown Seller",
-          rating: item.rating || 0,
           stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
           description: item.description || "No description",
           category: item.category?.name || "Uncategorized",
@@ -182,7 +176,6 @@ const Product = ({ language = "en" }) => {
     product &&
     ((product.name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
      (product.description?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-     (product.seller?.toLowerCase().includes(searchTerm.toLowerCase())) ||
      (product.category?.toLowerCase().includes(searchTerm.toLowerCase()))) &&
     (!selectedCategory || product.category_id === parseInt(selectedCategory))
   );
@@ -284,8 +277,6 @@ const Product = ({ language = "en" }) => {
         name: savedProduct.name,
         price: `$${Number(savedProduct.price).toFixed(2)}`,
         image: savedProduct.image_url || "/placeholder.svg",
-        seller: savedProduct.user?.name || "Unknown Seller",
-        rating: savedProduct.rating || 0,
         stock: savedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
         description: savedProduct.description,
         category: savedProduct.category?.name || "Uncategorized",
@@ -344,8 +335,6 @@ const Product = ({ language = "en" }) => {
         name: updatedProduct.name,
         price: `$${Number(updatedProduct.price).toFixed(2)}`,
         image: updatedProduct.image_url || "/placeholder.svg",
-        seller: updatedProduct.user?.name || "Unknown Seller",
-        rating: updatedProduct.rating || 0,
         stock: updatedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
         description: updatedProduct.description,
         category: updatedProduct.category?.name || "Uncategorized",
@@ -533,8 +522,6 @@ const Product = ({ language = "en" }) => {
                     <div><label className="block text-lg font-medium text-gray-700 mb-2">{t.productName}</label><p className="text-2xl font-bold text-gray-900">{selectedProduct.name}</p></div>
                     <div><label className="block text-lg font-medium text-gray-700 mb-2">{t.productCategory}</label><p className="text-xl text-gray-900">{selectedProduct.category}</p></div>
                     <div><label className="block text-lg font-medium text-gray-700 mb-2">{t.price}</label><p className="text-3xl font-bold text-green-600">{selectedProduct.price}<span className="text-lg text-gray-500 font-normal">{t.perKg}</span></p></div>
-                    <div><label className="block text-lg font-medium text-gray-700 mb-2">{t.seller}</label><p className="text-xl text-gray-900">{selectedProduct.seller}</p></div>
-                    <div><label className="block text-lg font-medium text-gray-700 mb-2">{t.rating}</label><div className="flex items-center gap-2"><Star className="h-6 w-6 text-yellow-400 fill-current" /><span className="text-xl font-semibold text-gray-900">{selectedProduct.rating}</span><span className="text-lg text-gray-500">out of 5</span></div></div>
                     <div><label className="block text-lg font-medium text-gray-700 mb-2">{t.productStock}</label><span className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${selectedProduct.stock === "In Stock" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{selectedProduct.stock}</span></div>
                     <div><label className="block text-lg font-medium text-gray-700 mb-2">{t.productDescription}</label><p className="text-lg text-gray-900 leading-relaxed">{selectedProduct.description}</p></div>
                   </div>
