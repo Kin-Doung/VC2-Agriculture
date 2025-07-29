@@ -238,7 +238,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       setIsMapLoading(false);
       setShowInitialOverlay(points.length === 0);
     }
-  }, []);
+  }, [points.length]);
 
   useEffect(() => {
     const matchedProvince = provincesData.find(p => 
