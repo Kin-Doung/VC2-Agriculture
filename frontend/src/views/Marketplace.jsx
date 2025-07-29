@@ -1,28 +1,21 @@
-"use client"
+"use client";
 
-import { ShoppingCart, Plus, Search, Filter, Star, X, Upload, MoreVertical, Eye, Edit, Trash2 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { ShoppingCart, Plus, Search, Filter, Star, X, Upload, MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const Marketplace = ({ language = "en" }) => {
   // State management
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("") // New state for category filter
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showViewModal, setShowViewModal] = useState(false)
-  const [activeMenu, setActiveMenu] = useState(null)
-  const [selectedProduct, setSelectedProduct] = useState(null)
-  const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState([
-    { id: 1, name: "Rice" },
-    { id: 2, name: "Corn" },
-    { id: 3, name: "Beans" },
-    { id: 4, name: "Potatoes" },
-    { id: 5, name: "Fruits" },
-  ]) // State for categories
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [newProduct, setNewProduct] = useState({
     name: "",
     price: "",
@@ -31,8 +24,7 @@ const Marketplace = ({ language = "en" }) => {
     image: "",
     imageFile: null,
     category_id: "",
-  })
-
+  });
   const [editProduct, setEditProduct] = useState({
     id: null,
     name: "",
@@ -42,7 +34,7 @@ const Marketplace = ({ language = "en" }) => {
     image: "",
     imageFile: null,
     category_id: "",
-  })
+  });
 
   // Translations for multilingual support
   const translations = {
@@ -82,7 +74,8 @@ const Marketplace = ({ language = "en" }) => {
       confirmDelete: "Are you sure you want to delete this product?",
       seller: "Seller",
       loading: "Loading products...",
-      error: "Failed to load products. Please try again later.",
+      error: "Failed to load data. Please try again later.",
+      updateError: "Failed to update product. Please try again.",
     },
     km: {
       title: "ទីផ្សារ",
@@ -120,34 +113,37 @@ const Marketplace = ({ language = "en" }) => {
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
       seller: "អ្នកលក់",
       loading: "កំពុងផ្ទុកផលិតផល...",
-      error: "បរាជ័យក្នុងការផ្ទុកផលិតផល។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពផលិតផល។ សូមព្យាយាមម្តងទៀត។",
     },
-  }
+  };
 
-  const t = translations[language] || translations.en
-  const API_URL = "http://127.0.0.1:8000/api/products"
-  const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories"
+  const t = translations[language] || translations.en;
+  const API_URL = "http://127.0.0.1:8000/api/products";
+  const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
+  const AUTH_TOKEN = "your-auth-token-here"; // Replace with actual token or use auth context
 
   // Fetch products and categories from API
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
         // Fetch products
-        console.log("Fetching products from:", API_URL)
+        console.log("Attempting to fetch products from:", API_URL);
         const productResponse = await fetch(API_URL, {
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${AUTH_TOKEN}`, // Add auth header
           },
-        })
+        });
         if (!productResponse.ok) {
-          const text = await productResponse.text()
-          throw new Error(`HTTP error! Status: ${productResponse.status} ${productResponse.statusText}`)
+          const text = await productResponse.text();
+          throw new Error(`Products fetch failed: HTTP ${productResponse.status} ${productResponse.statusText} - ${text}`);
         }
-        const productData = await productResponse.json()
+        const productData = await productResponse.json();
         if (!Array.isArray(productData)) {
-          throw new Error("API response is not an array")
+          throw new Error("Products API response is not an array");
         }
         const transformedProducts = productData.map((item) => ({
           id: item.id,
@@ -155,39 +151,40 @@ const Marketplace = ({ language = "en" }) => {
           price: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
           image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
           seller: item.user?.name || "Unknown Seller",
-          rating: 0,
+          rating: item.rating || 0,
           stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
           description: item.description || "No description available",
           category: item.category?.name || "Uncategorized",
           category_id: item.category_id,
-        }))
-        setProducts(transformedProducts)
+        }));
+        setProducts(transformedProducts);
 
         // Fetch categories
-        console.log("Fetching categories from:", CATEGORIES_API_URL)
+        console.log("Attempting to fetch categories from:", CATEGORIES_API_URL);
         const categoryResponse = await fetch(CATEGORIES_API_URL, {
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${AUTH_TOKEN}`, // Add auth header
           },
-        })
+        });
         if (!categoryResponse.ok) {
-          const text = await categoryResponse.text()
-          throw new Error(`HTTP error! Status: ${categoryResponse.status} ${categoryResponse.statusText}`)
+          const text = await categoryResponse.text();
+          throw new Error(`Categories fetch failed: HTTP ${categoryResponse.status} ${categoryResponse.statusText} - ${text}`);
         }
-        const categoryData = await categoryResponse.json()
+        const categoryData = await categoryResponse.json();
         if (!Array.isArray(categoryData)) {
-          throw new Error("Categories API response is not an array")
+          throw new Error("Categories API response is not an array");
         }
-        setCategories(categoryData)
+        setCategories(categoryData);
       } catch (err) {
-        console.error("Fetch data error:", err)
-        setError(`${t.error}: ${err.message}`)
+        console.error("Fetch data error:", err);
+        setError(`${t.error}: ${err.message}`);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchData()
-  }, [t.error])
+    };
+    fetchData();
+  }, [t.error]);
 
   // Filter products based on search term and selected category
   const filteredProducts = products.filter(
@@ -198,19 +195,19 @@ const Marketplace = ({ language = "en" }) => {
         (product.seller && product.seller.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))) &&
       (!selectedCategory || product.category_id === parseInt(selectedCategory)),
-  )
+  );
 
   // Toggle dropdown menu for product actions
   const toggleMenu = (productId) => {
-    setActiveMenu(activeMenu === productId ? null : productId)
-  }
+    setActiveMenu(activeMenu === productId ? null : productId);
+  };
 
   // View product details
   const handleViewProduct = (product) => {
-    setSelectedProduct(product)
-    setShowViewModal(true)
-    setActiveMenu(null)
-  }
+    setSelectedProduct(product);
+    setShowViewModal(true);
+    setActiveMenu(null);
+  };
 
   // Prepare product for editing
   const handleEditProduct = (product) => {
@@ -223,135 +220,130 @@ const Marketplace = ({ language = "en" }) => {
       image: product.image || "",
       imageFile: null,
       category_id: product.category_id || "",
-    })
-    setShowEditModal(true)
-    setActiveMenu(null)
-  }
+    });
+    setShowEditModal(true);
+    setActiveMenu(null);
+  };
 
   // Delete product
   const handleDeleteProduct = async (productId) => {
     if (window.confirm(t.confirmDelete)) {
       try {
-        console.log("Deleting product:", productId)
+        console.log("Deleting product:", productId);
         const response = await fetch(`${API_URL}/${productId}`, {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${AUTH_TOKEN}`, // Add auth header
           },
-        })
+        });
         if (!response.ok) {
-          const text = await response.text()
-          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`)
+          const text = await response.text();
+          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText} - ${text}`);
         }
-        setProducts(products.filter((product) => product.id !== productId))
+        setProducts(products.filter((product) => product.id !== productId));
       } catch (err) {
-        console.error("Delete product error:", err)
-        alert(`${t.error}: ${err.message}`)
+        console.error("Delete product error:", err);
+        alert(`${t.error}: ${err.message}`);
       }
     }
-    setActiveMenu(null)
-  }
+    setActiveMenu(null);
+  };
 
   // Handle input changes for new product form
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setNewProduct((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
+    const { name, value } = e.target;
+    setNewProduct((prev) => ({ ...prev, [name]: value }));
+  };
 
   // Handle input changes for edit product form
   const handleEditInputChange = (e) => {
-    const { name, value } = e.target
-    setEditProduct((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
+    const { name, value } = e.target;
+    setEditProduct((prev) => ({ ...prev, [name]: value }));
+  };
 
   // Handle image upload for new product
   const handleImageUpload = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
         setNewProduct((prev) => ({
           ...prev,
           image: e.target.result,
           imageFile: file,
-        }))
-      }
-      reader.readAsDataURL(file)
+        }));
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   // Handle image upload for edit product
   const handleEditImageUpload = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
         setEditProduct((prev) => ({
           ...prev,
           image: e.target.result,
           imageFile: file,
-        }))
-      }
-      reader.readAsDataURL(file)
+        }));
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   // Add new product
   const handleAddProduct = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!newProduct.name || !newProduct.price || !newProduct.description || !newProduct.category_id) {
-      alert("Please fill in all required fields, including category")
-      return
+      alert("Please fill in all required fields, including category");
+      return;
     }
-
-    const formData = new FormData()
-    formData.append("name", newProduct.name)
-    formData.append("price", newProduct.price)
-    formData.append("description", newProduct.description)
-    formData.append("quantity", newProduct.stock === "In Stock" ? 10 : 0)
-    formData.append("user_id", 1)
-    formData.append("category_id", newProduct.category_id)
-    formData.append("crop_id", 1)
+    const formData = new FormData();
+    formData.append("name", newProduct.name);
+    formData.append("price", newProduct.price);
+    formData.append("description", newProduct.description);
+    formData.append("quantity", newProduct.stock === "In Stock" ? 10 : 0);
+    formData.append("user_id", 1); // Replace with actual user ID from auth context
+    formData.append("category_id", newProduct.category_id);
+    formData.append("crop_id", 1); // Replace with actual crop ID if needed
     if (newProduct.imageFile) {
-      formData.append("image", newProduct.imageFile)
+      formData.append("image", newProduct.imageFile);
     }
-
     try {
-      console.log("Adding product with data:", Object.fromEntries(formData))
+      console.log("Adding product with data:", Object.fromEntries(formData));
       const response = await fetch(API_URL, {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${AUTH_TOKEN}`, // Add auth header
+        },
         body: formData,
-      })
+      });
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`)
+        const text = await response.text();
+        throw new Error(`HTTP error! Status: ${response.status} ${response.statusText} - ${text}`);
       }
-      const contentType = response.headers.get("content-type")
+      const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        setError(`${t.error}: Response is not JSON: ${text.slice(0, 100)}...`)
-        return
+        const text = await response.text();
+        throw new Error(`Response is not JSON: ${text.slice(0, 100)}...`);
       }
-      const savedProduct = await response.json()
+      const savedProduct = await response.json();
       const transformedProduct = {
         id: savedProduct.id,
         name: savedProduct.name || "Unnamed Product",
         price: savedProduct.price ? `$${Number(savedProduct.price).toFixed(2)}` : "$0.00",
-        image: savedProduct.image_path ? `/storage/${savedProduct.image_path}` : "/placeholder.svg?height=400&width=400&text=Product+Image",
+        image: savedProduct.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
         seller: savedProduct.user?.name || "Unknown Seller",
-        rating: 0,
+        rating: savedProduct.rating || 0,
         stock: savedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
         description: savedProduct.description || "No description available",
         category: savedProduct.category?.name || "Uncategorized",
         category_id: savedProduct.category_id,
-      }
-      setProducts((prev) => [transformedProduct, ...prev])
+      };
+      setProducts((prev) => [transformedProduct, ...prev]);
       setNewProduct({
         name: "",
         price: "",
@@ -360,64 +352,66 @@ const Marketplace = ({ language = "en" }) => {
         image: "",
         imageFile: null,
         category_id: "",
-      })
-      setShowAddModal(false)
+      });
+      setShowAddModal(false);
     } catch (err) {
-      console.error("Add product error:", err)
-      setError(`${t.error}: ${err.message}`)
+      console.error("Add product error:", err);
+      alert(`${t.error}: ${err.message}`);
     }
-  }
+  };
 
   // Update existing product
   const handleUpdateProduct = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!editProduct.name || !editProduct.price || !editProduct.description || !editProduct.category_id) {
-      alert("Please fill in all required fields, including category")
-      return
+      alert("Please fill in all required fields, including category");
+      return;
     }
-
-    const formData = new FormData()
-    formData.append("name", editProduct.name)
-    formData.append("price", editProduct.price)
-    formData.append("description", editProduct.description)
-    formData.append("quantity", editProduct.stock === "In Stock" ? 10 : 0)
-    formData.append("user_id", 1)
-    formData.append("category_id", editProduct.category_id)
-    formData.append("crop_id", 1)
+    const formData = new FormData();
+    formData.append("name", editProduct.name);
+    formData.append("price", parseFloat(editProduct.price));
+    formData.append("description", editProduct.description);
+    formData.append("quantity", editProduct.stock === "In Stock" ? 10 : 0);
+    formData.append("user_id", 1); // Replace with actual user ID from auth context
+    formData.append("category_id", editProduct.category_id);
+    formData.append("crop_id", 1); // Replace with actual crop ID if needed
     if (editProduct.imageFile) {
-      formData.append("image", editProduct.imageFile)
+      formData.append("image", editProduct.imageFile);
     }
-
+    // Add _method field for Laravel if needed
+    formData.append("_method", "PUT");
     try {
-      console.log("Updating product with data:", Object.fromEntries(formData))
+      console.log("Updating product with data:", Object.fromEntries(formData));
       const response = await fetch(`${API_URL}/${editProduct.id}`, {
-        method: "PUT",
+        method: "POST", // Use POST with _method=PUT for Laravel compatibility
+        headers: {
+          "Authorization": `Bearer ${AUTH_TOKEN}`, // Add auth header
+        },
         body: formData,
-      })
+      });
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`)
+        const text = await response.text();
+        throw new Error(`Update failed: HTTP ${response.status} ${response.statusText} - ${text}`);
       }
-      const contentType = response.headers.get("content-type")
+      const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        setError(`${t.error}: Response is not JSON: ${text.slice(0, 100)}...`)
-        return
+        const text = await response.text();
+        throw new Error(`Response is not JSON: ${text.slice(0, 100)}...`);
       }
-      const updatedProduct = await response.json()
+      const updatedProduct = await response.json();
       const transformedProduct = {
         id: updatedProduct.id,
         name: updatedProduct.name || "Unnamed Product",
         price: updatedProduct.price ? `$${Number(updatedProduct.price).toFixed(2)}` : "$0.00",
-        image: updatedProduct.image_path ? `/storage/${updatedProduct.image_path}` : "/placeholder.svg?height=400&width=400&text=Product+Image",
+        image: updatedProduct.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
         seller: updatedProduct.user?.name || "Unknown Seller",
-        rating: 0,
+        rating: updatedProduct.rating || 0,
         stock: updatedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
         description: updatedProduct.description || "No description available",
         category: updatedProduct.category?.name || "Uncategorized",
         category_id: updatedProduct.category_id,
-      }
-      setProducts(products.map((product) => (product.id === editProduct.id ? transformedProduct : product)))
+      };
+      setProducts(products.map((product) => (product.id === editProduct.id ? transformedProduct : product)));
       setEditProduct({
         id: null,
         name: "",
@@ -427,18 +421,18 @@ const Marketplace = ({ language = "en" }) => {
         image: "",
         imageFile: null,
         category_id: "",
-      })
-      setShowEditModal(false)
+      });
+      setShowEditModal(false);
     } catch (err) {
-      console.error("Update product error:", err)
-      setError(`${t.error}: ${err.message}`)
+      console.error("Update product error:", err);
+      alert(`${t.updateError}: ${err.message}`);
     }
-  }
+  };
 
   // Handle clicking outside to close menu
   const handleClickOutside = () => {
-    setActiveMenu(null)
-  }
+    setActiveMenu(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -457,7 +451,6 @@ const Marketplace = ({ language = "en" }) => {
             {t.addProduct}
           </button>
         </div>
-
         {/* Search and Filter */}
         <div className="bg-white rounded-lg p-4 shadow-lg">
           <div className="flex gap-4">
@@ -489,7 +482,6 @@ const Marketplace = ({ language = "en" }) => {
             </button>
           </div>
         </div>
-
         {/* Loading and Error States */}
         {loading ? (
           <div className="text-center py-12">
@@ -520,8 +512,8 @@ const Marketplace = ({ language = "en" }) => {
                 <div className="absolute top-2 right-2 z-20">
                   <button
                     onClick={(e) => {
-                      e.stopPropagation()
-                      toggleMenu(product.id)
+                      e.stopPropagation();
+                      toggleMenu(product.id);
                     }}
                     className="p-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all opacity-0 group-hover:opacity-100 duration-200"
                   >
@@ -531,8 +523,8 @@ const Marketplace = ({ language = "en" }) => {
                     <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30">
                       <button
                         onClick={(e) => {
-                          e.stopPropagation()
-                          handleViewProduct(product)
+                          e.stopPropagation();
+                          handleViewProduct(product);
                         }}
                         className="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
@@ -541,8 +533,8 @@ const Marketplace = ({ language = "en" }) => {
                       </button>
                       <button
                         onClick={(e) => {
-                          e.stopPropagation()
-                          handleEditProduct(product)
+                          e.stopPropagation();
+                          handleEditProduct(product);
                         }}
                         className="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
@@ -551,8 +543,8 @@ const Marketplace = ({ language = "en" }) => {
                       </button>
                       <button
                         onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteProduct(product.id)
+                          e.stopPropagation();
+                          handleDeleteProduct(product.id);
                         }}
                         className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
                       >
@@ -562,7 +554,6 @@ const Marketplace = ({ language = "en" }) => {
                     </div>
                   )}
                 </div>
-
                 {/* Stock Status Badge */}
                 <div className="absolute top-2 left-2 z-10">
                   <span
@@ -573,7 +564,6 @@ const Marketplace = ({ language = "en" }) => {
                     {product.stock === "In Stock" ? t.inStock : t.outOfStock}
                   </span>
                 </div>
-
                 {/* 100% Full Image Container */}
                 <div className="relative w-full h-full">
                   <img
@@ -581,10 +571,8 @@ const Marketplace = ({ language = "en" }) => {
                     alt={product.name || "Product"}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-
                   {/* Gradient Overlay for Content */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-
                   {/* Product Info Overlay */}
                   <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                     <h3 className="font-bold text-lg mb-1" style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.5)" }}>
@@ -622,7 +610,6 @@ const Marketplace = ({ language = "en" }) => {
             ))}
           </div>
         )}
-
         {/* Add Product Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -746,7 +733,6 @@ const Marketplace = ({ language = "en" }) => {
             </div>
           </div>
         )}
-
         {/* Edit Product Modal */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -791,7 +777,6 @@ const Marketplace = ({ language = "en" }) => {
                       </div>
                     </div>
                   </div>
-
                   {/* Right Column - Form Fields */}
                   <div className="space-y-6">
                     <div>
@@ -863,7 +848,6 @@ const Marketplace = ({ language = "en" }) => {
                     </div>
                   </div>
                 </div>
-
                 <div className="flex gap-4 pt-8 mt-8 border-t">
                   <button
                     type="button"
@@ -883,7 +867,6 @@ const Marketplace = ({ language = "en" }) => {
             </div>
           </div>
         )}
-
         {/* View Product Modal */}
         {showViewModal && selectedProduct && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -906,7 +889,6 @@ const Marketplace = ({ language = "en" }) => {
                       />
                     </div>
                   </div>
-
                   {/* Right Column - Product Details */}
                   <div className="space-y-6">
                     <div>
@@ -954,7 +936,6 @@ const Marketplace = ({ language = "en" }) => {
                     </div>
                   </div>
                 </div>
-
                 <div className="pt-8 mt-8 border-t">
                   <div className="flex gap-4">
                     <button
@@ -975,7 +956,7 @@ const Marketplace = ({ language = "en" }) => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Marketplace
+export default Marketplace;
