@@ -10,17 +10,27 @@ use App\Http\Controllers\ProductController;
 Route::apiResource('lands', LandController::class);
 
 // Auth routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+// Route::post('/register', [AuthController::class, 'register']);
+// Route::post('/login', [AuthController::class, 'login']);
+// Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Register
+// Public Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Authenticated Routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Admin routes
+    Route::middleware('admin')->group(function () {
+        Route::get('/admin/users', [AuthController::class, 'getAllUsers']);
+    });
+});
+
+
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 // Category Routes
