@@ -1,7 +1,9 @@
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "../components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
-import { Map as MapIcon, Clock, Wheat } from "lucide-react";
+import { Map as MapIcon, Clock, Wheat, AlertCircle } from "lucide-react";
+import { getLands } from "../api"; // Assuming the API module is in a file named api.js
 
 // Recommendations object for land types
 const recommendations = {
@@ -38,10 +40,31 @@ const formatLandType = (landType) => {
     coastal_plains: "Coastal Plains",
     highlands: "Highlands",
   };
-  return landTypeOptions[landType] || "Not specified";
+  return landTypeOptions[landType] || landType || "Not specified";
 };
 
-export default function MeasureLand({ onMeasure, onHistory, measurements, language }) {
+export default function MeasureLand({ onMeasure, onHistory, language }) {
+  const [measurements, setMeasurements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch land data from API on component mount
+  useEffect(() => {
+    const fetchLands = async () => {
+      try {
+        setLoading(true);
+        const data = await getLands(); // Using the getLands function from the API module
+        setMeasurements(Array.isArray(data) ? data : []);
+        setLoading(false);
+      } catch (err) {
+        setError("Failed to fetch land data. Please try again later.");
+        setLoading(false);
+      }
+    };
+    fetchLands();
+  }, []);
+
+  // Calculate total area, number of fields, and average size
   const totalArea = measurements.reduce((sum, m) => sum + (m.area || 0), 0);
   const numberOfFields = measurements.length;
   const averageSize = numberOfFields > 0 ? (totalArea / numberOfFields).toFixed(2) : "0";
@@ -101,47 +124,41 @@ export default function MeasureLand({ onMeasure, onHistory, measurements, langua
         <Card>
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Measurements</h3>
-            {measurements.length === 0 ? (
+            {loading ? (
+              <p className="text-gray-600 text-center">Loading measurements...</p>
+            ) : error ? (
+              <p className="text-red-600 flex items-center justify-center">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                {error}
+              </p>
+            ) : measurements.length === 0 ? (
               <p className="text-gray-600 text-center">No recent measurements available.</p>
             ) : (
-              <div className="space-y-4">
-                {measurements.map((measurement) => (
-                  <div
-                    key={measurement.id}
-                    className="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-700">{measurement.name}</span>
-                        <span className="text-xs text-gray-500 ml-2">{measurement.date}</span>
-                      </div>
-                      <span className="text-sm font-medium text-green-600">{measurement.area} ha</span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <div className="flex items-center mb-2">
-                        <Wheat className="w-4 h-4 mr-1 text-yellow-600" />
-                        <span className="font-medium">Land Type: </span>
-                        {formatLandType(measurement.landType)}
-                      </div>
-                      {measurement.landType && recommendations[measurement.landType] && (
-                        <div>
-                          <div className="mb-2">
-                            <span className="font-medium text-gray-700">Recommended Rice Varieties:</span>
-                            <p>{recommendations[measurement.landType].rice}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium text-gray-700">Fertilizer Plan:</span>
-                            <ul className="list-disc pl-5 text-sm">
-                              {recommendations[measurement.landType].fertilizerPlan.map((step, index) => (
-                                <li key={index}>{step}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Name</th>
+                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Area (ha)</th>
+                      <th className="border p-2 text-left text-sm font-medium text-gray-700">District</th>
+                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Fertilizer Amount</th>
+                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Land Type</th>
+                      <th className="border p-2 text-left text-sm font-medium text-gray-700">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {measurements.map((measurement) => (
+                      <tr key={measurement.id} className="hover:bg-gray-50">
+                        <td className="border p-2 text-sm">{measurement.name || "Unnamed"}</td>
+                        <td className="border p-2 text-sm">{measurement.area?.toFixed(2) || 0}</td>
+                        <td className="border p-2 text-sm">{formatLandType(measurement.landType)}</td>
+                        <td className="border p-2 text-sm">{measurement.fertilizer_tot || "Not specified"}</td>
+                        <td className="border p-2 text-sm">{measurement.land_type || "Not specified"}</td>
+                        <td className="border p-2">{measurement.date ? measurement.date.slice(0, 10) : "N/A"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
