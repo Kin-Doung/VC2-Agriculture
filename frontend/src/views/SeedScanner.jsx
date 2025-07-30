@@ -2,9 +2,9 @@ import { useState } from "react";
 import CameraCapture from "../components/ScantTypeOfRice/CameraCapture";
 import ImageUpload from "../components/ScantTypeOfRice/ImageUpload";
 import ScanResults from "../components/ScantTypeOfRice/ScanResults";
-import RiceTypesReference from "../components/ScantTypeOfRice/RiceTypesReference";
+
 import RiceComparisonTool from "../components/ScantTypeOfRice/RiceComparisonTool";
-import DebugPanel from "../components/ScantTypeOfRice/DebugPanel";
+
 
 // Placeholder UI components
 const Card = ({ children, className }) => (
