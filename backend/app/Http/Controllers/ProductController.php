@@ -9,17 +9,18 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
-    {
-        $products = Product::all()->map(function ($product) {
-            $product->image_url = $product->image_path
-                ? asset('storage/' . $product->image_path)
-                : null;
-            return $product;
-        });
+public function index()
+{
+    $products = Product::with('category')->get()->map(function ($product) {
+        $product->image_url = $product->image_path
+            ? asset('storage/' . $product->image_path)
+            : null;
+        return $product;
+    });
 
-        return response()->json($products, 200);
-    }
+    return response()->json($products, 200);
+}
+
     public function store(ProductRequest $request)
     {
         $validated = $request->validated();
