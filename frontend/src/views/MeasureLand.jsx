@@ -125,43 +125,57 @@ export default function MeasureLand({ onMeasure, onHistory, language }) {
           </h1>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <CardContent className="p-4 sm:p-6 text-center">
-              <div className="flex items-center justify-center mb-3">
-                <Layers className="w-8 h-8 mr-2" />
-                <div className="text-xl sm:text-2xl font-bold">{isNaN(totalArea) ? "0.00" : totalArea.toFixed(2)}</div>
+         <div className="grid md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <Card className="rounded-lg border bg-white shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Total Land Measured (hectares)</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {isNaN(totalArea) ? "0.00" : totalArea.toFixed(2)}
               </div>
-              <div className="text-green-100 text-sm sm:text-base">Total Land Measured (hectares)</div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="bg-green-100 p-3 rounded-lg">
+              <Layers className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-4 sm:p-6 text-center">
-              <div className="flex items-center justify-center mb-3">
-                <Target className="w-8 h-8 mr-2" />
-                <div className="text-xl sm:text-2xl font-bold">{numberOfFields}</div>
-              </div>
-              <div className="text-blue-100 text-sm sm:text-base">Number of Fields</div>
-            </CardContent>
-          </Card>
+      <Card className="rounded-lg border bg-white shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Number of Fields</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">{numberOfFields}</div>
+            </div>
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <Target className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-            <CardContent className="p-4 sm:p-6 text-center">
-              <div className="flex items-center justify-center mb-3">
-                <BarChart3 className="w-8 h-8 mr-2" />
-                <div className="text-xl sm:text-2xl font-bold">{averageSize}</div>
-              </div>
-              <div className="text-purple-100 text-sm sm:text-base">Average Field Size (ha)</div>
-            </CardContent>
-          </Card>
-        </div>
+      <Card className="rounded-lg border bg-white shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Average Field Size (ha)</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">{averageSize}</div>
+            </div>
+            <div className="bg-purple-100 p-3 rounded-lg">
+              <BarChart3 className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
 
         <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <Card className="rounded-lg bg-card text-card-foreground shadow-2xs hover:shadow-lg transition-shadow border-2 border-green-200">
             <CardContent className="p-4 sm:p-6 text-center">
               <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Compass className="w-8 h-8 text-green-600" />
+                <Compass className="w-8 h-8 text-green-500" />
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Measure My Land</h3>
               <p className="text-gray-600 mb-3 sm:mb-4 text-sm sm:text-base">
@@ -170,7 +184,7 @@ export default function MeasureLand({ onMeasure, onHistory, language }) {
               </p>
               <Button
                 onClick={onMeasure}
-                className="bg-green-600 hover:bg-green-700 w-full text-sm sm:text-base py-2 sm:py-3 shadow-lg"
+                className="bg-green-500 hover:bg-green-600 w-full text-sm sm:text-base py-2 sm:py-3 shadow-lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Start Measuring
@@ -178,7 +192,7 @@ export default function MeasureLand({ onMeasure, onHistory, language }) {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <Card className="rounded-lg bg-card text-card-foreground shadow-2xs hover:shadow-lg transition-shadow border-2 border-green-200">
             <CardContent className="p-4 sm:p-6 text-center">
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <History className="w-8 h-8 text-blue-600" />
