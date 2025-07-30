@@ -6,6 +6,10 @@ import { useState, useEffect } from "react";
 const Product = ({ language = "en" }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [stockStatus, setStockStatus] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -24,8 +28,8 @@ const Product = ({ language = "en" }) => {
     image: "",
     imageFile: null,
     category_id: "",
-    crop_id: "1", // Default crop_id to satisfy backend
-    user_id: localStorage.getItem("user_id") || "1", // Replace with auth context
+    crop_id: "1",
+    user_id: localStorage.getItem("user_id") || "1",
   });
   const [editProduct, setEditProduct] = useState({
     id: null,
@@ -36,7 +40,7 @@ const Product = ({ language = "en" }) => {
     image: "",
     imageFile: null,
     category_id: "",
-    crop_id: "1", // Default crop_id to satisfy backend
+    crop_id: "1",
     user_id: localStorage.getItem("user_id") || "1",
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,6 +90,12 @@ const Product = ({ language = "en" }) => {
       addError: "Failed to add product: ",
       prevPage: "Previous",
       nextPage: "Next",
+      stockStatus: "Stock Status",
+      all: "All",
+      minPrice: "Min Price",
+      maxPrice: "Max Price",
+      applyFilters: "Apply Filters",
+      resetFilters: "Reset Filters",
     },
     km: {
       title: "ផលិតផលរបស់ខ្ញុំ",
@@ -129,13 +139,19 @@ const Product = ({ language = "en" }) => {
       addError: "បរាជ័យក្នុងការបន្ថែមផលិតផល៖ ",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
+      stockStatus: "ស្ថានភាពស្តុក",
+      all: "ទាំងអស់",
+      minPrice: "តម្លៃអប្បបរមា",
+      maxPrice: "តម្លៃអតិបរមា",
+      applyFilters: "អនុវត្តតម្រង",
+      resetFilters: "កំណត់តម្រងឡើងវិញ",
     },
   };
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = "your-auth-token-here"; // Replace with actual token
+  const AUTH_TOKEN = "your-auth-token-here";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -190,14 +206,22 @@ const Product = ({ language = "en" }) => {
     fetchData();
   }, [t.error]);
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product &&
-      ((product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-        (!selectedCategory || product.category_id === parseInt(selectedCategory)))
-  );
+  const filteredProducts = products.filter((product) => {
+    if (!product) return false;
+
+    const nameMatch = product.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const descriptionMatch = product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const categoryMatch = product.category?.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchMatch = nameMatch || descriptionMatch || categoryMatch;
+
+    const categoryFilter = !selectedCategory || product.category_id === parseInt(selectedCategory);
+    const stockFilter = !stockStatus || product.stock === stockStatus;
+    const priceValue = parseFloat(product.price.replace("$", ""));
+    const minPriceFilter = !minPrice || priceValue >= parseFloat(minPrice);
+    const maxPriceFilter = !maxPrice || priceValue <= parseFloat(maxPrice);
+
+    return searchMatch && categoryFilter && stockFilter && minPriceFilter && maxPriceFilter;
+  });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (!sortConfig.key) return 0;
@@ -223,6 +247,8 @@ const Product = ({ language = "en" }) => {
 
   const toggleMenu = (productId) => setActiveMenu(activeMenu === productId ? null : productId);
 
+  const handleClickOutside = () => setActiveMenu(null);
+
   const handleViewProduct = (product) => {
     setSelectedProduct(product);
     setShowViewModal(true);
@@ -235,7 +261,7 @@ const Product = ({ language = "en" }) => {
       price: product.price.replace("$", ""),
       imageFile: null,
       category_id: product.category_id,
-      crop_id: product.crop_id || "1", // Default to "1" if not present
+      crop_id: product.crop_id || "1",
       quantity: product.stock === "In Stock" ? 10 : 0,
       user_id: localStorage.getItem("user_id") || "1",
     });
@@ -353,7 +379,7 @@ const Product = ({ language = "en" }) => {
     formData.append("description", newProduct.description);
     formData.append("quantity", parseInt(newProduct.quantity));
     formData.append("category_id", newProduct.category_id);
-    formData.append("crop_id", newProduct.crop_id); // Send default crop_id
+    formData.append("crop_id", newProduct.crop_id);
     formData.append("user_id", newProduct.user_id);
     if (newProduct.imageFile) {
       formData.append("image", newProduct.imageFile);
@@ -422,7 +448,7 @@ const Product = ({ language = "en" }) => {
         image: "",
         imageFile: null,
         category_id: "",
-        crop_id: "1", // Reset to default
+        crop_id: "1",
         user_id: localStorage.getItem("user_id") || "1",
       });
       setFormErrors({});
@@ -455,7 +481,7 @@ const Product = ({ language = "en" }) => {
     formData.append("description", editProduct.description);
     formData.append("quantity", parseInt(editProduct.quantity));
     formData.append("category_id", editProduct.category_id);
-    formData.append("crop_id", editProduct.crop_id); // Send default crop_id
+    formData.append("crop_id", editProduct.crop_id);
     formData.append("user_id", editProduct.user_id);
     if (editProduct.imageFile) {
       formData.append("image", editProduct.imageFile);
@@ -519,7 +545,7 @@ const Product = ({ language = "en" }) => {
         image: "",
         imageFile: null,
         category_id: "",
-        crop_id: "1", // Reset to default
+        crop_id: "1",
         user_id: localStorage.getItem("user_id") || "1",
       });
       setFormErrors({});
@@ -532,7 +558,14 @@ const Product = ({ language = "en" }) => {
     }
   };
 
-  const handleClickOutside = () => setActiveMenu(null);
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("");
+    setStockStatus("");
+    setMinPrice("");
+    setMaxPrice("");
+    setShowFilterModal(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -573,11 +606,89 @@ const Product = ({ language = "en" }) => {
                 </option>
               ))}
             </select>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+            <button
+              onClick={() => setShowFilterModal(true)}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
               <Filter className="h-4 w-4" /> {t.filter}
             </button>
           </div>
         </div>
+        {showFilterModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800">{t.filter}</h2>
+                <button
+                  onClick={() => setShowFilterModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.stockStatus}
+                  </label>
+                  <select
+                    value={stockStatus}
+                    onChange={(e) => setStockStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">{t.all}</option>
+                    <option value="In Stock">{t.inStock}</option>
+                    <option value="Out of Stock">{t.outOfStock}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.minPrice}
+                  </label>
+                  <input
+                    type="number"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    placeholder={t.minPrice}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.maxPrice}
+                  </label>
+                  <input
+                    type="number"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    placeholder={t.maxPrice}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    {t.resetFilters}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFilterModal(false)}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    {t.applyFilters}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {loading ? (
           <div className="text-center py-12">{t.loading}</div>
         ) : error ? (
