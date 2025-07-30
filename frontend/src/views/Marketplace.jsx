@@ -13,9 +13,13 @@ const Marketplace = ({ language = "en" }) => {
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8; // Set to 8 items per page
+  const [showFilterModal, setShowFilterModal] = useState(false); // New state for filter modal
+  const [stockFilter, setStockFilter] = useState("all"); // New state for stock filter
+  const [minPrice, setMinPrice] = useState(""); // New state for min price
+  const [maxPrice, setMaxPrice] = useState(""); // New state for max price
+  const itemsPerPage = 8;
 
-  // Translations for multilingual support
+  // Translations
   const translations = {
     en: {
       title: "Marketplace",
@@ -40,6 +44,13 @@ const Marketplace = ({ language = "en" }) => {
       error: "Failed to load data. Please try again later.",
       page: "Page",
       of: "of",
+      applyFilters: "Apply Filters",
+      clearFilters: "Clear Filters",
+      stock: "Stock",
+      all: "All",
+      priceRange: "Price Range",
+      minPrice: "Min Price",
+      maxPrice: "Max Price",
     },
     km: {
       title: "ទីផ្សារ",
@@ -64,21 +75,26 @@ const Marketplace = ({ language = "en" }) => {
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       page: "ទំព័រ",
       of: "នៃ",
+      applyFilters: "អនុវត្តតម្រង",
+      clearFilters: "លុបតម្រង",
+      stock: "ស្តុក",
+      all: "ទាំងអស់",
+      priceRange: "ជួរតម្លៃ",
+      minPrice: "តម្លៃអប្បបរមា",
+      maxPrice: "តម្លៃអតិបរមា",
     },
   };
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = "your-auth-token-here"; // Replace with actual token or use auth context
+  const AUTH_TOKEN = "your-auth-token-here";
 
-  // Fetch products and categories from API
+  // Fetch products and categories
   useEffect(() => {
     const fetchData = async () => {
       setError(null);
       try {
-        // Fetch products
-        console.log("Attempting to fetch products from:", API_URL);
         const productResponse = await fetch(API_URL, {
           headers: {
             "Content-Type": "application/json",
@@ -96,7 +112,8 @@ const Marketplace = ({ language = "en" }) => {
         const transformedProducts = productData.map((item) => ({
           id: item.id,
           name: item.name || "Unnamed Product",
-          price: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
+          price: item.price ? Number(item.price) : 0, // Store as number for filtering
+          priceDisplay: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
           image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
           seller: item.user?.name || "",
           stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
@@ -106,8 +123,6 @@ const Marketplace = ({ language = "en" }) => {
         }));
         setProducts(transformedProducts);
 
-        // Fetch categories
-        console.log("Attempting to fetch categories from:", CATEGORIES_API_URL);
         const categoryResponse = await fetch(CATEGORIES_API_URL, {
           headers: {
             "Content-Type": "application/json",
@@ -131,7 +146,7 @@ const Marketplace = ({ language = "en" }) => {
     fetchData();
   }, [t.error]);
 
-  // Filter products based on search term and selected category
+  // Filter products
   const filteredProducts = products.filter(
     (product) =>
       product &&
@@ -139,7 +154,10 @@ const Marketplace = ({ language = "en" }) => {
         (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (product.seller && product.seller.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-      (!selectedCategory || product.category_id === parseInt(selectedCategory)),
+      (!selectedCategory || product.category_id === parseInt(selectedCategory)) &&
+      (stockFilter === "all" || product.stock === stockFilter) &&
+      (!minPrice || product.price >= Number(minPrice)) &&
+      (!maxPrice || product.price <= Number(maxPrice)),
   );
 
   // Pagination logic
@@ -149,7 +167,12 @@ const Marketplace = ({ language = "en" }) => {
     currentPage * itemsPerPage,
   );
 
-  // View product details
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, stockFilter, minPrice, maxPrice]);
+
+  // Handle view product
   const handleViewProduct = (product) => {
     setSelectedProduct(product);
     setShowViewModal(true);
@@ -158,6 +181,21 @@ const Marketplace = ({ language = "en" }) => {
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  // Handle clear filters
+  const handleClearFilters = () => {
+    setSelectedCategory("");
+    setStockFilter("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setShowFilterModal(false);
+  };
+
+  // Handle apply filters
+  const handleApplyFilters = () => {
+    setShowFilterModal(false);
+    setCurrentPage(1);
   };
 
   return (
@@ -193,12 +231,81 @@ const Marketplace = ({ language = "en" }) => {
                 </option>
               ))}
             </select>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <button
+              onClick={() => setShowFilterModal(true)}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
               <Filter className="h-4 w-4" />
               {t.filter}
             </button>
           </div>
         </div>
+        {/* Filter Modal */}
+        {showFilterModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800">{t.filter}</h2>
+                <button onClick={() => setShowFilterModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="space-y-6">
+                {/* Stock Filter */}
+                <div>
+                  <label className="block text-lg font-medium text-gray-700 mb-2">{t.stock}</label>
+                  <select
+                    value={stockFilter}
+                    onChange={(e) => setStockFilter(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="all">{t.all}</option>
+                    <option value="In Stock">{t.inStock}</option>
+                    <option value="Out of Stock">{t.outOfStock}</option>
+                  </select>
+                </div>
+                {/* Price Range Filter */}
+                <div>
+                  <label className="block text-lg font-medium text-gray-700 mb-2">{t.priceRange}</label>
+                  <div className="flex gap-4">
+                    <input
+                      type="number"
+                      placeholder={t.minPrice}
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      min="0"
+                      step="0.01"
+                    />
+                    <input
+                      type="number"
+                      placeholder={t.maxPrice}
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 flex gap-4">
+                <button
+                  onClick={handleClearFilters}
+                  className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  {t.clearFilters}
+                </button>
+                <button
+                  onClick={handleApplyFilters}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  {t.applyFilters}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Error and Product Grid */}
         {error ? (
           <div className="text-center py-12">
@@ -219,7 +326,6 @@ const Marketplace = ({ language = "en" }) => {
                   className="bg-white rounded-lg shadow-lg overflow-hidden relative group hover:shadow-xl transition-all duration-300 h-96 cursor-pointer"
                   onClick={() => handleViewProduct(product)}
                 >
-                  {/* Stock Status Badge */}
                   <div className="absolute top-2 right-2 z-10">
                     <span
                       className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
@@ -229,16 +335,13 @@ const Marketplace = ({ language = "en" }) => {
                       {product.stock === "In Stock" ? t.inStock : t.outOfStock}
                     </span>
                   </div>
-                  {/* 100% Full Image Container */}
                   <div className="relative w-full h-full">
                     <img
                       src={product.image || "/placeholder.svg?height=400&width=400"}
                       alt={product.name || "Product"}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    {/* Gradient Overlay for Content */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                    {/* Product Info Overlay */}
                     <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                       <h3 className="font-bold text-lg mb-1" style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.5)" }}>
                         {product.name}
@@ -263,7 +366,7 @@ const Marketplace = ({ language = "en" }) => {
                           </div>
                         )}
                         <div className="text-xl font-bold text-green-400">
-                          {product.price}
+                          {product.priceDisplay}
                           <span className="text-xs text-gray-300">{t.perKg}</span>
                         </div>
                       </div>
@@ -315,7 +418,6 @@ const Marketplace = ({ language = "en" }) => {
               </div>
               <div className="p-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Left Column - Image */}
                   <div className="space-y-6">
                     <div className="text-center">
                       <img
@@ -325,7 +427,6 @@ const Marketplace = ({ language = "en" }) => {
                       />
                     </div>
                   </div>
-                  {/* Right Column - Product Details */}
                   <div className="space-y-6">
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.productName}</label>
@@ -340,7 +441,7 @@ const Marketplace = ({ language = "en" }) => {
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.price}</label>
                       <p className="text-3xl font-bold text-green-600">
-                        {selectedProduct.price}
+                        {selectedProduct.priceDisplay}
                         <span className="text-lg text-gray-500 font-normal">{t.perKg}</span>
                       </p>
                     </div>
