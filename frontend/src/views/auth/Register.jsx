@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock, User, MapPin, Leaf, Phone } from "lucide-react"
 import axios from "axios"
+import Swal from 'sweetalert2';
+
 
 const Register = ({ language, onRegister }) => {
   const [formData, setFormData] = useState({
@@ -96,44 +98,67 @@ const Register = ({ language, onRegister }) => {
     }
   }
 
-  const validateForm = () => {
-    const newErrors = {}
+const validateForm = () => {
+  const newErrors = {};
 
-    // Required fields
-    if (!formData.name.trim()) newErrors.name = t.errors.required
-    if (!formData.email.trim()) newErrors.email = t.errors.required
-    if (!formData.password) newErrors.password = t.errors.required
-    if (!formData.confirmPassword) newErrors.confirmPassword = t.errors.required
-    if (!formData.farmName.trim()) newErrors.farmName = t.errors.required
-    if (!formData.location.trim()) newErrors.location = t.errors.required
-    if (!formData.phone.trim()) newErrors.phone = t.errors.required
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (formData.email && !emailRegex.test(formData.email)) {
-      newErrors.email = t.errors.invalidEmail
-    }
-
-    // Password validation
-    if (formData.password && formData.password.length < 6) {
-      newErrors.password = t.errors.passwordTooShort
-    }
-
-    // Password confirmation
-    if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = t.errors.passwordMismatch
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  // Required fields
+  if (!formData.name.trim()) {
+    newErrors.name = t.errors.required;
+  } else if (formData.name.trim().length < 2) {
+    newErrors.name = "Full name must be at least 2 characters";
   }
 
+  if (!formData.email.trim()) {
+    newErrors.email = t.errors.required;
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      newErrors.email = t.errors.invalidEmail;
+    }
+  }
+
+  if (!formData.password) {
+    newErrors.password = t.errors.required;
+  } else if (formData.password.length < 6) {
+    newErrors.password = t.errors.passwordTooShort;
+  }
+
+  if (!formData.confirmPassword) {
+    newErrors.confirmPassword = t.errors.required;
+  } else if (formData.password !== formData.confirmPassword) {
+    newErrors.confirmPassword = t.errors.passwordMismatch;
+  }
+
+  if (!formData.farmName.trim()) {
+    newErrors.farmName = t.errors.required;
+  } else if (formData.farmName.trim().length < 3) {
+    newErrors.farmName = t.errors.farmNameTooShort || "Farm Name must be at least 3 characters";
+  }
+
+  if (!formData.location.trim()) {
+    newErrors.location = t.errors.required;
+  } else if (formData.location.trim().length < 3) {
+    newErrors.location = t.errors.locationTooShort || "Location must be at least 3 characters.";
+  }
+
+  if (!formData.phone.trim()) newErrors.phone = t.errors.required;
+
+  // Set all errors (show them)
+  setErrors(newErrors);
+
+  // Return true if no error
+  return Object.keys(newErrors).length === 0;
+};
+
+const navigate = useNavigate();
+
 const handleSubmit = async (e) => {
-  e.preventDefault()
+  e.preventDefault();
 
-  if (!validateForm()) return
+  const isValid = validateForm();
+  if (!isValid) return;
 
-  setIsLoading(true)
+  setIsLoading(true);
 
   try {
     const response = await axios.post("http://localhost:8000/api/register", {
@@ -144,19 +169,51 @@ const handleSubmit = async (e) => {
       farm_name: formData.farmName,
       location: formData.location,
       phone: formData.phone,
-    })
+    });
 
-    onRegister(response.data)
+    // Show success message
+    Swal.fire({
+      icon: 'success',
+      title: 'Account Created!',
+      text: 'You have successfully registered.',
+      showConfirmButton: false,
+      timer: 2000,
+    }).then(() => {
+      navigate("/");
+    });
+
+    onRegister(response.data);
   } catch (error) {
-    if (error.response?.data?.errors?.email) {
-      setErrors({ email: t.errors.emailExists })
+    const backendErrors = error.response?.data?.errors;
+
+    if (backendErrors) {
+      const formattedErrors = {};
+      Object.keys(backendErrors).forEach((key) => {
+        formattedErrors[key] = backendErrors[key][0];
+      });
+      setErrors(formattedErrors);
+
+      // Show email exists error 
+      if (formattedErrors.email) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Registration Failed',
+          text: formattedErrors.email,
+        });
+      }
     } else {
-      alert("Register failed")
+      // Generic error
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Something went wrong during registration!',
+      });
     }
   } finally {
-    setIsLoading(false)
+    setIsLoading(false);
   }
-}
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">

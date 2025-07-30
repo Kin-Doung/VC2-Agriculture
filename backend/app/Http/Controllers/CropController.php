@@ -27,7 +27,7 @@ class CropController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Crop $crop)
+    public function show(string $id)
     {
         //
     }
@@ -35,7 +35,7 @@ class CropController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Crop $crop)
+    public function update(Request $request, string $id)
     {
         //
     }
@@ -43,7 +43,7 @@ class CropController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Crop $crop)
+    public function destroy(string $id)
     {
         //
     }

@@ -27,7 +27,7 @@ class MarketPriceController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(MarketPrice $marketPrice)
+    public function show(string $id)
     {
         //
     }
@@ -35,7 +35,7 @@ class MarketPriceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, MarketPrice $marketPrice)
+    public function update(Request $request, string $id)
     {
         //
     }
@@ -43,7 +43,7 @@ class MarketPriceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(MarketPrice $marketPrice)
+    public function destroy(string $id)
     {
         //
     }

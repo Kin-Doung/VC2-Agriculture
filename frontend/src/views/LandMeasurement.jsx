@@ -1,4 +1,3 @@
-// src/views/LandMeasurement.jsx
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
@@ -14,11 +13,10 @@ import {
   MapPin,
   Ruler,
   Trash2,
+  Search,
 } from "lucide-react";
 import { Button } from '../components/ui/Button';
-
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import {
   MapContainer,
   TileLayer,
@@ -31,6 +29,161 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import leafletImage from "leaflet-image";
+import { insertMeasurement, setAuthToken } from "../api.js"; // Removed insertAmount
+
+// Comprehensive land type data (deduplicated)
+const landTypes = [
+  { value: "Lowland Rainfed", label: "Lowland Rainfed", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Irrigated Paddy Field", label: "Irrigated Paddy Field", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 30 } },
+  { value: "Flood-prone Land", label: "Flood-prone Land", seedRate: [100, 120], fertilizer: { Compost: 2000, Urea: 50 } },
+  { value: "Upland/Dry Area", label: "Upland/Dry Area", seedRate: [80, 100], fertilizer: { DAP: 60, Organic: 1500 } },
+  { value: "Alluvial Soil (River side)", label: "Alluvial Soil (River side)", seedRate: [60, 80], fertilizer: { Urea: 70, DAP: 40 } },
+  { value: "Sandy Soil", label: "Sandy Soil", seedRate: [100, 120], fertilizer: { Compost: 3000, DAP: 60 } },
+  { value: "Clay Soil", label: "Clay Soil", seedRate: [80, 90], fertilizer: { Urea: 80, KCl: 40 } },
+  { value: "Loam Soil", label: "Loam Soil", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 60 } },
+  { value: "Heavy Clay (Flooded Area)", label: "Heavy Clay (Flooded Area)", seedRate: [90, 110], fertilizer: { Organic: 2000, Urea: 50 } },
+  { value: "Marshy Land (Wet all year)", label: "Marshy Land (Wet all year)", seedRate: [90, 120], fertilizer: { DAP: 50, Compost: 3000 } },
+  { value: "High-Fertility Lowland", label: "High-Fertility Lowland", seedRate: [60, 70], fertilizer: { Urea: 40, DAP: 30 } },
+  { value: "Mountain Base", label: "Mountain Base", seedRate: [80, 100], fertilizer: { Compost: 2000, Urea: 60 } },
+  { value: "Sloped Upland", label: "Sloped Upland", seedRate: [100, 120], fertilizer: { DAP: 40, Organic: 1000 } },
+  { value: "Red Soil Area", label: "Red Soil Area", seedRate: [80, 90], fertilizer: { DAP: 60, KCl: 30 } },
+  { value: "Acid Soil", label: "Acid Soil", seedRate: [90, 110], fertilizer: { Lime: 300, DAP: 60 } },
+  { value: "Saline Soil", label: "Saline Soil", seedRate: [80, 100], fertilizer: { Gypsum: 500, Urea: 50 } },
+  { value: "Land Near Lake", label: "Land Near Lake", seedRate: [80, 100], fertilizer: { DAP: 60, Compost: 2000 } },
+  { value: "Land with Water Retention", label: "Land with Water Retention", seedRate: [70, 90], fertilizer: { Urea: 60, KCl: 40 } },
+  { value: "Former Shrubland", label: "Former Shrubland", seedRate: [100, 120], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Former Forest Land", label: "Former Forest Land", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 50 } },
+  { value: "Organic-Rich Lowland", label: "Organic-Rich Lowland", seedRate: [70, 80], fertilizer: { Urea: 50, DAP: 30 } },
+  { value: "Drought-Prone Area", label: "Drought-Prone Area", seedRate: [100, 120], fertilizer: { Organic: 2000, DAP: 60 } },
+  { value: "River Island Soil", label: "River Island Soil", seedRate: [80, 90], fertilizer: { Compost: 2000, Urea: 60 } },
+  { value: "Black Soil", label: "Black Soil", seedRate: [70, 80], fertilizer: { DAP: 50, KCl: 30 } },
+  { value: "Silt Loam (Lake side)", label: "Silt Loam (Lake side)", seedRate: [60, 70], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Soil with High Organic Matter", label: "Soil with High Organic Matter", seedRate: [60, 80], fertilizer: { Urea: 30, DAP: 30 } },
+  { value: "Double-cropping Land", label: "Double-cropping Land", seedRate: [70, 90], fertilizer: { Urea: 60, KCl: 40 } },
+  { value: "Triple-cropping Land", label: "Triple-cropping Land", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 50 } },
+  { value: "Mixed Soil (clay + sand)", label: "Mixed Soil (clay + sand)", seedRate: [90, 110], fertilizer: { DAP: 60, Organic: 2000 } },
+  { value: "Soil with Pest History", label: "Soil with Pest History", seedRate: [100, 120], fertilizer: { DAP: 60, KCl: 50 } },
+  { value: "Seasonal Wetland", label: "Seasonal Wetland", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 60 } },
+  { value: "Near Main Canal", label: "Near Main Canal", seedRate: [80, 90], fertilizer: { Urea: 70, DAP: 50 } },
+  { value: "Area with Natural Drainage", label: "Area with Natural Drainage", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Newly Cleared Lowland", label: "Newly Cleared Lowland", seedRate: [90, 100], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Soil with High pH", label: "Soil with High pH", seedRate: [80, 90], fertilizer: { Gypsum: 500, Urea: 50 } },
+  { value: "Soil with Low pH", label: "Soil with Low pH", seedRate: [90, 110], fertilizer: { Lime: 400, DAP: 60 } },
+  { value: "Edge of Hill or Slope", label: "Edge of Hill or Slope", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
+  { value: "Rice Land Prone to Weed Pressure", label: "Rice Land Prone to Weed Pressure", seedRate: [90, 110], fertilizer: { DAP: 60, Urea: 60 } },
+  { value: "Wind-exposed Open Field", label: "Wind-exposed Open Field", seedRate: [90, 100], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Protected Field Near Forest Edge", label: "Protected Field Near Forest Edge", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Moist Shaded Area", label: "Moist Shaded Area", seedRate: [80, 100], fertilizer: { DAP: 50, Urea: 60 } },
+  { value: "Hard Crust Soil After Rain", label: "Hard Crust Soil After Rain", seedRate: [90, 110], fertilizer: { Compost: 3000, DAP: 60 } },
+  { value: "Medium Clay Field", label: "Medium Clay Field", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Silty-clay Flood Area", label: "Silty-clay Flood Area", seedRate: [100, 120], fertilizer: { Compost: 2500, DAP: 50 } },
+  { value: "Gravelly Loam Land", label: "Gravelly Loam Land", seedRate: [90, 110], fertilizer: { Organic: 2000, DAP: 60 } },
+  { value: "Deep Topsoil Loam", label: "Deep Topsoil Loam", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Rice-duck Integrated Field", label: "Rice-duck Integrated Field", seedRate: [80, 100], fertilizer: { DAP: 40, Organic: 1500 } },
+  { value: "Fish-rice System Area", label: "Fish-rice System Area", seedRate: [70, 80], fertilizer: { Organic: 2000, DAP: 40 } },
+  { value: "Organic Rice Farming Land", label: "Organic Rice Farming Land", seedRate: [80, 100], fertilizer: { Compost: 3000, GreenManure: 1000 } },
+  { value: "Former Banana Field", label: "Former Banana Field", seedRate: [90, 100], fertilizer: { Organic: 2000, DAP: 60 } },
+  { value: "Former Cassava Field", label: "Former Cassava Field", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 50 } },
+  { value: "Field After Maize Crop", label: "Field After Maize Crop", seedRate: [90, 110], fertilizer: { Compost: 2000, DAP: 60 } },
+  { value: "Multi-season Cropping Land", label: "Multi-season Cropping Land", seedRate: [70, 90], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Summer Season Field", label: "Summer Season Field", seedRate: [100, 120], fertilizer: { Organic: 3000, Urea: 60 } },
+  { value: "Monsoon Rice Area", label: "Monsoon Rice Area", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Reused Paddy Field", label: "Reused Paddy Field", seedRate: [100, 120], fertilizer: { Compost: 2000, DAP: 60 } },
+  { value: "Soil with Termite Mound Traces", label: "Soil with Termite Mound Traces", seedRate: [90, 110], fertilizer: { Organic: 2000, DAP: 50 } },
+  { value: "Salt-influenced Soil (Mild)", label: "Salt-influenced Soil (Mild)", seedRate: [80, 90], fertilizer: { Gypsum: 300, Urea: 50 } },
+  { value: "Low-lying Depression Area", label: "Low-lying Depression Area", seedRate: [90, 110], fertilizer: { Compost: 3000, DAP: 60 } },
+  { value: "Former Sugarcane Field", label: "Former Sugarcane Field", seedRate: [90, 100], fertilizer: { Organic: 2000, Urea: 60 } },
+  { value: "Wind-break Zone Field", label: "Wind-break Zone Field", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
+  { value: "Bamboo Grove Edge", label: "Bamboo Grove Edge", seedRate: [80, 100], fertilizer: { Compost: 2000, DAP: 50 } },
+  { value: "Roadside Rice Field", label: "Roadside Rice Field", seedRate: [90, 100], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Soil with Poor Structure", label: "Soil with Poor Structure", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
+  { value: "Sticky Rice Traditional Field", label: "Sticky Rice Traditional Field", seedRate: [100, 120], fertilizer: { Organic: 2000, DAP: 50 } },
+  { value: "Jasmine Rice Area", label: "Jasmine Rice Area", seedRate: [70, 90], fertilizer: { Urea: 60, DAP: 60 } },
+  { value: "Black Glutinous Rice Zone", label: "Black Glutinous Rice Zone", seedRate: [80, 100], fertilizer: { DAP: 50, Urea: 60 } },
+  { value: "Early Transplanting Land", label: "Early Transplanting Land", seedRate: [70, 90], fertilizer: { Urea: 50, DAP: 40 } },
+  { value: "Late Transplanting Land", label: "Late Transplanting Land", seedRate: [90, 110], fertilizer: { Compost: 2000, DAP: 60 } },
+  { value: "Manual Broadcast Field", label: "Manual Broadcast Field", seedRate: [100, 120], fertilizer: { DAP: 60, Urea: 70 } },
+  { value: "Transplant with Spacing Method", label: "Transplant with Spacing Method", seedRate: [60, 80], fertilizer: { Urea: 50, DAP: 40 } },
+  { value: "Tractor-tilled Rice Field", label: "Tractor-tilled Rice Field", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
+  { value: "Cow-plowed Land", label: "Cow-plowed Land", seedRate: [90, 100], fertilizer: { DAP: 60, Organic: 1500 } },
+  { value: "Land with Poor Water Holding", label: "Land with Poor Water Holding", seedRate: [100, 120], fertilizer: { Compost: 3000, DAP: 50 } },
+  { value: "Drought-prone Zone", label: "Drought-prone Zone", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
+  { value: "High-yield Demonstration Plot", label: "High-yield Demonstration Plot", seedRate: [60, 70], fertilizer: { Urea: 80, DAP: 60, KCl: 50 } },
+  { value: "Farmer Training Site", label: "Farmer Training Site", seedRate: [70, 90], fertilizer: { Urea: 70, DAP: 50 } },
+  { value: "Seed Production Plot", label: "Seed Production Plot", seedRate: [60, 80], fertilizer: { Urea: 60, DAP: 50, KCl: 40 } },
+  { value: "Nursery Bed Land", label: "Nursery Bed Land", seedRate: [30, 40], fertilizer: { Compost: 1000, DAP: 30 } },
+  { value: "Rainfed Upland (Sorghum Rotation)", label: "Rainfed Upland (Sorghum Rotation)", seedRate: [100, 120], fertilizer: { Organic: 2500, DAP: 50 } },
+];
+
+// Expanded province data with approximate coordinates
+const provincesData = [
+  { value: "phnom_penh", label: "Phnom Penh", coords: [11.5564, 104.9282] },
+  { value: "kampong_cham", label: "Kampong Cham", coords: [12.0108, 105.4642] },
+  { value: "siem_reap", label: "Siem Reap", coords: [13.3618, 103.8602] },
+  { value: "battambang", label: "Battambang", coords: [13.1000, 103.2000] },
+  { value: "kampong_speu", label: "Kampong Speu", coords: [11.4535, 104.5192] },
+  { value: "kampong_thom", label: "Kampong Thom", coords: [12.7088, 104.8895] },
+  { value: "kandal", label: "Kandal", coords: [11.2257, 104.9070] },
+  { value: "prey_veng", label: "Prey Veng", coords: [11.4866, 105.3257] },
+  { value: "takeo", label: "Takeo", coords: [10.9865, 104.7850] },
+  { value: "kep", label: "Kep", coords: [10.4841, 104.3158] },
+  { value: "koh_kong", label: "Koh Kong", coords: [11.6154, 102.9835] },
+  { value: "kratie", label: "Kratie", coords: [12.4888, 106.0188] },
+  { value: "mondulkiri", label: "Mondulkiri", coords: [12.9262, 107.1788] },
+  { value: "odar_meanchey", label: "Odar Meanchey", coords: [14.1171, 103.4917] },
+  { value: "pursat", label: "Pursat", coords: [12.5388, 103.9192] },
+  { value: "preah_vihear", label: "Preah Vihear", coords: [13.9833, 104.9667] },
+  { value: "rattanakiri", label: "Rattanakiri", coords: [13.7333, 107.0000] },
+  { value: "stung_treng", label: "Stung Treng", coords: [13.5269, 105.9667] },
+  { value: "svay_rieng", label: "Svay Rieng", coords: [11.0860, 105.7992] },
+  { value: "kampot", label: "Kampot", coords: [10.6086, 104.1815] },
+  { value: "sihanoukville", label: "Sihanoukville", coords: [10.6109, 103.5303] },
+];
+
+const districts = {
+  phnom_penh: ["Chamkar Mon", "Doun Penh", "Prampir Makara"],
+  kampong_cham: ["Kampong Cham", "Krouch Chhmar", "Stung Trang"],
+  siem_reap: ["Siem Reap", "Sotr Nikum", "Angkor Thom"],
+  battambang: ["Battambang", "Sangkae", "Bavel"],
+  kampong_speu: ["Kampong Speu", "Odongk", "Samraong Tong"],
+  kampong_thom: ["Kampong Thom", "Stung Sen", "Sandan"],
+  kandal: ["Takmao", "Kandal Stueng", "Lvea Aem"],
+  prey_veng: ["Prey Veng", "Peam Chor", "Kampong Leav"],
+  takeo: ["Takeo", "Doun Kaev", "Samraong"],
+  kep: ["Kep", "Damnak Chang Aeur"],
+  koh_kong: ["Koh Kong", "Khemarak Phoumin", "Srae Ambel"],
+  kratie: ["Kratie", "Chhlong", "Snuol"],
+  mondulkiri: ["Senmonorom", "Kaoh Nheaek", "Pech Chreada"],
+  odar_meanchey: ["Samraong", "Trapeang Prasat", "Banteay Ampil"],
+  pursat: ["Pursat", "Krakor", "Phnum Kravanh"],
+  preah_vihear: ["Tbeng Meanchey", "Chey Saen", "Rovieng"],
+  rattanakiri: ["Banlung", "Lumphat", "Ou Ya Dav"],
+  stung_treng: ["Stung Treng", "Sesan", "Thala Borivat"],
+  svay_rieng: ["Svay Rieng", "Romeas Haek", "Svay Chrum"],
+  kampot: ["Kampot", "Chhuk", "Banteay Meas"],
+  sihanoukville: ["Sihanoukville", "Prey Nob", "Stueng Hav"],
+};
+
+// Estimate seed and fertilizer amounts based on area and land type
+const estimateAmounts = (area, landType) => {
+  const selectedType = landTypes.find(type => type.value === landType) || landTypes[0];
+  const seedRateMin = selectedType.seedRate[0];
+  const seedRateMax = selectedType.seedRate[1];
+  const fertilizer = selectedType.fertilizer;
+
+  const seedAmountMin = area * seedRateMin;
+  const seedAmountMax = area * seedRateMax;
+  const fertilizerTotal = {};
+  for (const [key, value] of Object.entries(fertilizer)) {
+    fertilizerTotal[key] = area * (value / 1000);
+  }
+
+  return {
+    seedAmountMin,
+    seedAmountMax,
+    fertilizerTotal,
+  };
+};
 
 function ChangeMapView({ center }) {
   const map = useMap();
@@ -56,10 +209,15 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   const [mapType, setMapType] = useState("satellite");
   const [landName, setLandName] = useState(initialMeasurement?.name || "");
   const [area, setArea] = useState(initialMeasurement?.area || 0);
-  const [mapCenter, setMapCenter] = useState([40.7128, -74.006]); // Default: NYC
+  const [mapCenter, setMapCenter] = useState([40.7128, -74.006]);
   const [newPointId, setNewPointId] = useState(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [showInitialOverlay, setShowInitialOverlay] = useState(points.length === 0 && !isMapLoading);
+  const [landType, setLandType] = useState(initialMeasurement?.landType || "");
+  const [provinceSearch, setProvinceSearch] = useState(initialMeasurement?.province || "");
+  const [district, setDistrict] = useState(initialMeasurement?.district || "");
+  const [suggestions, setSuggestions] = useState([]);
+  const [error, setError] = useState(null); // Added for error display
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -80,7 +238,23 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       setIsMapLoading(false);
       setShowInitialOverlay(points.length === 0);
     }
-  }, []);
+  }, [points.length]);
+
+  useEffect(() => {
+    const matchedProvince = provincesData.find(p => 
+      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+    );
+    if (matchedProvince) {
+      setMapCenter(matchedProvince.coords);
+      setDistrict("");
+    }
+    const filteredSuggestions = provincesData.filter(p =>
+      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+    ).map(p => p.label);
+    setSuggestions(filteredSuggestions);
+  }, [provinceSearch]);
 
   useEffect(() => {
     if (points.length < 3) {
@@ -119,7 +293,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
     const metersPerDegreeLng = 40075 * 1000 / 360;
     const scaledArea = area * (metersPerDegreeLat * metersPerDegreeLng) / 10000;
 
-    setArea(scaledArea);
+    setArea(isNaN(scaledArea) ? 0 : scaledArea);
     setGpsError(null);
   }, [points]);
 
@@ -142,7 +316,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
         setMapCenter([newPoint.lat, newPoint.lng]);
         setNewPointId(newPoint.id);
         setTimeout(() => setNewPointId(null), 3000);
-        setShowInitialOverlay(false); // Hide overlay after successful GPS
+        setShowInitialOverlay(false);
         setIsGPSActive(false);
       },
       (error) => {
@@ -176,19 +350,19 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       isGPS: false,
     };
     setPoints((prev) => [...prev, newPoint]);
-    setShowInitialOverlay(false); // Hide overlay after map click
+    setShowInitialOverlay(false);
   };
 
   const removePoint = (id) => {
     setPoints((prev) => prev.filter((point) => point.id !== id));
     setGpsError(null);
-    setShowInitialOverlay(points.length === 1 && !isMapLoading); // Show overlay if no points remain
+    setShowInitialOverlay(points.length === 1 && !isMapLoading);
   };
 
   const clearAllPoints = () => {
     setPoints([]);
     setGpsError(null);
-    setShowInitialOverlay(true); // Show overlay when clearing all points
+    setShowInitialOverlay(true);
   };
 
   const exportMapImage = () => {
@@ -236,18 +410,67 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
     iconAnchor: [15, 15],
   });
 
-  const handleSave = () => {
-    if (points.length < 3 || !landName.trim() || isMapLoading) return;
+  const handleSave = async () => {
+    if (points.length < 3 || !landName.trim() || isMapLoading) {
+      alert("Please add at least 3 points and provide a land name.");
+      return;
+    }
+
+    if (isNaN(area) || area <= 0) {
+      alert("Invalid area calculated. Please ensure points form a valid polygon.");
+      return;
+    }
+
     const now = new Date();
+    const { seedAmountMin, seedAmountMax, fertilizerTotal } = estimateAmounts(area, landType);
+
     const measurement = {
       id: initialMeasurement?.id || Date.now().toString(),
       name: landName.trim(),
-      area,
-      points,
-      date: now.toLocaleDateString(),
-      timestamp: now.getTime(),
+      data_area_ha: parseFloat(area.toFixed(2)),
+      data_area_acres: parseFloat((area * 2.471).toFixed(2)), // Convert hectares to acres
+      points: points.map(point => ({
+        lat: point.lat,
+        lng: point.lng,
+        id: point.id,
+        isGPS: point.isGPS,
+      })),
+      landType,
+      seedAmountMin: parseFloat(seedAmountMin.toFixed(2)),
+      seedAmountMax: parseFloat(seedAmountMax.toFixed(2)),
+      fertilizerTotal,
+      date: now.toLocaleDateString('en-CA'), // Format as YYYY-MM-DD
     };
-    onSave(measurement);
+
+    try {
+      const authToken = localStorage.getItem("authToken") || "YOUR_AUTH_TOKEN_HERE";
+      setAuthToken(authToken);
+
+      console.log("Payload being sent:", measurement); // Log payload for debugging
+
+      const measurementResponse = await insertMeasurement(measurement);
+      console.log("Measurement insertion response:", measurementResponse);
+
+      onSave(measurement);
+      setError(null);
+      alert("Measurement saved successfully!");
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message;
+      const validationErrors = error.response?.data?.errors || {};
+      console.error("Error saving data:", {
+        message: errorMessage,
+        validation: validationErrors,
+        status: error.response?.status,
+        url: error.config?.url,
+      });
+      setError(`Failed to save measurement: ${errorMessage}`);
+      alert(`Failed to save measurement: ${errorMessage}. Check console for details.`);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setProvinceSearch(suggestion);
+    setSuggestions([]);
   };
 
   return (
@@ -383,6 +606,11 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
           {newPointId && (
             <div className="absolute top-2 sm:top-4 left-2 sm:left-4 bg-green-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded shadow-lg animate-fade-out z-20 sm:text-sm">
               GPS Point Added!
+            </div>
+          )}
+          {error && (
+            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-red-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded shadow-lg z-20 sm:text-sm">
+              {error}
             </div>
           )}
         </div>
@@ -549,9 +777,67 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                     className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Province Search</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={provinceSearch}
+                      onChange={(e) => setProvinceSearch(e.target.value)}
+                      placeholder="Search province"
+                      className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-8"
+                    />
+                    <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {suggestions.length > 0 && (
+                      <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                        {suggestions.map((suggestion, index) => (
+                          <li
+                            key={index}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="px-2 py-1 hover:bg-gray-100 cursor-pointer text-sm"
+                          >
+                            {suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">District</label>
+                  <select
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    disabled={!provinceSearch || !provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase())}
+                  >
+                    <option value="" disabled>Select a district</option>
+                    {provinceSearch && provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()) && 
+                      districts[provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()).value].map((dist) => (
+                        <option key={dist} value={dist}>
+                          {dist}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Land Type</label>
+                  <select
+                    value={landType}
+                    onChange={(e) => setLandType(e.target.value)}
+                    className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                  >
+                    <option value="" disabled>Select a land type</option>
+                    {landTypes.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <Button
                   onClick={handleSave}
-                  disabled={points.length < 3 || !landName.trim() || isMapLoading}
+                  disabled={points.length < 3 || !landName.trim() || isMapLoading || isNaN(area) || area <= 0}
                   className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 sm:py-3"
                 >
                   <Save className="w-4 h-4 mr-2" />
@@ -559,6 +845,9 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                 </Button>
                 {points.length < 3 && (
                   <p className="text-xs text-gray-500">Add at least 3 points to save measurement</p>
+                )}
+                {(isNaN(area) || area <= 0) && (
+                  <p className="text-xs text-red-500">Invalid area, please check points</p>
                 )}
               </CardContent>
             </Card>

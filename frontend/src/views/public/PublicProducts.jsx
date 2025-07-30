@@ -1,9 +1,13 @@
 "use client"
 
-import { Smartphone, Cloud, BarChart3, Users, Shield, Zap, Check, ArrowRight } from "lucide-react"
+import { Smartphone, Cloud, BarChart3, Users, Shield, Zap, ArrowRight } from "lucide-react"
 import { Link } from "react-router-dom"
+import { useEffect, useState } from "react"
+import axios from "axios"
 
 const PublicProducts = ({ language }) => {
+  const [products, setProducts] = useState([])
+
   const translations = {
     en: {
       hero: {
@@ -11,51 +15,8 @@ const PublicProducts = ({ language }) => {
         subtitle: "Comprehensive farming solutions designed to help you succeed",
       },
       products: {
-        title: "What We Offer",
-        items: [
-          {
-            icon: Smartphone,
-            title: "Mobile App",
-            description: "Complete farm management on your smartphone",
-            features: [
-              "Crop tracking and monitoring",
-              "Weather alerts and forecasts",
-              "Task management and reminders",
-              "Market price updates",
-              "Offline functionality",
-            ],
-            price: "Free",
-            popular: false,
-          },
-          {
-            icon: Cloud,
-            title: "Cloud Platform",
-            description: "Advanced analytics and data management",
-            features: [
-              "Data backup and sync",
-              "Advanced reporting",
-              "Multi-device access",
-              "API integrations",
-              "Priority support",
-            ],
-            price: "$9.99/month",
-            popular: true,
-          },
-          {
-            icon: BarChart3,
-            title: "Analytics Pro",
-            description: "Professional insights and recommendations",
-            features: [
-              "AI-powered recommendations",
-              "Yield prediction models",
-              "Cost optimization analysis",
-              "Custom reports",
-              "Expert consultations",
-            ],
-            price: "$29.99/month",
-            popular: false,
-          },
-        ],
+        title: "Products for Sale",
+        subtitle: "Discover fresh, locally-sourced agricultural products directly from Cambodian farmers.",
       },
       features: {
         title: "Key Features",
@@ -104,51 +65,8 @@ const PublicProducts = ({ language }) => {
         subtitle: "ដំណោះស្រាយកសិកម្មគ្រប់គ្រាន់ដែលរចនាឡើងដើម្បីជួយអ្នកឱ្យជោគជ័យ",
       },
       products: {
-        title: "អ្វីដែលយើងផ្តល់ជូន",
-        items: [
-          {
-            icon: Smartphone,
-            title: "កម្មវិធីទូរស័ព្ទ",
-            description: "ការគ្រប់គ្រងកសិដ្ឋានពេញលេញនៅលើស្មាតហ្វូនរបស់អ្នក",
-            features: [
-              "ការតាមដាន និងត្រួតពិនិត្យដំណាំ",
-              "ការជូនដំណឹងអាកាសធាតុ និងការព្យាករណ៍",
-              "ការគ្រប់គ្រងកិច្ចការ និងការរំលឹក",
-              "ការធ្វើបច្ចុប្បន្នភាពតម្លៃទីផ្សារ",
-              "មុខងារក្រៅបណ្តាញ",
-            ],
-            price: "ឥតគិតថ្លៃ",
-            popular: false,
-          },
-          {
-            icon: Cloud,
-            title: "វេទិកាពពក",
-            description: "ការវិភាគកម្រិតខ្ពស់ និងការគ្រប់គ្រងទិន្នន័យ",
-            features: [
-              "ការបម្រុងទុក និងធ្វើសមកាលកម្មទិន្នន័យ",
-              "របាយការណ៍កម្រិតខ្ពស់",
-              "ការចូលប្រើពហុឧបករណ៍",
-              "ការរួមបញ្ចូល API",
-              "ការគាំទ្រអាទិភាព",
-            ],
-            price: "$9.99/ខែ",
-            popular: true,
-          },
-          {
-            icon: BarChart3,
-            title: "Analytics Pro",
-            description: "ការយល់ដឹង និងការណែនាំជំនាញ",
-            features: [
-              "ការណែនាំដែលដំណើរការដោយ AI",
-              "ម៉ូដែលព្យាករណ៍ទិន្នផល",
-              "ការវិភាគបង្កើនប្រសិទ្ធភាពការចំណាយ",
-              "របាយការណ៍ផ្ទាល់ខ្លួន",
-              "ការពិគ្រោះយោបល់អ្នកជំនាញ",
-            ],
-            price: "$29.99/ខែ",
-            popular: false,
-          },
-        ],
+        title: "ផលិតផលដែលលក់",
+        subtitle: "រកផលិតផលកសិកម្មដែលមានភាពស្រស់ និងបានប្រមូលផ្តុំក្នុងស្រុកផ្ទាល់ពីអ្នកប្រមូលផលកម្ពុជា។",
       },
       features: {
         title: "លក្ខណៈពិសេសសំខាន់",
@@ -193,7 +111,14 @@ const PublicProducts = ({ language }) => {
     },
   }
 
-  const t = translations[language]
+  const t = translations[language] || translations.en
+
+  useEffect(() => {
+    axios
+      .get("http://127.0.0.1:8000/api/products")
+      .then((res) => setProducts(res.data))
+      .catch((err) => console.error("Failed to fetch products:", err))
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -208,61 +133,46 @@ const PublicProducts = ({ language }) => {
       {/* Products Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-16">{t.products.title}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">
+            {t.products.title}
+          </h2>
+          <p className="text-center text-gray-600 mb-12">{t.products.subtitle}</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {t.products.items.map((product, index) => (
-              <div
-                key={index}
-                className={`relative bg-white rounded-2xl shadow-xl p-8 ${product.popular ? "ring-2 ring-green-500 scale-105" : ""}`}
-              >
-                {product.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                      {language === "en" ? "Most Popular" : "ពេញនិយមបំផុត"}
-                    </span>
+          {products.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products.map((product, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <img
+                    src={`http://127.0.0.1:8000/storage/${product.image_path}`}
+                    alt={product.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="p-6 text-center">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{product.name}</h3>
+                    <p className="text-gray-600 mb-4">{product.description}</p>
+                    <p className="text-2xl font-bold text-green-600">{product.price} KHR</p>
+                    <Link
+                      to={`/product-details/${product.id}`}
+                      className="mt-4 inline-block bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                    >
+                      View Details
+                    </Link>
                   </div>
-                )}
-
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <product.icon className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{product.title}</h3>
-                  <p className="text-gray-600 mb-4">{product.description}</p>
-                  <div className="text-3xl font-bold text-green-600">{product.price}</div>
                 </div>
-
-                <ul className="space-y-3 mb-8">
-                  {product.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center gap-3">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  to="/register"
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold transition-colors ${
-                    product.popular
-                      ? "bg-green-600 text-white hover:bg-green-700"
-                      : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                  }`}
-                >
-                  {language === "en" ? "Get Started" : "ចាប់ផ្តើម"}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-gray-500">No products available.</p>
+          )}
         </div>
       </section>
 
       {/* Features Section */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-16">{t.features.title}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-16">
+            {t.features.title}
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {t.features.items.map((feature, index) => (
