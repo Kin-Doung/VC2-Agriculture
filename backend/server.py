@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Rice types (must match model class order if using model)
 RICE_TYPES = [
+    {"type": "Basmati", "details": "Long-grain rice used in Indian cuisine", "image_path": "images/rice-1.jpg"},
     {"type": "Sen Kra Ob", "details": "Fragrant rice used in Thai cuisine", "image_path": "images/Sen Kra Ob.jpg"},
     {"type": "Phka Rumduol", "details": "Fragrant rice used in Thai cuisine", "image_path": "images/Romdul.png"},
     {"type": "Neang Khon", "details": "Fragrant rice used in Thai cuisine", "image_path": "images/Neang Khon.png"},
