@@ -13,6 +13,7 @@ import {
   User,
   Home,
   Package,
+  List
 } from "lucide-react"
 
 const Navigation = ({ isOpen, language }) => {
@@ -25,6 +26,7 @@ const Navigation = ({ isOpen, language }) => {
       landMeasure: "Measure Land",
       cropTracker: "Crop Tracker",
       tasks: "Tasks & Reminders",
+      category: "Category",
       product: "Product",
       marketplace: "Marketplace",
       prices: "Market Prices",
@@ -42,6 +44,7 @@ const Navigation = ({ isOpen, language }) => {
       landMeasure: "វាស់ដី",
       cropTracker: "តាមដានដំណាំ",
       tasks: "កិច្ចការ និងការរំលឹក",
+      category: "ប្រភេទ",
       product: "ផលិត​ផល",
       marketplace: "ទីផ្សារ",
       prices: "តម្លៃទីផ្សារ",
@@ -63,6 +66,7 @@ const Navigation = ({ isOpen, language }) => {
     { icon: MapPin, label: t.landMeasure, path: "/measure" },
     { icon: Sprout, label: t.cropTracker, path: "/crops" },
     { icon: Calendar, label: t.tasks, path: "/tasks" },
+    { icon: List, label: t.category, path: "/category" },
     { icon: Package, label: t.product, path: "/product" },
     { icon: DollarSign, label: t.marketplace, path: "/marketplace" },
     { icon: TrendingUp, label: t.prices, path: "/prices" },

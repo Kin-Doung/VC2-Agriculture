@@ -3,48 +3,39 @@
 namespace App\Http\Controllers;
 
 use App\Models\CropType;
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\CropTypeRequest;
 
 class CropTypeController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $types = CropType::all();
+        return response()->json($types);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(CropTypeRequest $request)
     {
-        //
+        $cropType = CropType::create($request->validated());
+        return response()->json($cropType, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
-        //
+        $cropType = CropType::findOrFail($id);
+        return response()->json($cropType);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(CropTypeRequest $request, string $id)
     {
-        //
+        $cropType = CropType::findOrFail($id);
+        $cropType->update($request->validated());
+        return response()->json($cropType);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
-        //
+        $cropType = CropType::findOrFail($id);
+        $cropType->delete();
+        return response()->json(['message' => 'CropType deleted']);
     }
 }

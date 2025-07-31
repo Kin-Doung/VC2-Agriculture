@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Crop;
-use App\Http\Controllers\Controller;
-use App\Models\Category;
-use Illuminate\Http\Request;
+use App\Http\Requests\CropRequest;
 
 class CropController extends Controller
 {
@@ -14,17 +12,17 @@ class CropController extends Controller
      */
     public function index()
     {
-        //
+        $crops = Crop::all();
+        return response()->json($crops);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(CropRequest $request)
     {
-        //
-        
-
+        $crop = Crop::create($request->validated());
+        return response()->json($crop, 201);
     }
 
     /**
@@ -32,16 +30,18 @@ class CropController extends Controller
      */
     public function show(string $id)
     {
-        //
-
+        $crop = Crop::with(['farm', 'cropType', 'product'])->findOrFail($id);
+        return response()->json($crop);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(CropRequest $request, string $id)
     {
-        //
+        $crop = Crop::findOrFail($id);
+        $crop->update($request->validated());
+        return response()->json($crop);
     }
 
     /**
@@ -49,6 +49,8 @@ class CropController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $crop = Crop::findOrFail($id);
+        $crop->delete();
+        return response()->json(['message' => 'Crop deleted']);
     }
 }
