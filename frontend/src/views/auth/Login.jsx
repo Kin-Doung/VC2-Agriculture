@@ -110,7 +110,7 @@ const handleSubmit = async (e) => {
     }
 
     // Save token if needed
-    localStorage.setItem("token", data.token)
+    localStorage.setItem("token", data.access_token)
 
     // Trigger login
     onLogin(userData)

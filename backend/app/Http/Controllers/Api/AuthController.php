@@ -42,6 +42,9 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+        /** @var \App\Models\User $user */
+        $user->is_active = true;
+        $user->save();
         /** @var \App\Models\User|\Laravel\Sanctum\HasApiTokens $user */
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -56,6 +59,11 @@ class AuthController extends Controller
     // ✅ Logout
     public function logout($request)
     {
+        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        $user->is_active = false;
+        $user->save();
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([

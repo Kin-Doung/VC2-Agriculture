@@ -25,7 +25,7 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Authenticated Routes
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
-    Route::get('/admin/dashboard/users', [AdminController::class, 'index']);
+    Route::get('/admin/users', [AdminController::class, 'index']);
 });
 
 
