@@ -12,6 +12,7 @@ import {
   Settings,
   User,
   Home,
+  Book,
 } from "lucide-react"
 
 const Navigation = ({ isOpen, language }) => {
@@ -28,11 +29,12 @@ const Navigation = ({ isOpen, language }) => {
       prices: "Market Prices",
       scanner: "Seed Scanner",
       chat: "Messages",
-      videos: "Learning Videos",
+      learn: "Learning",
       finances: "Income & Expenses",
       support: "Help & Support",
       profile: "Profile",
       settings: "Settings",
+      
     },
     km: {
       dashboard: "ផ្ទាំងគ្រប់គ្រង",
@@ -44,7 +46,7 @@ const Navigation = ({ isOpen, language }) => {
       prices: "តម្លៃទីផ្សារ",
       scanner: "ស្កេនគ្រាប់ពូជ",
       chat: "សារ",
-      videos: "វីដេអូសិក្សា",
+      learn: "សិក្សា",
       finances: "ចំណូល និងចំណាយ",
       support: "ជំនួយ",
       profile: "ប្រវត្តិរូប",
@@ -64,7 +66,7 @@ const Navigation = ({ isOpen, language }) => {
     { icon: TrendingUp, label: t.prices, path: "/prices" },
     { icon: Camera, label: t.scanner, path: "/scanner" },
     { icon: MessageCircle, label: t.chat, path: "/messages" },
-    { icon: Video, label: t.videos, path: "/videos" },
+    { icon: Book, label: t.learn, path: "/learn" },
     { icon: DollarSign, label: t.finances, path: "/finances" },
     { icon: HelpCircle, label: t.support, path: "/support" },
   ]

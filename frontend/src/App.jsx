@@ -18,7 +18,7 @@ import Marketplace from "./views/Marketplace"
 import MarketPricesView from "./views/MarketPricesView"
 import SeedScanner from "./views/SeedScanner"
 import Messages from "./views/Messages"
-import LearningVideos from "./views/LearningVideos"
+import Learning from "./views/Learning"
 import Finances from "./views/Finances"
 import Support from "./views/Support"
 import Profile from "./views/Profile"
@@ -106,7 +106,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       <Route path="/prices" element={<MarketPricesView language={language} />} />
       <Route path="/scanner" element={<SeedScanner language={language} />} />
       <Route path="/messages" element={<Messages language={language} />} />
-      <Route path="/videos" element={<LearningVideos language={language} />} />
+      <Route path="/learn" element={<Learning language={language} />} />
       <Route path="/finances" element={<Finances language={language} />} />
       <Route path="/support" element={<Support language={language} />} />
       <Route path="/profile" element={<Profile language={language} />} />
