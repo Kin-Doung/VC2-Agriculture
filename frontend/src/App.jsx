@@ -32,6 +32,9 @@ import PublicTraining from "./views/public/PublicTraining"
 import Login from "./views/auth/Login"
 import Register from "./views/auth/Register"
 
+// Admin
+import AdminLayout from "./layouts/AdminLayout"
+
 import "./App.css"
 
 // Mock measurements moved to App.jsx
@@ -168,9 +171,19 @@ function App() {
   return (
     <Router>
       {isAuthenticated ? (
+        user?.role === 'admin' ? (
+        <AdminLayout user={user} onLogout={handleLogout}>
+          <AuthenticatedRoutes
+            language={language}
+            measurements={measurements}
+            setMeasurements={setMeasurements}
+          />
+        </AdminLayout>
+      ) : (
         <MainLayout language={language} setLanguage={setLanguage} user={user} onLogout={handleLogout}>
           <AuthenticatedRoutes language={language} measurements={measurements} setMeasurements={setMeasurements} />
         </MainLayout>
+      )
       ) : (
         <PublicLayout language={language} setLanguage={setLanguage}>
           <PublicRoutes language={language} handleLogin={handleLogin} />

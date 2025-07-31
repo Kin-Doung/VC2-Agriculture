@@ -5,6 +5,12 @@ import MarketPrices from "../components/MarketPrices"
 import QuickActions from "../components/QuickActions"
 
 const Dashboard = ({ language }) => {
+  const user = JSON.parse(localStorage.getItem("user"))
+
+  if (user?.role === "admin") {
+    return null
+  }
+
   const translations = {
     en: {
       welcome: "Welcome back, Farmer!",

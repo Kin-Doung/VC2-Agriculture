@@ -24,6 +24,7 @@ class User extends Authenticatable
         'farm_name',
         'location',
         'phone',
+        'role',
     ];
     public function seedScans()
     {

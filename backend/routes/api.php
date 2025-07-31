@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\adminController\AdminController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LandController;
@@ -23,11 +24,8 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Authenticated Routes
-Route::middleware(['auth:sanctum'])->group(function () {
-    // Admin routes
-    Route::middleware('admin')->group(function () {
-        Route::get('/admin/users', [AuthController::class, 'getAllUsers']);
-    });
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/admin/dashboard/users', [AdminController::class, 'index']);
 });
 
 

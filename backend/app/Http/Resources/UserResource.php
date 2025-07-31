@@ -16,6 +16,8 @@ class UserResource extends JsonResource
             'farm_name'=> $this->farm_name,
             'location' => $this->location,
             'phone'    => $this->phone,
+            'role'      => $this->role,
+            'is_admin'  => $this->is_admin,
         ];
     }
 }
