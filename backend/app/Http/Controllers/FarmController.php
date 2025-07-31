@@ -3,48 +3,37 @@
 namespace App\Http\Controllers;
 
 use App\Models\Farm;
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\FarmRequest;
 
 class FarmController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        return response()->json(Farm::with('user')->get());
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(FarmRequest $request)
     {
-        //
+        $farm = Farm::create($request->validated());
+        return response()->json($farm, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
-        //
+        return response()->json(Farm::with('user')->findOrFail($id));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(FarmRequest $request, string $id)
     {
-        //
+        $farm = Farm::findOrFail($id);
+        $farm->update($request->validated());
+        return response()->json($farm);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
-        //
+        $farm = Farm::findOrFail($id);
+        $farm->delete();
+        return response()->json(['message' => 'Farm deleted']);
     }
 }

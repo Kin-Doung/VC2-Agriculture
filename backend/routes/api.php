@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LandController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CropController;
+use App\Http\Controllers\CropTypeController;
+use App\Http\Controllers\FarmController;
 use App\Http\Controllers\ProductController;
 
 Route::apiResource('lands', LandController::class);
@@ -28,3 +31,6 @@ Route::apiResource('categories', CategoryController::class);
 
 // Product 
 Route::apiResource("products", ProductController::class);
+Route::apiResource("crops", CropController::class);
+Route::apiResource("croptypes", CropTypeController::class);
+Route::apiResource("farms", FarmController::class);
