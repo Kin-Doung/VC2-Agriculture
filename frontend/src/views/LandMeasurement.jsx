@@ -29,7 +29,7 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import leafletImage from "leaflet-image";
-import { insertMeasurement, setAuthToken } from "../api.js"; // Removed insertAmount
+import { insertMeasurement, setAuthToken } from "../api.js";
 
 // Comprehensive land type data (deduplicated)
 const landTypes = [
@@ -209,52 +209,68 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   const [mapType, setMapType] = useState("satellite");
   const [landName, setLandName] = useState(initialMeasurement?.name || "");
   const [area, setArea] = useState(initialMeasurement?.area || 0);
-  const [mapCenter, setMapCenter] = useState([40.7128, -74.006]);
+  const [mapCenter, setMapCenter] = useState([11.5564, 104.9282]); // Default to Phnom Penh
   const [newPointId, setNewPointId] = useState(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [showInitialOverlay, setShowInitialOverlay] = useState(points.length === 0 && !isMapLoading);
   const [landType, setLandType] = useState(initialMeasurement?.landType || "");
-  const [provinceSearch, setProvinceSearch] = useState(initialMeasurement?.province || "");
-  const [district, setDistrict] = useState(initialMeasurement?.district || "");
+  const [locationSearch, setLocationSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-  const [error, setError] = useState(null); // Added for error display
+  const [district, setDistrict] = useState(initialMeasurement?.district || "");
+  const [error, setError] = useState(null);
   const mapRef = useRef(null);
 
+  // Initialize map center with GPS or last known location
   useEffect(() => {
+    const lastKnownLocation = localStorage.getItem("lastKnownLocation");
+    let initialCenter = [11.5564, 104.9282]; // Phnom Penh as fallback
+
+    if (lastKnownLocation) {
+      const { lat, lng } = JSON.parse(lastKnownLocation);
+      initialCenter = [lat, lng];
+    }
+
+    setMapCenter(initialCenter);
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setMapCenter([position.coords.latitude, position.coords.longitude]);
+          const { latitude, longitude } = position.coords;
+          setMapCenter([latitude, longitude]);
+          localStorage.setItem("lastKnownLocation", JSON.stringify({ lat: latitude, lng: longitude }));
           setIsMapLoading(false);
           setShowInitialOverlay(points.length === 0);
         },
-        () => {
+        (error) => {
+          console.warn("GPS failed, using fallback location:", initialCenter);
           setIsMapLoading(false);
           setShowInitialOverlay(points.length === 0);
+          setGpsError("Could not fetch current location. Using last known or default location.");
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
     } else {
       setIsMapLoading(false);
       setShowInitialOverlay(points.length === 0);
+      setGpsError("Geolocation not supported. Using default location.");
     }
-  }, [points.length]);
+  }, []);
 
   useEffect(() => {
-    const matchedProvince = provincesData.find(p => 
-      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
-      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+    const matchedLocation = provincesData.find(p => 
+      p.label.toLowerCase().includes(locationSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(locationSearch.toLowerCase())
     );
-    if (matchedProvince) {
-      setMapCenter(matchedProvince.coords);
+    if (matchedLocation) {
+      setMapCenter(matchedLocation.coords);
       setDistrict("");
     }
     const filteredSuggestions = provincesData.filter(p =>
-      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
-      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+      p.label.toLowerCase().includes(locationSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(locationSearch.toLowerCase())
     ).map(p => p.label);
     setSuggestions(filteredSuggestions);
-  }, [provinceSearch]);
+  }, [locationSearch]);
 
   useEffect(() => {
     if (points.length < 3) {
@@ -306,14 +322,16 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
     setGpsError(null);
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const { latitude, longitude } = position.coords;
         const newPoint = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
+          lat: latitude,
+          lng: longitude,
           id: Date.now().toString(),
           isGPS: true,
         };
         setPoints((prev) => [...prev, newPoint]);
-        setMapCenter([newPoint.lat, newPoint.lng]);
+        setMapCenter([latitude, longitude]);
+        localStorage.setItem("lastKnownLocation", JSON.stringify({ lat: latitude, lng: longitude }));
         setNewPointId(newPoint.id);
         setTimeout(() => setNewPointId(null), 3000);
         setShowInitialOverlay(false);
@@ -428,7 +446,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       id: initialMeasurement?.id || Date.now().toString(),
       name: landName.trim(),
       data_area_ha: parseFloat(area.toFixed(2)),
-      data_area_acres: parseFloat((area * 2.471).toFixed(2)), // Convert hectares to acres
+      data_area_acres: parseFloat((area * 2.471).toFixed(2)),
       points: points.map(point => ({
         lat: point.lat,
         lng: point.lng,
@@ -439,14 +457,14 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       seedAmountMin: parseFloat(seedAmountMin.toFixed(2)),
       seedAmountMax: parseFloat(seedAmountMax.toFixed(2)),
       fertilizerTotal,
-      date: now.toLocaleDateString('en-CA'), // Format as YYYY-MM-DD
+      date: now.toLocaleDateString('en-CA'),
     };
 
     try {
       const authToken = localStorage.getItem("authToken") || "YOUR_AUTH_TOKEN_HERE";
       setAuthToken(authToken);
 
-      console.log("Payload being sent:", measurement); // Log payload for debugging
+      console.log("Payload being sent:", measurement);
 
       const measurementResponse = await insertMeasurement(measurement);
       console.log("Measurement insertion response:", measurementResponse);
@@ -469,7 +487,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   };
 
   const handleSuggestionClick = (suggestion) => {
-    setProvinceSearch(suggestion);
+    setLocationSearch(suggestion);
     setSuggestions([]);
   };
 
@@ -611,6 +629,11 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
           {error && (
             <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-red-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded shadow-lg z-20 sm:text-sm">
               {error}
+            </div>
+          )}
+          {gpsError && (
+            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-yellow-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded shadow-lg z-20 sm:text-sm">
+              {gpsError} <Button onClick={getGPSLocation} size="sm" className="ml-2">Retry</Button>
             </div>
           )}
         </div>
@@ -778,13 +801,13 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Province Search</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Search Location</label>
                   <div className="relative">
                     <input
                       type="text"
-                      value={provinceSearch}
-                      onChange={(e) => setProvinceSearch(e.target.value)}
-                      placeholder="Search province"
+                      value={locationSearch}
+                      onChange={(e) => setLocationSearch(e.target.value)}
+                      placeholder="e.g., Phnom Penh, Siem Reap"
                       className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-8"
                     />
                     <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -809,11 +832,11 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                     value={district}
                     onChange={(e) => setDistrict(e.target.value)}
                     className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                    disabled={!provinceSearch || !provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase())}
+                    disabled={!locationSearch || !provincesData.find(p => p.label.toLowerCase() === locationSearch.toLowerCase() || p.value === locationSearch.toLowerCase())}
                   >
                     <option value="" disabled>Select a district</option>
-                    {provinceSearch && provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()) && 
-                      districts[provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()).value].map((dist) => (
+                    {locationSearch && provincesData.find(p => p.label.toLowerCase() === locationSearch.toLowerCase() || p.value === locationSearch.toLowerCase()) && 
+                      districts[provincesData.find(p => p.label.toLowerCase() === locationSearch.toLowerCase() || p.value === locationSearch.toLowerCase()).value].map((dist) => (
                         <option key={dist} value={dist}>
                           {dist}
                         </option>
