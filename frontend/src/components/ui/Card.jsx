@@ -1,13 +1,18 @@
-export const Card = ({ children, className }) => (
-  <div className={`border rounded-lg shadow-sm bg-white ${className}`}>{children}</div>
-);
+// src/components/ui/Card.jsx
+import React from 'react';
 
-export const CardHeader = ({ children }) => <div className="p-4 border-b">{children}</div>;
+export function Card({ children, className = '' }) {
+  return <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>{children}</div>;
+}
 
-export const CardTitle = ({ children, className }) => (
-  <h2 className={`text-lg font-semibold ${className}`}>{children}</h2>
-);
+export function CardHeader({ children, className = '' }) {
+  return <div className={`p-4 border-b border-gray-200 ${className}`}>{children}</div>;
+}
 
-export const CardContent = ({ children, className }) => (
-  <div className={`p-4 ${className}`}>{children}</div>
-);
+export function CardTitle({ children, className = '' }) {
+  return <h2 className={`text-lg font-semibold text-gray-900 ${className}`}>{children}</h2>;
+}
+
+export function CardContent({ children, className = '' }) {
+  return <div className={`p-4 ${className}`}>{children}</div>;
+}
