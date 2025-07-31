@@ -1,203 +1,231 @@
-import React, { useRef, useState, useEffect } from 'react'
-import Webcam from 'react-webcam'
-import * as mobilenet from '@tensorflow-models/mobilenet'
-import '@tensorflow/tfjs'
+"use client"
 
-const SeedScanner = ({ language }) => {
-  const webcamRef = useRef(null)
-  const [model, setModel] = useState(null)
-  const [result, setResult] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [modelLoading, setModelLoading] = useState(true)
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+
+import CameraCapture from '../components/ScantTypeOfRice/camera-capture';
+import ImageUpload from '../components/ScantTypeOfRice/image-upload';
+import ScanResults from '../components/ScantTypeOfRice/scan-results';
+import RiceTypesReference from '../components/ScantTypeOfRice/rice-types-reference';
+import RiceComparisonTool from '../components/ScantTypeOfRice/rice-comparison-tool';
+import DebugPanel from '../components/ScantTypeOfRice/debug-panel';
+
+
+export default function SeedScanner() {
   const [selectedImage, setSelectedImage] = useState(null)
-  const [imageElement, setImageElement] = useState(null)
-  const [showCamera, setShowCamera] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+  const [scanHistory, setScanHistory] = useState([])
 
-  // Load ML model
-  useEffect(() => {
-    mobilenet.load().then(m => {
-      setModel(m)
-      setModelLoading(false)
-    })
-  }, [])
+  const scanSeed = async () => {
+    if (!selectedImage) return
 
-  const getFruitQuality = (conf) => {
-    if (conf >= 80) return language === 'en' ? 'Good' : 'ល្អ'
-    if (conf >= 50) return language === 'en' ? 'Average' : 'មធ្យម'
-    return language === 'en' ? 'Bad' : 'អន់'
-  }
+    setIsScanning(true)
+    setError(null)
+    setResult(null)
 
-  const runPrediction = async (imgEl) => {
-    if (!model) return
-    setLoading(true)
-    const predictions = await model.classify(imgEl)
-    setLoading(false)
-    if (predictions.length > 0) {
-      const conf = predictions[0].probability * 100
-      setResult({
-        label: predictions[0].className,
-        confidence: conf.toFixed(2),
-        quality: getFruitQuality(conf),
+    try {
+      console.log("Starting seed scan...")
+
+      const response = await fetch("/api/scan-rice", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image: selectedImage }),
       })
-      setShowCamera(false) 
-    } else {
-      setResult(null)
+
+      console.log("API response status:", response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("API error:", errorData)
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log("Classification result:", data)
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      setResult(data)
+
+      // Add to scan history
+      const scanRecord = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        image: selectedImage,
+        result: data,
+        confidence: data.confidence,
+      }
+      setScanHistory((prev) => [scanRecord, ...prev.slice(0, 9)]) // Keep last 10 scans
+    } catch (err) {
+      console.error("Scan error:", err)
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred"
+      setError(`Failed to identify seed type: ${errorMessage}. Please try again with a clearer image.`)
+    } finally {
+      setIsScanning(false)
     }
   }
 
-  const captureAndPredict = () => {
-    if (!webcamRef.current) return
-    const imageSrc = webcamRef.current.getScreenshot()
-    if (!imageSrc) {
-      alert(language === 'en' ? 'Camera not working' : 'កាមេរ៉ាមិនដំណើរការ')
-      return
-    }
-    const img = new Image()
-    img.src = imageSrc
-    img.onload = () => {
-      setImageElement(img)
-      runPrediction(img)
-    }
-  }
-
-  const handleImageChange = (event) => {
-    const file = event.target.files[0]
-    if (file) {
-      const imgURL = URL.createObjectURL(file)
-      setSelectedImage(imgURL)
-      setResult(null)
-      setImageElement(null)
-      setShowCamera(false)
-      const img = new Image()
-      img.src = imgURL
-      img.onload = () => setImageElement(img)
-    }
-  }
-
-  const scanSelectedImage = () => {
-    if (imageElement) runPrediction(imageElement)
-  }
-
-  const handleCancel = () => {
+  const resetScanner = () => {
     setSelectedImage(null)
     setResult(null)
-    setImageElement(null)
-    setShowCamera(false)
+    setError(null)
   }
 
-  const handleBack = () => {
-    setResult(null)
-    setSelectedImage(null)
-    setImageElement(null)
-    setShowCamera(false)
+  const loadFromHistory = (historyItem) => {
+    setSelectedImage(historyItem.image)
+    setResult(historyItem.result)
+    setError(null)
+  }
+
+  const clearHistory = () => {
+    setScanHistory([])
   }
 
   return (
-    <div className="p-6 max-w-md mx-auto text-center">
-      <h1 className="text-3xl font-bold text-green-800 mb-4">
-        {language === 'en' ? 'Fruit Scanner' : 'ស្កេនផ្លែឈើ'}
-      </h1>
-
-      {/* If result is shown, only show result and back button */}
-      {result && !loading ? (
-        <>
-          <div className="mt-6 text-left bg-gray-100 p-4 rounded">
-            <p>
-              {language === 'en' ? 'Fruit Name' : 'ឈ្មោះផ្លែឈើ'}: <strong>{result.label}</strong>
-            </p>
-            <p>
-              {language === 'en' ? 'Quality' : 'គុណភាព'}: <strong>{result.quality}</strong>
-            </p>
-            <p>
-              {language === 'en' ? 'Confidence' : 'ភាពជឿជាក់'}: <strong>{result.confidence}%</strong>
-            </p>
-          </div>
-          <button
-            onClick={handleBack}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            {language === 'en' ? 'Back' : 'ត្រឡប់ក្រោយ'}
-          </button>
-        </>
-      ) : (
-        <>
-          {/* Start camera button */}
-          {!showCamera && !selectedImage && (
-            <button
-              onClick={() => setShowCamera(true)}
-              className="mb-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              {language === 'en' ? 'Start Camera Scan' : 'ចាប់ផ្តើមស្កេនដោយកាមេរ៉ា'}
-            </button>
-          )}
-
-          {/* Webcam view */}
-          {showCamera && (
-            <>
-              <Webcam
-                ref={webcamRef}
-                audio={false}
-                screenshotFormat="image/jpeg"
-                width={320}
-                videoConstraints={{ facingMode: 'environment' }}
-                className="rounded border mx-auto"
-              />
-              <div className="mt-4 flex justify-center gap-4">
-                <button
-                  onClick={captureAndPredict}
-                  className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  disabled={loading || modelLoading}
-                >
-                  {language === 'en' ? 'Scan fruit' : 'ស្កេន'}
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                >
-                  {language === 'en' ? 'Cancel' : 'បោះបង់'}
-                </button>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-green-800 mb-2">Seed Scanner</h1>
+          <p className="text-gray-600">Identify rice and seed types using AI-powered image recognition</p>
+          <div className="flex justify-center gap-4 mt-4">
+            <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
+              <span className="text-sm text-gray-600">Total Scans: </span>
+              <span className="font-semibold text-green-600">{scanHistory.length}</span>
+            </div>
+            {result && (
+              <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
+                <span className="text-sm text-gray-600">Last Result: </span>
+                <span className="font-semibold text-blue-600">{result.type}</span>
               </div>
-            </>
-          )}
+            )}
+          </div>
+        </div>
 
-          {/* Upload section */}
-          <div className="mt-6">
-            <label className="block mb-2 font-semibold">
-              {language === 'en' ? 'Or choose an image:' : 'ឬជ្រើសរូបភាព:'}
-            </label>
-            <input type="file" accept="image/*" onChange={handleImageChange} />
+        <div className="grid lg:grid-cols-4 gap-6">
+          {/* Image Capture Section */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Capture Seed Image</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!selectedImage && (
+                  <>
+                    <CameraCapture onImageCapture={setSelectedImage} />
+                    <div className="text-center text-gray-500">or</div>
+                    <ImageUpload onImageUpload={setSelectedImage} />
+                  </>
+                )}
+
+                {selectedImage && (
+                  <div className="space-y-3">
+                    <img
+                      src={selectedImage || "/placeholder.svg"}
+                      alt="Selected seed"
+                      className="w-full rounded-lg border max-h-64 object-cover"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={scanSeed}
+                        disabled={isScanning}
+                        className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                      >
+                        {isScanning ? "Scanning..." : "Scan Seed"}
+                      </button>
+                      <button
+                        onClick={resetScanner}
+                        className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Actions */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Quick Actions</h4>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => document.querySelector('input[type="file"]')?.click()}
+                      className="w-full text-left text-sm text-blue-600 hover:text-blue-800 py-1"
+                    >
+                      📁 Upload from Gallery
+                    </button>
+                    <button
+                      onClick={clearHistory}
+                      disabled={scanHistory.length === 0}
+                      className="w-full text-left text-sm text-red-600 hover:text-red-800 disabled:text-gray-400 py-1"
+                    >
+                      🗑️ Clear History
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Scan History */}
+            {scanHistory.length > 0 && (
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="text-sm">Recent Scans</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {scanHistory.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => loadFromHistory(item)}
+                        className="flex items-center gap-2 p-2 rounded border hover:bg-gray-50 cursor-pointer"
+                      >
+                        <img
+                          src={item.image || "/placeholder.svg"}
+                          alt="History item"
+                          className="w-8 h-8 object-cover rounded"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{item.result.type}</p>
+                          <p className="text-xs text-gray-500">{(item.confidence * 100).toFixed(0)}% confidence</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* Image preview and scan */}
-          {selectedImage && (
-            <>
-              <img
-                src={selectedImage}
-                alt="Selected"
-                className="mt-4 mx-auto rounded border"
-                style={{ maxWidth: '320px' }}
-              />
-              <div className="mt-4 flex justify-center gap-4">
-                <button
-                  onClick={scanSelectedImage}
-                  className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  disabled={loading || modelLoading}
-                >
-                  {language === 'en' ? 'Scan fruit' : 'ស្កេន'}
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                >
-                  {language === 'en' ? 'Cancel' : 'បោះបង់'}
-                </button>
-              </div>
-            </>
-          )}
-        </>
-      )}
+          {/* Results Section */}
+          <div className="lg:col-span-3">
+            <ScanResults result={result} error={error} isScanning={isScanning} />
+          </div>
+        </div>
+
+        {/* Seed Comparison Tool */}
+        {selectedImage && (
+          <RiceComparisonTool userImage={selectedImage} detectedType={result?.type} title="Seed Comparison Tool" />
+        )}
+
+        {/* Seed Types Reference */}
+        <div className="mt-8">
+          <RiceTypesReference title="Seed Types Reference Guide" />
+        </div>
+
+        {/* Debug Panel - Remove in production */}
+        <div className="mt-8">
+          <DebugPanel />
+        </div>
+      </div>
     </div>
   )
 }
 
-export default SeedScanner
+// Export for use in other components
+export { SeedScanner }

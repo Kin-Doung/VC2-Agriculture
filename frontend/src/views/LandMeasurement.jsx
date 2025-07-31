@@ -13,10 +13,10 @@ import {
   MapPin,
   Ruler,
   Trash2,
-  Wheat,
+  Search,
 } from "lucide-react";
-import { Button } from "../components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
+import { Button } from '../components/ui/Button';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import {
   MapContainer,
   TileLayer,
@@ -29,8 +29,9 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import leafletImage from "leaflet-image";
+import { insertMeasurement, setAuthToken } from "../api.js"; // Removed insertAmount
 
-// Comprehensive land type data (100 types)
+// Comprehensive land type data (deduplicated)
 const landTypes = [
   { value: "Lowland Rainfed", label: "Lowland Rainfed", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
   { value: "Irrigated Paddy Field", label: "Irrigated Paddy Field", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 30 } },
@@ -62,7 +63,6 @@ const landTypes = [
   { value: "Triple-cropping Land", label: "Triple-cropping Land", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 50 } },
   { value: "Mixed Soil (clay + sand)", label: "Mixed Soil (clay + sand)", seedRate: [90, 110], fertilizer: { DAP: 60, Organic: 2000 } },
   { value: "Soil with Pest History", label: "Soil with Pest History", seedRate: [100, 120], fertilizer: { DAP: 60, KCl: 50 } },
-  // Adding remaining 70 types (51-100) as per the provided list
   { value: "Seasonal Wetland", label: "Seasonal Wetland", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 60 } },
   { value: "Near Main Canal", label: "Near Main Canal", seedRate: [80, 90], fertilizer: { Urea: 70, DAP: 50 } },
   { value: "Area with Natural Drainage", label: "Area with Natural Drainage", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
@@ -115,9 +115,58 @@ const landTypes = [
   { value: "Rainfed Upland (Sorghum Rotation)", label: "Rainfed Upland (Sorghum Rotation)", seedRate: [100, 120], fertilizer: { Organic: 2500, DAP: 50 } },
 ];
 
+// Expanded province data with approximate coordinates
+const provincesData = [
+  { value: "phnom_penh", label: "Phnom Penh", coords: [11.5564, 104.9282] },
+  { value: "kampong_cham", label: "Kampong Cham", coords: [12.0108, 105.4642] },
+  { value: "siem_reap", label: "Siem Reap", coords: [13.3618, 103.8602] },
+  { value: "battambang", label: "Battambang", coords: [13.1000, 103.2000] },
+  { value: "kampong_speu", label: "Kampong Speu", coords: [11.4535, 104.5192] },
+  { value: "kampong_thom", label: "Kampong Thom", coords: [12.7088, 104.8895] },
+  { value: "kandal", label: "Kandal", coords: [11.2257, 104.9070] },
+  { value: "prey_veng", label: "Prey Veng", coords: [11.4866, 105.3257] },
+  { value: "takeo", label: "Takeo", coords: [10.9865, 104.7850] },
+  { value: "kep", label: "Kep", coords: [10.4841, 104.3158] },
+  { value: "koh_kong", label: "Koh Kong", coords: [11.6154, 102.9835] },
+  { value: "kratie", label: "Kratie", coords: [12.4888, 106.0188] },
+  { value: "mondulkiri", label: "Mondulkiri", coords: [12.9262, 107.1788] },
+  { value: "odar_meanchey", label: "Odar Meanchey", coords: [14.1171, 103.4917] },
+  { value: "pursat", label: "Pursat", coords: [12.5388, 103.9192] },
+  { value: "preah_vihear", label: "Preah Vihear", coords: [13.9833, 104.9667] },
+  { value: "rattanakiri", label: "Rattanakiri", coords: [13.7333, 107.0000] },
+  { value: "stung_treng", label: "Stung Treng", coords: [13.5269, 105.9667] },
+  { value: "svay_rieng", label: "Svay Rieng", coords: [11.0860, 105.7992] },
+  { value: "kampot", label: "Kampot", coords: [10.6086, 104.1815] },
+  { value: "sihanoukville", label: "Sihanoukville", coords: [10.6109, 103.5303] },
+];
+
+const districts = {
+  phnom_penh: ["Chamkar Mon", "Doun Penh", "Prampir Makara"],
+  kampong_cham: ["Kampong Cham", "Krouch Chhmar", "Stung Trang"],
+  siem_reap: ["Siem Reap", "Sotr Nikum", "Angkor Thom"],
+  battambang: ["Battambang", "Sangkae", "Bavel"],
+  kampong_speu: ["Kampong Speu", "Odongk", "Samraong Tong"],
+  kampong_thom: ["Kampong Thom", "Stung Sen", "Sandan"],
+  kandal: ["Takmao", "Kandal Stueng", "Lvea Aem"],
+  prey_veng: ["Prey Veng", "Peam Chor", "Kampong Leav"],
+  takeo: ["Takeo", "Doun Kaev", "Samraong"],
+  kep: ["Kep", "Damnak Chang Aeur"],
+  koh_kong: ["Koh Kong", "Khemarak Phoumin", "Srae Ambel"],
+  kratie: ["Kratie", "Chhlong", "Snuol"],
+  mondulkiri: ["Senmonorom", "Kaoh Nheaek", "Pech Chreada"],
+  odar_meanchey: ["Samraong", "Trapeang Prasat", "Banteay Ampil"],
+  pursat: ["Pursat", "Krakor", "Phnum Kravanh"],
+  preah_vihear: ["Tbeng Meanchey", "Chey Saen", "Rovieng"],
+  rattanakiri: ["Banlung", "Lumphat", "Ou Ya Dav"],
+  stung_treng: ["Stung Treng", "Sesan", "Thala Borivat"],
+  svay_rieng: ["Svay Rieng", "Romeas Haek", "Svay Chrum"],
+  kampot: ["Kampot", "Chhuk", "Banteay Meas"],
+  sihanoukville: ["Sihanoukville", "Prey Nob", "Stueng Hav"],
+};
+
 // Estimate seed and fertilizer amounts based on area and land type
 const estimateAmounts = (area, landType) => {
-  const selectedType = landTypes.find(type => type.value === landType) || landTypes[0]; // Default to first type if not found
+  const selectedType = landTypes.find(type => type.value === landType) || landTypes[0];
   const seedRateMin = selectedType.seedRate[0];
   const seedRateMax = selectedType.seedRate[1];
   const fertilizer = selectedType.fertilizer;
@@ -126,7 +175,7 @@ const estimateAmounts = (area, landType) => {
   const seedAmountMax = area * seedRateMax;
   const fertilizerTotal = {};
   for (const [key, value] of Object.entries(fertilizer)) {
-    fertilizerTotal[key] = area * (value / 1000); // Convert kg to tons for compost/organic if needed
+    fertilizerTotal[key] = area * (value / 1000);
   }
 
   return {
@@ -160,11 +209,15 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
   const [mapType, setMapType] = useState("satellite");
   const [landName, setLandName] = useState(initialMeasurement?.name || "");
   const [area, setArea] = useState(initialMeasurement?.area || 0);
-  const [mapCenter, setMapCenter] = useState([40.7128, -74.006]); // Default: NYC
+  const [mapCenter, setMapCenter] = useState([40.7128, -74.006]);
   const [newPointId, setNewPointId] = useState(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [showInitialOverlay, setShowInitialOverlay] = useState(points.length === 0 && !isMapLoading);
   const [landType, setLandType] = useState(initialMeasurement?.landType || "");
+  const [provinceSearch, setProvinceSearch] = useState(initialMeasurement?.province || "");
+  const [district, setDistrict] = useState(initialMeasurement?.district || "");
+  const [suggestions, setSuggestions] = useState([]);
+  const [error, setError] = useState(null); // Added for error display
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -185,7 +238,23 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
       setIsMapLoading(false);
       setShowInitialOverlay(points.length === 0);
     }
-  }, []);
+  }, [points.length]);
+
+  useEffect(() => {
+    const matchedProvince = provincesData.find(p => 
+      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+    );
+    if (matchedProvince) {
+      setMapCenter(matchedProvince.coords);
+      setDistrict("");
+    }
+    const filteredSuggestions = provincesData.filter(p =>
+      p.label.toLowerCase().includes(provinceSearch.toLowerCase()) || 
+      p.value.toLowerCase().includes(provinceSearch.toLowerCase())
+    ).map(p => p.label);
+    setSuggestions(filteredSuggestions);
+  }, [provinceSearch]);
 
   useEffect(() => {
     if (points.length < 3) {
@@ -224,7 +293,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
     const metersPerDegreeLng = 40075 * 1000 / 360;
     const scaledArea = area * (metersPerDegreeLat * metersPerDegreeLng) / 10000;
 
-    setArea(scaledArea);
+    setArea(isNaN(scaledArea) ? 0 : scaledArea);
     setGpsError(null);
   }, [points]);
 
@@ -341,23 +410,67 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
     iconAnchor: [15, 15],
   });
 
-  const handleSave = () => {
-    if (points.length < 3 || !landName.trim() || isMapLoading) return;
+  const handleSave = async () => {
+    if (points.length < 3 || !landName.trim() || isMapLoading) {
+      alert("Please add at least 3 points and provide a land name.");
+      return;
+    }
+
+    if (isNaN(area) || area <= 0) {
+      alert("Invalid area calculated. Please ensure points form a valid polygon.");
+      return;
+    }
+
     const now = new Date();
     const { seedAmountMin, seedAmountMax, fertilizerTotal } = estimateAmounts(area, landType);
+
     const measurement = {
       id: initialMeasurement?.id || Date.now().toString(),
       name: landName.trim(),
-      area,
-      points,
+      data_area_ha: parseFloat(area.toFixed(2)),
+      data_area_acres: parseFloat((area * 2.471).toFixed(2)), // Convert hectares to acres
+      points: points.map(point => ({
+        lat: point.lat,
+        lng: point.lng,
+        id: point.id,
+        isGPS: point.isGPS,
+      })),
       landType,
-      seedAmountMin,
-      seedAmountMax,
+      seedAmountMin: parseFloat(seedAmountMin.toFixed(2)),
+      seedAmountMax: parseFloat(seedAmountMax.toFixed(2)),
       fertilizerTotal,
-      date: now.toLocaleDateString(),
-      timestamp: now.getTime(),
+      date: now.toLocaleDateString('en-CA'), // Format as YYYY-MM-DD
     };
-    onSave(measurement);
+
+    try {
+      const authToken = localStorage.getItem("authToken") || "YOUR_AUTH_TOKEN_HERE";
+      setAuthToken(authToken);
+
+      console.log("Payload being sent:", measurement); // Log payload for debugging
+
+      const measurementResponse = await insertMeasurement(measurement);
+      console.log("Measurement insertion response:", measurementResponse);
+
+      onSave(measurement);
+      setError(null);
+      alert("Measurement saved successfully!");
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message;
+      const validationErrors = error.response?.data?.errors || {};
+      console.error("Error saving data:", {
+        message: errorMessage,
+        validation: validationErrors,
+        status: error.response?.status,
+        url: error.config?.url,
+      });
+      setError(`Failed to save measurement: ${errorMessage}`);
+      alert(`Failed to save measurement: ${errorMessage}. Check console for details.`);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setProvinceSearch(suggestion);
+    setSuggestions([]);
   };
 
   return (
@@ -493,6 +606,11 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
           {newPointId && (
             <div className="absolute top-2 sm:top-4 left-2 sm:left-4 bg-green-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded shadow-lg animate-fade-out z-20 sm:text-sm">
               GPS Point Added!
+            </div>
+          )}
+          {error && (
+            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-red-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded shadow-lg z-20 sm:text-sm">
+              {error}
             </div>
           )}
         </div>
@@ -660,6 +778,49 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Province Search</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={provinceSearch}
+                      onChange={(e) => setProvinceSearch(e.target.value)}
+                      placeholder="Search province"
+                      className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-8"
+                    />
+                    <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {suggestions.length > 0 && (
+                      <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                        {suggestions.map((suggestion, index) => (
+                          <li
+                            key={index}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="px-2 py-1 hover:bg-gray-100 cursor-pointer text-sm"
+                          >
+                            {suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">District</label>
+                  <select
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    disabled={!provinceSearch || !provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase())}
+                  >
+                    <option value="" disabled>Select a district</option>
+                    {provinceSearch && provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()) && 
+                      districts[provincesData.find(p => p.label.toLowerCase() === provinceSearch.toLowerCase() || p.value === provinceSearch.toLowerCase()).value].map((dist) => (
+                        <option key={dist} value={dist}>
+                          {dist}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 sm:text-base">Land Type</label>
                   <select
                     value={landType}
@@ -676,7 +837,7 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                 </div>
                 <Button
                   onClick={handleSave}
-                  disabled={points.length < 3 || !landName.trim() || isMapLoading}
+                  disabled={points.length < 3 || !landName.trim() || isMapLoading || isNaN(area) || area <= 0}
                   className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 sm:py-3"
                 >
                   <Save className="w-4 h-4 mr-2" />
@@ -684,6 +845,9 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
                 </Button>
                 {points.length < 3 && (
                   <p className="text-xs text-gray-500">Add at least 3 points to save measurement</p>
+                )}
+                {(isNaN(area) || area <= 0) && (
+                  <p className="text-xs text-red-500">Invalid area, please check points</p>
                 )}
               </CardContent>
             </Card>
