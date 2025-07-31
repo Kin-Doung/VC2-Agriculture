@@ -84,6 +84,40 @@ const translations = {
       { value: "Lowland Rainfed", label: "Lowland Rainfed" },
       { value: "Agricultural", label: "Agricultural" },
     ],
+    recommendations: {
+      tonle_sap_basin: {
+        rice: "High-yield varieties like IR36, IR42, or Phka Romdoul (fragrant, export-quality). Yields >1 ton/ha.",
+        fertilizerPlan: [
+          "Before planting: 25 kg DAP + 500 kg compost",
+          "Tillering stage (20 days): 30 kg urea",
+          "Panicle initiation (40–50 days): 25 kg urea + 20 kg MOP",
+        ],
+      },
+      coastal_plains: {
+        rice: "Traditional varieties or improved strains like IR36. Yields ~0.8 ton/ha.",
+        fertilizerPlan: [
+          "Before planting: 20 kg DAP + 400 kg compost",
+          "Tillering stage (20 days): 25 kg urea",
+          "Panicle initiation (40–50 days): 20 kg urea + 15 kg MOP",
+        ],
+      },
+      highlands: {
+        rice: "Floating rice for flood-prone areas. Yields <0.6 ton/ha.",
+        fertilizerPlan: [
+          "Before planting: 15 kg DAP + 300 kg compost",
+          "Tillering stage (20 days): 20 kg urea",
+          "Panicle initiation (40–50 days): 15 kg urea + 10 kg MOP",
+        ],
+      },
+      Agricultural: {
+        rice: "General-purpose varieties suitable for agricultural land.",
+        fertilizerPlan: [
+          "Before planting: 20 kg DAP + 500 kg compost",
+          "Tillering stage: 25 kg urea",
+          "Panicle initiation: 20 kg urea",
+        ],
+      },
+    },
   },
   km: {
     backToDashboard: "ត្រលប់ទៅផ្ទាំងគ្រប់គ្រង",
@@ -129,6 +163,40 @@ const translations = {
       { value: "Lowland Rainfed", label: "ដីទំនាបពឹងផ្អែកលើទឹកភ្លៀង" },
       { value: "Agricultural", label: "កសិកម្ម" },
     ],
+    recommendations: {
+      tonle_sap_basin: {
+        rice: "ពូជទិន្នផលខ្ពស់ដូចជា IR36, IR42, ឬ Phka Romdoul (ក្រអូប, គុណភាពនាំចេញ)។ ទិន្នផល >១ តោន/ហិកតា។",
+        fertilizerPlan: [
+          "មុនពេលដាំ: ២៥ គីឡូក្រាម DAP + ៥០០ គីឡូក្រាមជីកំប៉ុស្ត",
+          "ដំណាក់កាលដុះស្លឹក (២០ ថ្ងៃ): ៣០ គីឡូក្រាម urea",
+          "ដំណាក់កាលចេញផ្កា (៤០-៥០ ថ្ងៃ): ២៥ គីឡូក្រាម urea + ២០ គីឡូក្រាម MOP",
+        ],
+      },
+      coastal_plains: {
+        rice: "ពូជប្រពៃណី ឬពូជកែលម្អដូចជា IR36។ ទិន្នផល ~០.៨ តោន/ហិកតា។",
+        fertilizerPlan: [
+          "មុនពេលដាំ: ២០ គីឡូក្រាម DAP + ៤០០ គីឡូក្រាមជីកំប៉ុស្ត",
+          "ដំណាក់កាលដុះស្លឹក (២០ ថ្ងៃ): ២៥ គីឡូក្រាម urea",
+          "ដំណាក់កាលចេញផ្កា (៤០-៥០ ថ្ងៃ): ២០ គីឡូក្រាម urea + ១៥ គីឡូក្រាម MOP",
+        ],
+      },
+      highlands: {
+        rice: "ស្រូវអណ្តែតសម្រាប់តំបន់ងាយជន់លិច។ ទិន្នផល <០.៦ តោន/ហិកតា។",
+        fertilizerPlan: [
+          "មុនពេលដាំ: ១៥ គីឡូក្រាម DAP + ៣០០ គីឡូក្រាមជីកំប៉ុស្ត",
+          "ដំណាក់កាលដុះស្លឹក (២០ ថ្ងៃ): ២០ គីឡូក្រាម urea",
+          "ដំណាក់កាលចេញផ្កា (៤០-៥០ ថ្ងៃ): ១៥ គីឡូក្រាម urea + ១០ គីឡូក្រាម MOP",
+        ],
+      },
+      Agricultural: {
+        rice: "ពូជគោលបំណងទូទៅសមរម្យសម្រាប់ដីកសិកម្ម។",
+        fertilizerPlan: [
+          "មុនពេលដាំ: ២០ គីឡូក្រាម DAP + ៥០០ គីឡូក្រាមជីកំប៉ុស្ត",
+          "ដំណាក់កាលដុះស្លឹក: ២៥ គីឡូក្រាម urea",
+          "ដំណាក់កាលចេញផ្កា: ២០ គីឡូក្រាម urea",
+        ],
+      },
+    },
   },
 };
 
