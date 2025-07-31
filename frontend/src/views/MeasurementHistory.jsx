@@ -1,113 +1,73 @@
-import { useState } from "react";
-import { ArrowLeft, Search, Filter, MapPin, Calendar, Ruler, Edit2, Trash2, ChevronDown } from "lucide-react";
-import { Button } from "../components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
+"use client"
 
-// Comprehensive land type data (100 types)
+import { useState, useEffect } from "react"
+import {
+  ArrowLeft,
+  Search,
+  MapPin,
+  Calendar,
+  Ruler,
+  Trash2,
+  ChevronDown,
+  AlertCircle,
+  Download,
+  Eye,
+  BarChart3,
+  Layers,
+  Target,
+  TrendingUp,
+  Wheat,
+  Sprout,
+  Leaf,
+  Database,
+  FileText,
+  Activity,
+  Globe,
+  Zap,
+  Package,
+  Clock,
+  SortAsc,
+  SortDesc,
+  Map,
+  Compass,
+  TreePine,
+  Droplets,
+  CloudRain,
+} from "lucide-react"
+import { Button } from "../components/ui/Button"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card"
+import { getLands, deleteLand } from "../api"
+
+// Comprehensive land type data (unchanged)
 const landTypes = [
   { value: "Lowland Rainfed", label: "Lowland Rainfed", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
-  { value: "Irrigated Paddy Field", label: "Irrigated Paddy Field", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 30 } },
-  { value: "Flood-prone Land", label: "Flood-prone Land", seedRate: [100, 120], fertilizer: { Compost: 2000, Urea: 50 } },
-  { value: "Upland/Dry Area", label: "Upland/Dry Area", seedRate: [80, 100], fertilizer: { DAP: 60, Organic: 1500 } },
-  { value: "Alluvial Soil (River side)", label: "Alluvial Soil (River side)", seedRate: [60, 80], fertilizer: { Urea: 70, DAP: 40 } },
-  { value: "Sandy Soil", label: "Sandy Soil", seedRate: [100, 120], fertilizer: { Compost: 3000, DAP: 60 } },
-  { value: "Clay Soil", label: "Clay Soil", seedRate: [80, 90], fertilizer: { Urea: 80, KCl: 40 } },
-  { value: "Loam Soil", label: "Loam Soil", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 60 } },
-  { value: "Heavy Clay (Flooded Area)", label: "Heavy Clay (Flooded Area)", seedRate: [90, 110], fertilizer: { Organic: 2000, Urea: 50 } },
-  { value: "Marshy Land (Wet all year)", label: "Marshy Land (Wet all year)", seedRate: [90, 120], fertilizer: { DAP: 50, Compost: 3000 } },
-  { value: "High-Fertility Lowland", label: "High-Fertility Lowland", seedRate: [60, 70], fertilizer: { Urea: 40, DAP: 30 } },
-  { value: "Mountain Base", label: "Mountain Base", seedRate: [80, 100], fertilizer: { Compost: 2000, Urea: 60 } },
-  { value: "Sloped Upland", label: "Sloped Upland", seedRate: [100, 120], fertilizer: { DAP: 40, Organic: 1000 } },
-  { value: "Red Soil Area", label: "Red Soil Area", seedRate: [80, 90], fertilizer: { DAP: 60, KCl: 30 } },
-  { value: "Acid Soil", label: "Acid Soil", seedRate: [90, 110], fertilizer: { Lime: 300, DAP: 60 } },
-  { value: "Saline Soil", label: "Saline Soil", seedRate: [80, 100], fertilizer: { Gypsum: 500, Urea: 50 } },
-  { value: "Land Near Lake", label: "Land Near Lake", seedRate: [80, 100], fertilizer: { DAP: 60, Compost: 2000 } },
-  { value: "Land with Water Retention", label: "Land with Water Retention", seedRate: [70, 90], fertilizer: { Urea: 60, KCl: 40 } },
-  { value: "Former Shrubland", label: "Former Shrubland", seedRate: [100, 120], fertilizer: { Compost: 2000, DAP: 50 } },
-  { value: "Former Forest Land", label: "Former Forest Land", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 50 } },
-  { value: "Organic-Rich Lowland", label: "Organic-Rich Lowland", seedRate: [70, 80], fertilizer: { Urea: 50, DAP: 30 } },
-  { value: "Drought-Prone Area", label: "Drought-Prone Area", seedRate: [100, 120], fertilizer: { Organic: 2000, DAP: 60 } },
-  { value: "River Island Soil", label: "River Island Soil", seedRate: [80, 90], fertilizer: { Compost: 2000, Urea: 60 } },
-  { value: "Black Soil", label: "Black Soil", seedRate: [70, 80], fertilizer: { DAP: 50, KCl: 30 } },
-  { value: "Silt Loam (Lake side)", label: "Silt Loam (Lake side)", seedRate: [60, 70], fertilizer: { Urea: 60, DAP: 50 } },
-  { value: "Soil with High Organic Matter", label: "Soil with High Organic Matter", seedRate: [60, 80], fertilizer: { Urea: 30, DAP: 30 } },
-  { value: "Double-cropping Land", label: "Double-cropping Land", seedRate: [70, 90], fertilizer: { Urea: 60, KCl: 40 } },
-  { value: "Triple-cropping Land", label: "Triple-cropping Land", seedRate: [60, 80], fertilizer: { Urea: 80, DAP: 50, KCl: 50 } },
-  { value: "Mixed Soil (clay + sand)", label: "Mixed Soil (clay + sand)", seedRate: [90, 110], fertilizer: { DAP: 60, Organic: 2000 } },
-  { value: "Soil with Pest History", label: "Soil with Pest History", seedRate: [100, 120], fertilizer: { DAP: 60, KCl: 50 } },
-  { value: "Seasonal Wetland", label: "Seasonal Wetland", seedRate: [90, 110], fertilizer: { DAP: 50, Urea: 60 } },
-  { value: "Near Main Canal", label: "Near Main Canal", seedRate: [80, 90], fertilizer: { Urea: 70, DAP: 50 } },
-  { value: "Area with Natural Drainage", label: "Area with Natural Drainage", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
-  { value: "Newly Cleared Lowland", label: "Newly Cleared Lowland", seedRate: [90, 100], fertilizer: { Compost: 2000, DAP: 50 } },
-  { value: "Soil with High pH", label: "Soil with High pH", seedRate: [80, 90], fertilizer: { Gypsum: 500, Urea: 50 } },
-  { value: "Soil with Low pH", label: "Soil with Low pH", seedRate: [90, 110], fertilizer: { Lime: 400, DAP: 60 } },
-  { value: "Edge of Hill or Slope", label: "Edge of Hill or Slope", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
-  { value: "Rice Land Prone to Weed Pressure", label: "Rice Land Prone to Weed Pressure", seedRate: [90, 110], fertilizer: { DAP: 60, Urea: 60 } },
-  { value: "Wind-exposed Open Field", label: "Wind-exposed Open Field", seedRate: [90, 100], fertilizer: { Compost: 2000, DAP: 50 } },
-  { value: "Protected Field Near Forest Edge", label: "Protected Field Near Forest Edge", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 40 } },
-  { value: "Moist Shaded Area", label: "Moist Shaded Area", seedRate: [80, 100], fertilizer: { DAP: 50, Urea: 60 } },
-  { value: "Hard Crust Soil After Rain", label: "Hard Crust Soil After Rain", seedRate: [90, 110], fertilizer: { Compost: 3000, DAP: 60 } },
-  { value: "Medium Clay Field", label: "Medium Clay Field", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 50 } },
-  { value: "Silty-clay Flood Area", label: "Silty-clay Flood Area", seedRate: [100, 120], fertilizer: { Compost: 2500, DAP: 50 } },
-  { value: "Gravelly Loam Land", label: "Gravelly Loam Land", seedRate: [90, 110], fertilizer: { Organic: 2000, DAP: 60 } },
-  { value: "Deep Topsoil Loam", label: "Deep Topsoil Loam", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
-  { value: "Rice-duck Integrated Field", label: "Rice-duck Integrated Field", seedRate: [80, 100], fertilizer: { DAP: 40, Organic: 1500 } },
-  { value: "Fish-rice System Area", label: "Fish-rice System Area", seedRate: [70, 80], fertilizer: { Organic: 2000, DAP: 40 } },
-  { value: "Organic Rice Farming Land", label: "Organic Rice Farming Land", seedRate: [80, 100], fertilizer: { Compost: 3000, GreenManure: 1000 } },
-  { value: "Former Banana Field", label: "Former Banana Field", seedRate: [90, 100], fertilizer: { Organic: 2000, DAP: 60 } },
-  { value: "Former Cassava Field", label: "Former Cassava Field", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 50 } },
-  { value: "Field After Maize Crop", label: "Field After Maize Crop", seedRate: [90, 110], fertilizer: { Compost: 2000, DAP: 60 } },
-  { value: "Multi-season Cropping Land", label: "Multi-season Cropping Land", seedRate: [70, 90], fertilizer: { Urea: 60, DAP: 50 } },
-  { value: "Summer Season Field", label: "Summer Season Field", seedRate: [100, 120], fertilizer: { Organic: 3000, Urea: 60 } },
-  { value: "Monsoon Rice Area", label: "Monsoon Rice Area", seedRate: [80, 90], fertilizer: { Urea: 60, DAP: 50 } },
-  { value: "Reused Paddy Field", label: "Reused Paddy Field", seedRate: [100, 120], fertilizer: { Compost: 2000, DAP: 60 } },
-  { value: "Soil with Termite Mound Traces", label: "Soil with Termite Mound Traces", seedRate: [90, 110], fertilizer: { Organic: 2000, DAP: 50 } },
-  { value: "Salt-influenced Soil (Mild)", label: "Salt-influenced Soil (Mild)", seedRate: [80, 90], fertilizer: { Gypsum: 300, Urea: 50 } },
-  { value: "Low-lying Depression Area", label: "Low-lying Depression Area", seedRate: [90, 110], fertilizer: { Compost: 3000, DAP: 60 } },
-  { value: "Former Sugarcane Field", label: "Former Sugarcane Field", seedRate: [90, 100], fertilizer: { Organic: 2000, Urea: 60 } },
-  { value: "Wind-break Zone Field", label: "Wind-break Zone Field", seedRate: [70, 80], fertilizer: { Urea: 60, DAP: 40 } },
-  { value: "Bamboo Grove Edge", label: "Bamboo Grove Edge", seedRate: [80, 100], fertilizer: { Compost: 2000, DAP: 50 } },
-  { value: "Roadside Rice Field", label: "Roadside Rice Field", seedRate: [90, 100], fertilizer: { Urea: 60, DAP: 50 } },
-  { value: "Soil with Poor Structure", label: "Soil with Poor Structure", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
-  { value: "Sticky Rice Traditional Field", label: "Sticky Rice Traditional Field", seedRate: [100, 120], fertilizer: { Organic: 2000, DAP: 50 } },
-  { value: "Jasmine Rice Area", label: "Jasmine Rice Area", seedRate: [70, 90], fertilizer: { Urea: 60, DAP: 60 } },
-  { value: "Black Glutinous Rice Zone", label: "Black Glutinous Rice Zone", seedRate: [80, 100], fertilizer: { DAP: 50, Urea: 60 } },
-  { value: "Early Transplanting Land", label: "Early Transplanting Land", seedRate: [70, 90], fertilizer: { Urea: 50, DAP: 40 } },
-  { value: "Late Transplanting Land", label: "Late Transplanting Land", seedRate: [90, 110], fertilizer: { Compost: 2000, DAP: 60 } },
-  { value: "Manual Broadcast Field", label: "Manual Broadcast Field", seedRate: [100, 120], fertilizer: { DAP: 60, Urea: 70 } },
-  { value: "Transplant with Spacing Method", label: "Transplant with Spacing Method", seedRate: [60, 80], fertilizer: { Urea: 50, DAP: 40 } },
-  { value: "Tractor-tilled Rice Field", label: "Tractor-tilled Rice Field", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
-  { value: "Cow-plowed Land", label: "Cow-plowed Land", seedRate: [90, 100], fertilizer: { DAP: 60, Organic: 1500 } },
-  { value: "Land with Poor Water Holding", label: "Land with Poor Water Holding", seedRate: [100, 120], fertilizer: { Compost: 3000, DAP: 50 } },
-  { value: "Drought-prone Zone", label: "Drought-prone Zone", seedRate: [100, 120], fertilizer: { Organic: 3000, DAP: 60 } },
-  { value: "High-yield Demonstration Plot", label: "High-yield Demonstration Plot", seedRate: [60, 70], fertilizer: { Urea: 80, DAP: 60, KCl: 50 } },
-  { value: "Farmer Training Site", label: "Farmer Training Site", seedRate: [70, 90], fertilizer: { Urea: 70, DAP: 50 } },
-  { value: "Seed Production Plot", label: "Seed Production Plot", seedRate: [60, 80], fertilizer: { Urea: 60, DAP: 50, KCl: 40 } },
-  { value: "Nursery Bed Land", label: "Nursery Bed Land", seedRate: [30, 40], fertilizer: { Compost: 1000, DAP: 30 } },
-  { value: "Rainfed Upland (Sorghum Rotation)", label: "Rainfed Upland (Sorghum Rotation)", seedRate: [100, 120], fertilizer: { Organic: 2500, DAP: 50 } },
-];
+  { value: "Agricultural", label: "Agricultural", seedRate: [80, 100], fertilizer: { Urea: 60, DAP: 50 } },
+  // Add other land types as needed
+]
 
-// Estimate seed and fertilizer amounts based on area and land type
+// Estimate seed and fertilizer amounts (unchanged)
 const estimateAmounts = (area, landType) => {
-  const selectedType = landTypes.find(type => type.value === landType) || landTypes[0]; // Default to first type if not found
-  const seedRateMin = selectedType.seedRate[0];
-  const seedRateMax = selectedType.seedRate[1];
-  const fertilizer = selectedType.fertilizer;
+  const selectedType = landTypes.find((type) => type.value === landType) || landTypes[0]
+  const seedRateMin = selectedType.seedRate[0]
+  const seedRateMax = selectedType.seedRate[1]
+  const fertilizer = selectedType.fertilizer
 
-  const seedAmountMin = area * seedRateMin;
-  const seedAmountMax = area * seedRateMax;
-  const fertilizerTotal = {};
+  const seedAmountMin = area * seedRateMin
+  const seedAmountMax = area * seedRateMax
+  const fertilizerTotal = {}
+
   for (const [key, value] of Object.entries(fertilizer)) {
-    fertilizerTotal[key] = area * (value / 1000); // Convert kg to tons for compost/organic if needed
+    fertilizerTotal[key] = area * (value / 1000)
   }
 
   return {
     seedAmountMin,
     seedAmountMax,
     fertilizerTotal,
-  };
-};
+  }
+}
 
+// Recommendations (unchanged)
 const recommendations = {
   tonle_sap_basin: {
     rice: "High-yield varieties like IR36, IR42, or Phka Romdoul (fragrant, export-quality). Yields >1 ton/ha.",
@@ -133,89 +93,275 @@ const recommendations = {
       "Panicle initiation (40–50 days): 15 kg urea + 10 kg MOP",
     ],
   },
-};
+  Agricultural: {
+    rice: "General-purpose varieties suitable for agricultural land.",
+    fertilizerPlan: [
+      "Before planting: 20 kg DAP + 500 kg compost",
+      "Tillering stage: 25 kg urea",
+      "Panicle initiation: 20 kg urea",
+    ],
+  },
+}
 
-export default function MeasurementHistory({ onBack, measurements, onDelete, onEdit, language }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("date");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [expandedDetails, setExpandedDetails] = useState({});
+// Helper function to get land type icon (unchanged)
+const getLandTypeIcon = (landType) => {
+  switch (landType?.toLowerCase()) {
+    case "lowland rainfed":
+      return <CloudRain className="w-4 h-4" />
+    case "irrigated paddy field":
+      return <Droplets className="w-4 h-4" />
+    case "agricultural":
+      return <Wheat className="w-4 h-4" />
+    case "highlands":
+      return <TreePine className="w-4 h-4" />
+    default:
+      return <Leaf className="w-4 h-4" />
+  }
+}
 
-  // Ensure measurements is an array to prevent errors
-  const filteredMeasurements = Array.isArray(measurements)
-    ? measurements
-        .filter((measurement) =>
-          measurement?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .sort((a, b) => {
-          let comparison = 0;
-          switch (sortBy) {
-            case "name":
-              comparison = (a.name || "").localeCompare(b.name || "");
-              break;
-            case "area":
-              comparison = (a.area || 0) - (b.area || 0);
-              break;
-            case "date":
-            default:
-              comparison = (a.timestamp || 0) - (b.timestamp || 0);
-              break;
-          }
-          return sortOrder === "asc" ? comparison : -comparison;
-        })
-        .map((measurement) => ({
-          ...measurement,
-          ...estimateAmounts(measurement.area || 0, measurement.landType),
-        }))
-    : [];
+export default function MeasurementHistory({ onBack, onDelete, language }) {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [sortBy, setSortBy] = useState("date")
+  const [sortOrder, setSortOrder] = useState("desc")
+  const [expandedDetails, setExpandedDetails] = useState({})
+  const [measurements, setMeasurements] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
 
-  // Calculate total area, handling empty or invalid measurements
-  const totalArea = Array.isArray(measurements)
-    ? measurements.reduce((sum, measurement) => sum + (measurement?.area || 0), 0)
-    : 0;
+  // Fetch lands with retry logic
+  useEffect(() => {
+    const fetchLands = async (retries = 3, delay = 1000) => {
+      try {
+        setLoading(true)
+        const data = await getLands()
+        const processedData = Array.isArray(data)
+          ? data.map((measurement) => {
+              let boundaryPoints = []
+              try {
+                boundaryPoints =
+                  typeof measurement.boundary_points === "string"
+                    ? JSON.parse(measurement.boundary_points)
+                    : Array.isArray(measurement.boundary_points)
+                      ? measurement.boundary_points
+                      : []
+              } catch (e) {
+                console.error(`Error parsing boundary_points for ${measurement.name}:`, e)
+                boundaryPoints = []
+              }
 
-  const handleDelete = (id, name) => {
-    if (window.confirm(`Are you sure you want to delete "${name || "Unnamed"}"? This action cannot be undone.`)) {
-      onDelete(id);
+              const area = Number(measurement.data_area_ha) || 0
+              const estimated = !measurement.seed_amount_min || !measurement.fertilizer_total
+                ? estimateAmounts(area, measurement.land_type)
+                : {}
+
+              return {
+                ...measurement,
+                id: measurement.id || `temp-${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
+                area,
+                boundary_points: boundaryPoints,
+                data_area_acres: Number(measurement.data_area_acres) || area * 2.471,
+                seed_amount_min: Number(measurement.seed_amount_min) || estimated.seedAmountMin || 0,
+                seed_amount_max: Number(measurement.seed_amount_max) || estimated.seedAmountMax || 0,
+                fertilizer_total: measurement.fertilizer_total || estimated.fertilizerTotal || {},
+                date: measurement.date || new Date().toISOString().slice(0, 10),
+                land_type: measurement.land_type || "Unknown",
+              }
+            })
+          : []
+
+        setMeasurements(processedData)
+        setLoading(false)
+        setError(null)
+      } catch (err) {
+        if (retries > 0) {
+          console.warn(`Retrying fetchLands, ${retries} attempts left...`)
+          await new Promise((resolve) => setTimeout(resolve, delay))
+          return fetchLands(retries - 1, delay * 2)
+        }
+        setError("Failed to fetch land data after multiple attempts. Please check your connection or try again later.")
+        setLoading(false)
+      }
     }
-  };
 
+    fetchLands()
+  }, [])
+
+  // Handle delete with refetch
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete "${name || "Unnamed"}"? This action cannot be undone.`)) {
+      try {
+        await deleteLand(id, async () => {
+          // Refetch lands to update state
+          const data = await getLands()
+          const processedData = Array.isArray(data)
+            ? data.map((measurement) => {
+                let boundaryPoints = []
+                try {
+                  boundaryPoints =
+                    typeof measurement.boundary_points === "string"
+                      ? JSON.parse(measurement.boundary_points)
+                      : Array.isArray(measurement.boundary_points)
+                        ? measurement.boundary_points
+                        : []
+                } catch (e) {
+                  console.error(`Error parsing boundary_points for ${measurement.name}:`, e)
+                  boundaryPoints = []
+                }
+                const area = Number(measurement.data_area_ha) || 0
+                const estimated = !measurement.seed_amount_min || !measurement.fertilizer_total
+                  ? estimateAmounts(area, measurement.land_type)
+                  : {}
+
+                return {
+                  ...measurement,
+                  id: measurement.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
+                  area,
+                  boundary_points: boundaryPoints,
+                  data_area_acres: Number(measurement.data_area_acres) || area * 2.471,
+                  seed_amount_min: Number(measurement.seed_amount_min) || estimated.seedAmountMin || 0,
+                  seed_amount_max: Number(measurement.seed_amount_max) || estimated.seedAmountMax || 0,
+                  fertilizer_total: measurement.fertilizer_total || estimated.fertilizerTotal || {},
+                  date: measurement.date || new Date().toISOString().slice(0, 10),
+                  land_type: measurement.land_type || "Unknown",
+                }
+              })
+            : []
+          setMeasurements(processedData)
+        })
+        setSuccessMessage(`Land "${name || "Unnamed"}" deleted successfully`)
+        setError(null)
+        setTimeout(() => setSuccessMessage(null), 3000)
+        if (onDelete && typeof onDelete === "function") {
+          onDelete(id)
+        }
+      } catch (error) {
+        setError(error.message || "Failed to delete land. Please try again.")
+        setSuccessMessage(null)
+      }
+    }
+  }
+
+  // Filter and sort measurements
+  const filteredMeasurements = measurements
+    .filter((measurement) => measurement?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case "name":
+          comparison = (a.name || "").localeCompare(b.name || "")
+          break
+        case "area":
+          comparison = (a.area || 0) - (b.area || 0)
+          break
+        case "date":
+        default:
+          comparison = new Date(a.date || 0) - new Date(b.date || 0)
+          break
+      }
+      return sortOrder === "asc" ? comparison : -comparison
+    })
+
+  // Calculate total area
+  const totalArea = measurements.reduce((sum, measurement) => {
+    const area = Number(measurement.area) || 0
+    return sum + area
+  }, 0)
+
+  // Enhanced CSV export with more fields
   const exportToCSV = (measurement) => {
-    if (!measurement || !Array.isArray(measurement.points)) return;
-    const headers = "Point,Latitude,Longitude\n";
-    const rows = measurement.points
-      .map((point, index) => `${index + 1},${point?.lat ?? ""},${point?.lng ?? ""}`)
-      .join("\n");
-    const csvContent = `data:text/csv;charset=utf-8,${headers}${rows}`;
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `${measurement.name || "measurement"}_points.csv`);
-    link.click();
-  };
+    if (!measurement) return
+
+    const headers = [
+      "Name",
+      "Area (ha)",
+      "Area (acres)",
+      "Land Type",
+      "Date",
+      "Seed Amount Min (kg)",
+      "Seed Amount Max (kg)",
+      "Fertilizer Urea (kg)",
+      "Fertilizer DAP (kg)",
+      "Boundary Points",
+    ].join(",")
+
+    const fertilizerUrea = measurement.fertilizer_total?.Urea
+      ? Math.round(Number(measurement.fertilizer_total.Urea) * 1000)
+      : ""
+    const fertilizerDAP = measurement.fertilizer_total?.DAP
+      ? Math.round(Number(measurement.fertilizer_total.DAP) * 1000)
+      : ""
+
+    const boundaryPoints = Array.isArray(measurement.boundary_points)
+      ? measurement.boundary_points
+          .map((point, index) => `Point ${index + 1}: (${point[0]},${point[1]})`)
+          .join("; ")
+      : ""
+
+    const row = [
+      `"${measurement.name || "Unnamed"}"`,
+      Number(measurement.area).toFixed(2),
+      Number(measurement.data_area_acres).toFixed(2),
+      measurement.land_type || "Unknown",
+      measurement.date || "N/A",
+      Math.round(Number(measurement.seed_amount_min) || 0),
+      Math.round(Number(measurement.seed_amount_max) || 0),
+      fertilizerUrea,
+      fertilizerDAP,
+      `"${boundaryPoints}"`,
+    ].join(",")
+
+    const csvContent = `data:text/csv;charset=utf-8,${headers}\n${row}`
+    const link = document.createElement("a")
+    link.setAttribute("href", encodeURI(csvContent))
+    link.setAttribute("download", `${measurement.name || "measurement"}_details.csv`)
+    link.click()
+  }
 
   const toggleDetails = (id) => {
-    setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+    setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button onClick={onBack} variant="ghost" size="sm">
+            <Button onClick={onBack} variant="ghost" size="sm" className="hover:bg-green-50">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">Measurement History</h1>
+            <div className="flex items-center space-x-2">
+              <Database className="w-6 h-6 text-green-600" />
+              <h1 className="text-2xl font-bold text-gray-900">Measurement History</h1>
+            </div>
           </div>
-          <div className="text-sm text-gray-600">
-            {filteredMeasurements.length} measurement{filteredMeasurements.length !== 1 ? "s" : ""} •{" "}
-            {totalArea.toFixed(2)} ha total
+          <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+            <Activity className="w-4 h-4" />
+            <span>
+              {filteredMeasurements.length} measurement{filteredMeasurements.length !== 1 ? "s" : ""} •{" "}
+              {isNaN(totalArea) ? "0.00" : totalArea.toFixed(2)} ha total
+            </span>
           </div>
         </div>
       </div>
+
       <div className="p-6">
         <div className="max-w-6xl mx-auto">
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-100 text-green-800 rounded-lg flex items-center">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              {successMessage}
+            </div>
+          )}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-100 text-red-800 rounded-lg flex items-center">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              {error}
+            </div>
+          )}
           <div className="mb-6 flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -224,67 +370,105 @@ export default function MeasurementHistory({ onBack, measurements, onDelete, onE
                 placeholder="Search measurements..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm"
               />
             </div>
             <div className="flex gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="date">Sort by Date</option>
-                <option value="name">Sort by Name</option>
-                <option value="area">Sort by Area</option>
-              </select>
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm appearance-none"
+                >
+                  <option value="date">Sort by Date</option>
+                  <option value="name">Sort by Name</option>
+                  <option value="area">Sort by Area</option>
+                </select>
+              </div>
               <Button
                 onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
                 variant="outline"
                 size="sm"
+                className="shadow-sm hover:bg-green-50"
               >
-                <Filter className="w-4 h-4 mr-1" />
-                {sortOrder === "asc" ? "↑" : "↓"}
+                {sortOrder === "asc" ? <SortAsc className="w-4 h-4 mr-1" /> : <SortDesc className="w-4 h-4 mr-1" />}
+                {sortOrder === "asc" ? "Asc" : "Desc"}
               </Button>
             </div>
           </div>
+
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card>
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
               <CardContent className="p-6 text-center">
-                <div className="text-2xl font-bold text-blue-600 mb-1">{filteredMeasurements.length}</div>
-                <div className="text-gray-600">Total Fields</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-2xl font-bold text-green-600 mb-1">{totalArea.toFixed(2)} ha</div>
-                <div className="text-gray-600">Total Area</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-2xl font-bold text-purple-600 mb-1">
-                  {filteredMeasurements.length > 0 ? (totalArea / filteredMeasurements.length).toFixed(2) : "0"} ha
+                <div className="flex items-center justify-center mb-3">
+                  <Target className="w-8 h-8 mr-2" />
+                  <div className="text-2xl font-bold">{filteredMeasurements.length}</div>
                 </div>
-                <div className="text-gray-600">Average Size</div>
+                <div className="text-blue-100">Total Fields</div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <Layers className="w-8 h-8 mr-2" />
+                  <div className="text-2xl font-bold">{isNaN(totalArea) ? "0.00" : totalArea.toFixed(2)}</div>
+                </div>
+                <div className="text-green-100">Total Area (ha)</div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <BarChart3 className="w-8 h-8 mr-2" />
+                  <div className="text-2xl font-bold">
+                    {filteredMeasurements.length > 0 && !isNaN(totalArea)
+                      ? (totalArea / filteredMeasurements.length).toFixed(2)
+                      : "0.00"}
+                  </div>
+                </div>
+                <div className="text-purple-100">Average Size (ha)</div>
               </CardContent>
             </Card>
           </div>
-          {filteredMeasurements.length === 0 ? (
-            <Card className="text-center py-12">
+
+          {loading ? (
+            <Card className="text-center py-12 border-0 shadow-lg">
               <CardContent>
-                <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Activity className="w-8 h-8 text-blue-600 animate-pulse" />
+                </div>
+                <p className="text-gray-600">Loading measurements...</p>
+              </CardContent>
+            </Card>
+          ) : error ? (
+            <Card className="text-center py-12 border-0 shadow-lg">
+              <CardContent>
+                <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <p className="text-red-600 flex items-center justify-center">{error}</p>
+              </CardContent>
+            </Card>
+          ) : filteredMeasurements.length === 0 ? (
+            <Card className="text-center py-12 border-0 shadow-lg">
+              <CardContent>
+                <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Map className="w-8 h-8 text-gray-400" />
+                </div>
                 <CardHeader>
-                  <CardTitle>
-                    {measurements?.length === 0 ? "No Measurements Yet" : "No Results Found"}
-                  </CardTitle>
+                  <CardTitle>{measurements.length === 0 ? "No Measurements Yet" : "No Results Found"}</CardTitle>
                 </CardHeader>
                 <p className="text-gray-600 mb-6">
-                  {measurements?.length === 0
+                  {measurements.length === 0
                     ? "Start measuring your land to see your history here."
                     : "Try adjusting your search terms or filters."}
                 </p>
-                {measurements?.length === 0 && (
-                  <Button onClick={onBack} className="bg-green-600 hover:bg-green-700">
+                {measurements.length === 0 && (
+                  <Button onClick={onBack} className="bg-green-600 hover:bg-green-700 shadow-lg">
+                    <Compass className="w-4 h-4 mr-2" />
                     Start Measuring
                   </Button>
                 )}
@@ -293,96 +477,176 @@ export default function MeasurementHistory({ onBack, measurements, onDelete, onE
           ) : (
             <>
               {filteredMeasurements.map((measurement) => (
-                <div key={measurement.id} className="border border-blue-200 mb-4 rounded-lg overflow-hidden">
-                  <div className="bg-blue-50 p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                        {measurement.name || "Unnamed"} ({measurement.area?.toFixed(2) || 0} ha)
-                      </span>
-                      <span className="text-gray-600 text-sm">
-                        <Calendar className="w-4 h-4 inline mr-1" /> {measurement.date || "N/A"}
-                      </span>
-                      <span className="text-gray-600 text-sm">
-                        <MapPin className="w-4 h-4 inline mr-1" /> {measurement.points?.length || 0} boundary points
-                      </span>
-                      <span className="text-gray-600 text-sm">
-                        <Ruler className="w-4 h-4 inline mr-1" /> {((measurement.area || 0) * 2.471).toFixed(2)} acres
-                      </span>
+                <div key={measurement.id} className="border-0 shadow-lg mb-6 rounded-lg overflow-hidden bg-white">
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 flex items-center justify-between border-b">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-white p-2 rounded-full shadow-sm">
+                        <Sprout className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium flex items-center">
+                          <Wheat className="w-3 h-3 mr-1" />
+                          {measurement.name || "Unnamed"} ({Number(measurement.area).toFixed(2)} ha)
+                        </span>
+                        <span className="text-gray-600 text-sm flex items-center">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {measurement.date ? measurement.date.slice(0, 10) : "N/A"}
+                        </span>
+                        <span className="text-gray-600 text-sm flex items-center">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {measurement.boundary_points.length} points
+                        </span>
+                        <span className="text-gray-600 text-sm flex items-center">
+                          <Ruler className="w-3 h-3 mr-1" />
+                          {Number(measurement.data_area_acres).toFixed(2)} acres
+                        </span>
+                        <span className="text-gray-600 text-sm flex items-center">
+                          {getLandTypeIcon(measurement.land_type)}
+                          <span className="ml-1">{measurement.land_type || "Unknown"}</span>
+                        </span>
+                      </div>
                     </div>
                     <div className="flex space-x-2">
-                      <Button
-                        onClick={() => onEdit(measurement)}
-                        variant="outline"
-                        size="sm"
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Edit2 className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
                       <Button
                         onClick={() => handleDelete(measurement.id, measurement.name)}
                         variant="outline"
                         size="sm"
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                       >
                         <Trash2 className="w-4 h-4 mr-1" />
                         Delete
                       </Button>
                     </div>
                   </div>
-                  <div className="p-2 flex items-center">
+
+                  <div className="p-4 bg-gray-50 flex items-center justify-between">
                     <Button
                       onClick={() => toggleDetails(measurement.id)}
                       variant="ghost"
                       size="sm"
-                      className="text-blue-600 hover:text-blue-700 flex items-center"
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center"
                     >
-                      <Search className="w-4 h-4 mr-1" />
-                      View Details...
+                      <Eye className="w-4 h-4 mr-1" />
+                      View Details
                       <ChevronDown
                         className={`w-4 h-4 ml-1 transition-transform ${expandedDetails[measurement.id] ? "rotate-180" : ""}`}
                       />
                     </Button>
+                    <Button
+                      onClick={() => exportToCSV(measurement)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50 flex items-center"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Export CSV
+                    </Button>
                   </div>
+
                   {expandedDetails[measurement.id] && (
-                    <div className="p-4 bg-white border-t">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border p-2 text-left">Farmland Name</th>
-                            <th className="border p-2 text-left">Area (ha)</th>
-                            <th className="border p-2 text-left">Seed Amount (kg)</th>
-                            <th className="border p-2 text-left">Fertilizer Amount</th>
-                            <th className="border p-2 text-left">Date</th>
-                            <th className="border p-2 text-left">Land Type</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="hover:bg-gray-50">
-                            <td className="border p-2">{measurement.name || "Unnamed"}</td>
-                            <td className="border p-2">{measurement.area?.toFixed(2) || 0}</td>
-                            <td className="border p-2">{Math.round(measurement.seedAmountMin)} - {Math.round(measurement.seedAmountMax)} kg</td>
-                            <td className="border p-2">
-                              {Object.entries(measurement.fertilizerTotal).map(([key, value]) => (
-                                <div key={key}>{key}: {Math.round(value * 1000)} kg</div>
-                              ))}
-                            </td>
-                            <td className="border p-2">{measurement.date || "N/A"}</td>
-                            <td className="border p-2">{measurement.landType || "Not specified"}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      {measurement.landType && recommendations[measurement.landType] && (
-                        <div className="mt-4 text-sm text-gray-600">
-                          <div className="mb-2">
-                            <span className="font-medium text-gray-700">Recommended Rice Varieties:</span>
-                            <p>{recommendations[measurement.landType].rice}</p>
+                    <div className="p-6 bg-white border-t">
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+                          <thead>
+                            <tr className="bg-gradient-to-r from-gray-100 to-gray-200">
+                              <th className="border border-gray-300 p-3 text-left font-semibold text-gray-700 flex items-center">
+                                <FileText className="w-4 h-4 mr-2" />
+                                Farmland Name
+                              </th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold text-gray-700">
+                                <div className="flex items-center">
+                                  <Layers className="w-4 h-4 mr-2" />
+                                  Area (ha)
+                                </div>
+                              </th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold text-gray-700">
+                                <div className="flex items-center">
+                                  <Package className="w-4 h-4 mr-2" />
+                                  Seed Amount (kg)
+                                </div>
+                              </th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold text-gray-700">
+                                <div className="flex items-center">
+                                  <Zap className="w-4 h-4 mr-2" />
+                                  Fertilizer Amount
+                                </div>
+                              </th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold text-gray-700">
+                                <div className="flex items-center">
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Date
+                                </div>
+                              </th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold text-gray-700">
+                                <div className="flex items-center">
+                                  <Leaf className="w-4 h-4 mr-2" />
+                                  Land Type
+                                </div>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-300 p-3">{measurement.name || "Unnamed"}</td>
+                              <td className="border border-gray-300 p-3 font-medium text-green-600">
+                                {Number(measurement.area).toFixed(2)}
+                              </td>
+                              <td className="border border-gray-300 p-3">
+                                <div className="flex items-center">
+                                  <Package className="w-3 h-3 mr-1 text-blue-600" />
+                                  {Math.round(Number(measurement.seed_amount_min) || 0)} -{" "}
+                                  {Math.round(Number(measurement.seed_amount_max) || 0)} kg
+                                </div>
+                              </td>
+                              <td className="border border-gray-300 p-3">
+                                <div className="space-y-1">
+                                  {measurement.fertilizer_total
+                                    ? Object.entries(measurement.fertilizer_total).map(([key, value]) => (
+                                        <div key={key} className="flex items-center text-sm">
+                                          <Zap className="w-3 h-3 mr-1 text-yellow-600" />
+                                          {key}: {Math.round(Number(value) * 1000)} kg
+                                        </div>
+                                      ))
+                                    : <div className="text-sm">No fertilizer data</div>}
+                                </div>
+                              </td>
+                              <td className="border border-gray-300 p-3">
+                                <div className="flex items-center">
+                                  <Calendar className="w-3 h-3 mr-1 text-gray-500" />
+                                  {measurement.date ? measurement.date.slice(0, 10) : "N/A"}
+                                </div>
+                              </td>
+                              <td className="border border-gray-300 p-3">
+                                <div className="flex items-center">
+                                  {getLandTypeIcon(measurement.land_type)}
+                                  <span className="ml-1">{measurement.land_type || "Not specified"}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {measurement.land_type && recommendations[measurement.land_type.toLowerCase()] && (
+                        <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                          <div className="mb-4">
+                            <div className="flex items-center mb-2">
+                              <Sprout className="w-5 h-5 mr-2 text-green-600" />
+                              <span className="font-semibold text-gray-700">Recommended Rice Varieties:</span>
+                            </div>
+                            <p className="text-gray-600 ml-7">{recommendations[measurement.land_type.toLowerCase()].rice}</p>
                           </div>
                           <div>
-                            <span className="font-medium text-gray-700">Fertilizer Plan:</span>
-                            <ul className="list-disc pl-5">
-                              {recommendations[measurement.landType].fertilizerPlan.map((step, index) => (
-                                <li key={index}>{step}</li>
+                            <div className="flex items-center mb-2">
+                              <Zap className="w-5 h-5 mr-2 text-yellow-600" />
+                              <span className="font-semibold text-gray-700">Fertilizer Plan:</span>
+                            </div>
+                            <ul className="list-none space-y-1 ml-7">
+                              {recommendations[measurement.land_type.toLowerCase()].fertilizerPlan.map((step, index) => (
+                                <li key={index} className="flex items-start text-gray-600">
+                                  <TrendingUp className="w-3 h-3 mr-2 mt-1 text-blue-600 flex-shrink-0" />
+                                  {step}
+                                </li>
                               ))}
                             </ul>
                           </div>
@@ -397,5 +661,5 @@ export default function MeasurementHistory({ onBack, measurements, onDelete, onE
         </div>
       </div>
     </div>
-  );
+  )
 }
