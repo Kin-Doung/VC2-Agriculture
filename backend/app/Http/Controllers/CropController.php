@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Crop;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use Illuminate\Http\Request;
 
 class CropController extends Controller
@@ -22,6 +23,8 @@ class CropController extends Controller
     public function store(Request $request)
     {
         //
+        
+
     }
 
     /**
@@ -30,6 +33,7 @@ class CropController extends Controller
     public function show(string $id)
     {
         //
+
     }
 
     /**

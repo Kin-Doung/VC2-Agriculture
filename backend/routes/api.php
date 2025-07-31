@@ -6,6 +6,7 @@ use App\Http\Controllers\LandController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\TaskController;
 
 Route::apiResource('lands', LandController::class);
 
@@ -28,3 +29,5 @@ Route::apiResource('categories', CategoryController::class);
 
 // Product 
 Route::apiResource("products", ProductController::class);
+
+Route::apiResource("task", TaskController::class);
