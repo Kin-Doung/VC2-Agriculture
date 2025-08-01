@@ -33,6 +33,7 @@ const Navigation = ({ isOpen, language }) => {
       support: "Help & Support",
       profile: "Profile",
       settings: "Settings",
+      userList: "Users List",
     },
     km: {
       dashboard: "ផ្ទាំងគ្រប់គ្រង",
@@ -67,6 +68,7 @@ const Navigation = ({ isOpen, language }) => {
     { icon: Video, label: t.videos, path: "/videos" },
     { icon: DollarSign, label: t.finances, path: "/finances" },
     { icon: HelpCircle, label: t.support, path: "/support" },
+    { icon: User, label: t.userList, path: "/admin/user-logins" },
   ]
 
   const isActiveRoute = (path) => {

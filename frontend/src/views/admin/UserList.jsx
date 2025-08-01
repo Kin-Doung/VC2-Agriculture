@@ -1,38 +1,147 @@
 import { MoreVertical } from "lucide-react"
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import axios from "axios"
+
+// ✅ Dummy EditUserForm (replace with real component or use this as template)
+const EditUserForm = ({ user, isOpen, onClose, onSave }) => {
+  const [name, setName] = useState(user?.name || "")
+  const [isActive, setIsActive] = useState(user?.is_active || false)
+
+  useEffect(() => {
+    setName(user?.name || "")
+    setIsActive(user?.is_active || false)
+  }, [user])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const token = localStorage.getItem("token")
+
+    try {
+      const response = await axios.put(`http://localhost:8000/api/admin/users/${user.id}`, {
+        name,
+        is_active: isActive,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      onSave(response.data)
+      onClose()
+    } catch (err) {
+      console.error("Failed to update user", err)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+      <div className="bg-white p-6 rounded-md shadow-lg w-96">
+        <h2 className="text-xl font-semibold mb-4">Edit User</h2>
+        <form onSubmit={handleSubmit}>
+          <label className="block mb-2 font-medium">Name</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border rounded mb-4"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <label className="block mb-2 font-medium">Active</label>
+          <select
+            className="w-full px-3 py-2 border rounded mb-4"
+            value={isActive ? "1" : "0"}
+            onChange={(e) => setIsActive(e.target.value === "1")}
+          >
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded">
+              Cancel
+            </button>
+            <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 const UserList = () => {
   const [users, setUsers] = useState([])
   const [openMenu, setOpenMenu] = useState(null)
+  const [editingUser, setEditingUser] = useState(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [error, setError] = useState("")
+  const dropdownRef = useRef(null)
 
-useEffect(() => {
-  const fetchUsers = async () => {
-    try {
-      const token = localStorage.getItem("token")
-      const response = await axios.get("http://localhost:8000/api/admin/users", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      setUsers(response.data)
-    } catch (error) {
-      console.error("Unauthorized or failed to load users:", error)
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await axios.get("http://localhost:8000/api/admin/users", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setUsers(response.data)
+      } catch (error) {
+        console.error("Unauthorized or failed to load users:", error)
+      }
     }
-  }
 
-  fetchUsers()
-}, [])
+    fetchUsers()
+  }, [])
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenMenu(null)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   const toggleMenu = (id) => {
     setOpenMenu(openMenu === id ? null : id)
   }
 
-  const handleAction = (id, action) => {
-    alert(`${action} user with ID: ${id}`)
+  const handleEdit = (user) => {
+    setEditingUser(user)
+    setIsEditModalOpen(true)
     setOpenMenu(null)
+  }
+
+  const handleUpdateUser = (updatedUser) => {
+    const updatedUsers = users.map((u) =>
+      u.id === updatedUser.id ? updatedUser : u
+    )
+    setUsers(updatedUsers)
+  }
+
+  const handleDelete = async (userId) => {
+    const confirmed = window.confirm("Are you sure you want to delete this user?")
+    if (!confirmed) return
+
+    try {
+      const token = localStorage.getItem("token")
+      await axios.delete(`http://localhost:8000/api/admin/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      setUsers(users.filter((u) => u.id !== userId))
+      alert("User deleted successfully.")
+    } catch (err) {
+      console.error("Failed to delete user:", err)
+      alert("Failed to delete user. Please try again.")
+    }
   }
 
   return (
@@ -77,22 +186,16 @@ useEffect(() => {
                     </button>
 
                     {openMenu === user.id && (
-                      <div className="absolute right-4 top-8 z-10 w-32 bg-white shadow-md rounded-md border">
+                      <div ref={dropdownRef} className="absolute right-4 top-8 z-10 w-32 bg-white shadow-md rounded-md border">
                         <button
                           className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                          onClick={() => handleAction(user.id, "Edit")}
+                          onClick={() => handleEdit(user)}
                         >
                           Edit
                         </button>
                         <button
-                          className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                          onClick={() => handleAction(user.id, "Update")}
-                        >
-                          Update
-                        </button>
-                        <button
                           className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                          onClick={() => handleAction(user.id, "Delete")}
+                          onClick={() => handleDelete(user.id)}
                         >
                           Delete
                         </button>
@@ -105,6 +208,19 @@ useEffect(() => {
           </tbody>
         </table>
       </div>
+
+      {/* ✅ Edit Modal */}
+      {editingUser && (
+        <EditUserForm
+          user={editingUser}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setEditingUser(null)
+          }}
+          onSave={handleUpdateUser}
+        />
+      )}
     </div>
   )
 }

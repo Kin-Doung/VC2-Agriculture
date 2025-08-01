@@ -26,6 +26,9 @@ Route::post('/login', [AuthController::class, 'login']);
 // Authenticated Routes
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/users', [AdminController::class, 'index']);
+    Route::get('/admin/users/{id}', [AdminController::class, 'show']);
+    Route::put('/admin/users/{id}', [AdminController::class, 'update']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'destroy']);
 });
 
 

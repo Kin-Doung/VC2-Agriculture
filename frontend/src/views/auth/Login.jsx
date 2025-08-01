@@ -117,7 +117,7 @@ const handleSubmit = async (e) => {
 
     // Redirect based on role
     if (userData.role === "admin") {
-      navigate("/admin")
+      navigate("/")
     } else {
       navigate("/dashboard")
     }

@@ -33,7 +33,7 @@ import Login from "./views/auth/Login"
 import Register from "./views/auth/Register"
 
 // Admin
-import AdminLayout from "./layouts/AdminLayout"
+import UserList from "./views/admin/UserList"
 
 import "./App.css"
 
@@ -50,6 +50,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
   return (
     <Routes>
       <Route path="/" element={<Dashboard language={language} />} />
+      <Route path="/admin/user-logins" element={<UserList />} />
       <Route path="/farm" element={<FarmView language={language} />} />
       <Route
         path="/measure"
@@ -171,15 +172,7 @@ function App() {
   return (
     <Router>
       {isAuthenticated ? (
-        user?.role === 'admin' ? (
-        <AdminLayout user={user} onLogout={handleLogout}>
-          <AuthenticatedRoutes
-            language={language}
-            measurements={measurements}
-            setMeasurements={setMeasurements}
-          />
-        </AdminLayout>
-      ) : (
+      (
         <MainLayout language={language} setLanguage={setLanguage} user={user} onLogout={handleLogout}>
           <AuthenticatedRoutes language={language} measurements={measurements} setMeasurements={setMeasurements} />
         </MainLayout>
