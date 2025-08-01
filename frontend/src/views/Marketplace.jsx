@@ -1,7 +1,7 @@
 "use client";
 
 import { ShoppingCart, Search, Filter, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 const Marketplace = ({ language = "en" }) => {
   // State management
@@ -13,11 +13,12 @@ const Marketplace = ({ language = "en" }) => {
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilterModal, setShowFilterModal] = useState(false); // New state for filter modal
-  const [stockFilter, setStockFilter] = useState("all"); // New state for stock filter
-  const [minPrice, setMinPrice] = useState(""); // New state for min price
-  const [maxPrice, setMaxPrice] = useState(""); // New state for max price
-  const itemsPerPage = 8;
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [stockFilter, setStockFilter] = useState("all");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [rowOrder, setRowOrder] = useState([]);
+  const itemsPerPage = 12;
 
   // Translations
   const translations = {
@@ -112,7 +113,7 @@ const Marketplace = ({ language = "en" }) => {
         const transformedProducts = productData.map((item) => ({
           id: item.id,
           name: item.name || "Unnamed Product",
-          price: item.price ? Number(item.price) : 0, // Store as number for filtering
+          price: item.price ? Number(item.price) : 0,
           priceDisplay: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
           image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
           seller: item.user?.name || "",
@@ -146,19 +147,31 @@ const Marketplace = ({ language = "en" }) => {
     fetchData();
   }, [t.error]);
 
-  // Filter products
-  const filteredProducts = products.filter(
-    (product) =>
-      product &&
-      ((product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (product.seller && product.seller.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-      (!selectedCategory || product.category_id === parseInt(selectedCategory)) &&
-      (stockFilter === "all" || product.stock === stockFilter) &&
-      (!minPrice || product.price >= Number(minPrice)) &&
-      (!maxPrice || product.price <= Number(maxPrice)),
-  );
+  // Filter products using useMemo for performance
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      if (!product) return false;
+
+      const lowerSearchTerm = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        (product.name?.toLowerCase()?.includes(lowerSearchTerm) ?? false) ||
+        (product.description?.toLowerCase()?.includes(lowerSearchTerm) ?? false) ||
+        (product.seller?.toLowerCase()?.includes(lowerSearchTerm) ?? false) ||
+        (product.category?.toLowerCase()?.includes(lowerSearchTerm) ?? false);
+
+      const matchesCategory =
+        !selectedCategory || (product.category_id && product.category_id === Number.parseInt(selectedCategory));
+
+      const matchesStock = stockFilter === "all" || product.stock === stockFilter;
+
+      const minPriceNum = minPrice !== "" ? Number(minPrice) : -Infinity;
+      const maxPriceNum = maxPrice !== "" ? Number(maxPrice) : Infinity;
+      const matchesPrice =
+        typeof product.price === "number" && product.price >= minPriceNum && product.price <= maxPriceNum;
+
+      return matchesSearch && matchesCategory && matchesStock && matchesPrice;
+    });
+  }, [products, searchTerm, selectedCategory, stockFilter, minPrice, maxPrice]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -167,10 +180,34 @@ const Marketplace = ({ language = "en" }) => {
     currentPage * itemsPerPage,
   );
 
-  // Reset page when filters change
+  // Calculate columns per row for responsive grid
+  const getColumnsPerRow = () => {
+    if (typeof window === "undefined") return 1; // Default for server-side rendering
+    if (window.innerWidth >= 1280) return 4; // xl:grid-cols-4
+    if (window.innerWidth >= 1024) return 3; // lg:grid-cols-3
+    if (window.innerWidth >= 768) return 2; // md:grid-cols-2
+    return 1; // grid-cols-1
+  };
+
+  // Initialize row order and reset page when filters or products change
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory, stockFilter, minPrice, maxPrice]);
+    setCurrentPage(1); // Reset page to 1 whenever filters change
+    const colsPerRow = getColumnsPerRow();
+    const numRows = Math.ceil(paginatedProducts.length / colsPerRow);
+    // Initialize rowOrder to a simple sequential order
+    setRowOrder(Array.from({ length: numRows }, (_, i) => i));
+  }, [searchTerm, selectedCategory, stockFilter, minPrice, maxPrice, products.length]);
+
+  // Handle filter click with row animation
+  const handleFilterClick = () => {
+    setCurrentPage(1); // Reset to first page
+    // Cycle rows: move first row to bottom, shift others up
+    setRowOrder((prev) => {
+      if (prev.length <= 1) return prev; // No change if less than 2 rows
+      const newOrder = [...prev.slice(1), prev[0]]; // Shift first row to end
+      return newOrder;
+    });
+  };
 
   // Handle view product
   const handleViewProduct = (product) => {
@@ -196,6 +233,89 @@ const Marketplace = ({ language = "en" }) => {
   const handleApplyFilters = () => {
     setShowFilterModal(false);
     setCurrentPage(1);
+  };
+
+  // Render products grouped by rows
+  const renderProductRows = () => {
+    const colsPerRow = getColumnsPerRow();
+    const rows = [];
+    for (let i = 0; i < paginatedProducts.length; i += colsPerRow) {
+      rows.push(paginatedProducts.slice(i, i + colsPerRow));
+    }
+
+    return rowOrder.map((rowIndex, index) => (
+      <div
+        key={rowIndex}
+        className="grid gap-6"
+        style={{
+          gridTemplateColumns: `repeat(${colsPerRow}, minmax(0, 1fr))`,
+          transform: `translateY(${(index - rowOrder.indexOf(rowIndex)) * 100}%)`,
+          transition: "transform 0.3s ease-in-out",
+        }}
+      >
+        {rows[rowIndex]?.map((product) => (
+          <div
+            key={product.id}
+            className="bg-white rounded-lg shadow-lg overflow-hidden relative group hover:shadow-xl transition-all duration-300 h-96 cursor-pointer"
+            onClick={() => handleViewProduct(product)}
+          >
+            <div className="absolute top-2 right-2 z-10">
+              <span
+                className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
+                  product.stock === "In Stock" ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
+                }`}
+              >
+                {product.stock === "In Stock" ? t.inStock : t.outOfStock}
+              </span>
+            </div>
+            <div className="relative w-full h-full">
+              <img
+                src={product.image || "/placeholder.svg?height=400&width=400"}
+                alt={product.name || "Product"}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <h3 className="font-bold text-lg mb-1" style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.5)" }}>
+                  {product.name}
+                </h3>
+                <p
+                  className="text-sm text-gray-200 mb-2 overflow-hidden"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 1,
+                  }}
+                >
+                  {product.description}
+                </p>
+                {product.category && (
+                  <p className="text-xs text-gray-300 mb-2">{t.productCategory}: {product.category}</p>
+                )}
+                <div className="flex items-center justify-between mb-2">
+                  {product.seller && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-300">{product.seller}</span>
+                    </div>
+                  )}
+                  <div className="text-xl font-bold text-green-400">
+                    {product.priceDisplay}
+                    <span className="text-xs text-gray-300">{t.perKg}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleViewProduct(product)}
+                  className="w-full px-3 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <ShoppingCart className="h-3 w-3" />
+                  {t.viewDetail}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ));
   };
 
   return (
@@ -232,7 +352,7 @@ const Marketplace = ({ language = "en" }) => {
               ))}
             </select>
             <button
-              onClick={() => setShowFilterModal(true)}
+              onClick={handleFilterClick}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
@@ -319,69 +439,7 @@ const Marketplace = ({ language = "en" }) => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {paginatedProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden relative group hover:shadow-xl transition-all duration-300 h-96 cursor-pointer"
-                  onClick={() => handleViewProduct(product)}
-                >
-                  <div className="absolute top-2 right-2 z-10">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                        product.stock === "In Stock" ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
-                      }`}
-                    >
-                      {product.stock === "In Stock" ? t.inStock : t.outOfStock}
-                    </span>
-                  </div>
-                  <div className="relative w-full h-full">
-                    <img
-                      src={product.image || "/placeholder.svg?height=400&width=400"}
-                      alt={product.name || "Product"}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                      <h3 className="font-bold text-lg mb-1" style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.5)" }}>
-                        {product.name}
-                      </h3>
-                      <p
-                        className="text-sm text-gray-200 mb-2 overflow-hidden"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitBoxOrient: "vertical",
-                          WebkitLineClamp: 1,
-                        }}
-                      >
-                        {product.description}
-                      </p>
-                      {product.category && (
-                        <p className="text-xs text-gray-300 mb-2">{t.productCategory}: {product.category}</p>
-                      )}
-                      <div className="flex items-center justify-between mb-2">
-                        {product.seller && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-300">{product.seller}</span>
-                          </div>
-                        )}
-                        <div className="text-xl font-bold text-green-400">
-                          {product.priceDisplay}
-                          <span className="text-xs text-gray-300">{t.perKg}</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleViewProduct(product)}
-                        className="w-full px-3 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                      >
-                        <ShoppingCart className="h-3 w-3" />
-                        {t.viewDetail}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <div className="space-y-6">{renderProductRows()}</div>
             {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="mt-6 flex justify-center items-center gap-4">
