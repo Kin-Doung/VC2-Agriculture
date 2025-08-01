@@ -34,6 +34,9 @@ import PublicTraining from "./views/public/PublicTraining"
 import Login from "./views/auth/Login"
 import Register from "./views/auth/Register"
 
+// Admin
+import UserList from "./views/admin/UserList"
+
 import "./App.css"
 
 // Mock measurement data
@@ -70,6 +73,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
   return (
     <Routes>
       <Route path="/" element={<Dashboard language={language} />} />
+      <Route path="/admin/user-logins" element={<UserList />} />
       <Route path="/farm" element={<FarmView language={language} />} />
       <Route
         path="/measure"
@@ -189,6 +193,7 @@ function App() {
   return (
     <Router>
       {isAuthenticated ? (
+      (
         <MainLayout language={language} setLanguage={setLanguage} user={user} onLogout={handleLogout}>
           <AuthenticatedRoutes
             language={language}
@@ -196,6 +201,7 @@ function App() {
             setMeasurements={setMeasurements}
           />
         </MainLayout>
+      )
       ) : (
         <PublicLayout language={language} setLanguage={setLanguage}>
           <PublicRoutes language={language} handleLogin={handleLogin} />
