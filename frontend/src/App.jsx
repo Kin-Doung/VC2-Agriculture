@@ -15,6 +15,7 @@ import MeasurementHistory from "./views/MeasurementHistory"
 import CropTrackerView from "./views/CropTrackerView"
 import TasksView from "./views/TasksView"
 import Marketplace from "./views/Marketplace"
+import CropManagement from "./views/CropManagement" 
 import Product from "./views/Product"
 import Category from "./views/Category"
 import MarketPricesView from "./views/MarketPricesView"
@@ -35,6 +36,7 @@ import Login from "./views/auth/Login"
 import Register from "./views/auth/Register"
 
 import "./App.css"
+import { Crop } from "lucide-react"
 
 // Mock measurements moved to App.jsx
 const initialMeasurements = [
@@ -104,6 +106,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       />
       <Route path="/crops" element={<CropTrackerView language={language} />} />
       <Route path="/tasks" element={<TasksView language={language} />} />
+      <Route path="/cropmanagement" element={<CropManagement language={language} />} />
       <Route path="/category" element={<Category language={language} />} />
       <Route path="/product" element={<Product language={language} />} />
       <Route path="/marketplace" element={<Marketplace language={language} />} />
