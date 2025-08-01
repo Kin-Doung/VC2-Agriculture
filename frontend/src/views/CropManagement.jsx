@@ -1,7 +1,8 @@
 "use client";
 
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import debounce from "lodash/debounce"; // Requires: npm install lodash
 
 const CropManagement = ({ language = "en" }) => {
   // Localization texts (English + Khmer)
@@ -29,15 +30,24 @@ const CropManagement = ({ language = "en" }) => {
       selectFarm: "Select a farm...",
       selectCropType: "Select a crop type...",
       noCropsFound: "No crops found matching your search.",
+      noCropsAvailable: "No crops available. Add a new crop to get started.",
       confirmDelete: "Are you sure you want to delete this crop?",
       loading: "Loading data...",
-      error: "Failed to load data. Please try again later.",
+      error: "Failed to load data",
+      farmsError: "Failed to load farms",
+      cropTypesError: "Failed to load crop types",
+      cropsError: "Failed to load crops",
       updateError: "Failed to update crop: ",
       deleteSuccess: "Crop deleted successfully.",
+      deleteError: "Failed to delete crop: ",
       updateSuccess: "Crop updated successfully.",
       addError: "Failed to add crop: ",
+      saving: "Saving...",
+      updating: "Updating...",
+      deleting: "Deleting...",
       prevPage: "Previous",
       nextPage: "Next",
+      retry: "Retry",
     },
     km: {
       title: "គ្រប់គ្រងដំណាំ",
@@ -62,25 +72,35 @@ const CropManagement = ({ language = "en" }) => {
       selectFarm: "ជ្រើសរើសកសិដ្ឋាន...",
       selectCropType: "ជ្រើសរើសប្រភេទដំណាំ...",
       noCropsFound: "រកមិនឃើញដំណាំណាមួយដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
+      noCropsAvailable: "មិនមានដំណាំទេ។ បន្ថែមដំណាំថ្មីដើម្បីចាប់ផ្តើម។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបដំណាំនេះមែនទេ?",
       loading: "កំពុងផ្ទុកទិន្នន័យ...",
-      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ",
+      farmsError: "បរាជ័យក្នុងការផ្ទុកកសិដ្ឋាន",
+      cropTypesError: "បរាជ័យក្នុងការផ្ទុកប្រភេទដំណាំ",
+      cropsError: "បរាជ័យក្នុងការផ្ទុកដំណាំ",
       updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពដំណាំ៖ ",
       deleteSuccess: "ដំណាំត្រូវបានលុបដោយជោគជ័យ។",
+      deleteError: "បរាជ័យក្នុងការលុបដំណាំ៖ ",
       updateSuccess: "ដំណាំត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
       addError: "បរាជ័យក្នុងការបន្ថែមដំណាំ៖ ",
+      saving: "កំពុងរក្សាទុក...",
+      updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
+      deleting: "កំពុងលុប...",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
+      retry: "ព្យាយាមម្តងទៀត",
     },
   };
 
   const t = translations[language] || translations.en;
 
-  // API URLs and Auth token
+  // API URLs and Auth token (replace with secure method)
   const API_URL = "http://127.0.0.1:8000/api/crops";
   const API_FARMS_URL = "http://127.0.0.1:8000/api/farms";
   const API_CROPTYPES_URL = "http://127.0.0.1:8000/api/croptypes";
-  const AUTH_TOKEN = "your-auth-token-here";
+  // TODO: Replace with secure token (e.g., process.env.AUTH_TOKEN or context)
+  const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN || "your-auth-token-here";
 
   // States
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,6 +115,7 @@ const CropManagement = ({ language = "en" }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // For action loading states
   const [newCrop, setNewCrop] = useState({
     farm_id: "",
     crop_type_id: "",
@@ -114,58 +135,71 @@ const CropManagement = ({ language = "en" }) => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const itemsPerPage = 10;
 
-  // Fetch crops, farms, and crop types on mount
+  // Debounced search handler
+  const debouncedSetSearchTerm = useCallback(
+    debounce((value) => setSearchTerm(value), 300),
+    []
+  );
+
+  const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
+
+  // Fetch data (parallelized)
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [farmsResp, cropTypesResp, cropsResp] = await Promise.all([
+        fetch(API_FARMS_URL, {
+          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
+        }),
+        fetch(API_CROPTYPES_URL, {
+          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
+        }),
+        fetch(API_URL, {
+          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
+        }),
+      ]);
+
+      const errors = [];
+      if (!farmsResp.ok) errors.push(t.farmsError);
+      if (!cropTypesResp.ok) errors.push(t.cropTypesError);
+      if (!cropsResp.ok) errors.push(t.cropsError);
+      if (errors.length) throw new Error(errors.join("; "));
+
+      const [farmsData, cropTypesData, cropsData] = await Promise.all([
+        farmsResp.json(),
+        cropTypesResp.json(),
+        cropsResp.json(),
+      ]);
+
+      setFarms(farmsData);
+      setCropTypes(cropTypesData);
+
+      const transformed = cropsData.map((c) => ({
+        id: c.id,
+        farm_id: c.farm_id,
+        farm_name: farmsData.find((f) => f.id === c.farm_id)?.name || "Unknown farm",
+        crop_type_id: c.crop_type_id,
+        crop_type_name:
+          cropTypesData.find((ct) => ct.id === c.crop_type_id)?.name || "Unknown crop type",
+        planting_date: c.planting_date,
+        growth_stage: c.growth_stage || "No stage",
+        notes: c.notes || "No notes",
+      }));
+
+      setCrops(transformed);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(`${t.error}: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data on mount or language change
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch farms
-        const farmsResp = await fetch(API_FARMS_URL, {
-          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
-        });
-        if (!farmsResp.ok) throw new Error("Failed to fetch farms");
-        const farmsData = await farmsResp.json();
-        setFarms(farmsData);
-
-        // Fetch crop types
-        const cropTypesResp = await fetch(API_CROPTYPES_URL, {
-          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
-        });
-        if (!cropTypesResp.ok) throw new Error("Failed to fetch crop types");
-        const cropTypesData = await cropTypesResp.json();
-        setCropTypes(cropTypesData);
-
-        // Fetch crops
-        const cropsResp = await fetch(API_URL, {
-          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
-        });
-        if (!cropsResp.ok) throw new Error("Failed to fetch crops");
-        const cropsData = await cropsResp.json();
-
-        // Transform data
-        const transformed = cropsData.map((c) => ({
-          id: c.id,
-          farm_id: c.farm_id,
-          farm_name: farmsData.find((f) => f.id === c.farm_id)?.name || "Unknown farm",
-          crop_type_id: c.crop_type_id,
-          crop_type_name:
-            cropTypesData.find((ct) => ct.id === c.crop_type_id)?.name || "Unknown crop type",
-          planting_date: c.planting_date,
-          growth_stage: c.growth_stage || "No stage",
-          notes: c.notes || "No notes",
-        }));
-
-        setCrops(transformed);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError(`${t.error}: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, [t.error]);
+  }, [language]);
 
   // Filtering, Sorting, Pagination
   const filteredCrops = crops.filter(
@@ -216,6 +250,7 @@ const CropManagement = ({ language = "en" }) => {
 
   const handleDeleteCrop = async (cropId) => {
     if (!cropId || !window.confirm(t.confirmDelete)) return;
+    setIsSubmitting(true);
     try {
       const response = await fetch(`${API_URL}/${cropId}`, {
         method: "DELETE",
@@ -223,15 +258,17 @@ const CropManagement = ({ language = "en" }) => {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Delete failed: ${errorText}`);
+        throw new Error(errorText);
       }
       setCrops(crops.filter((c) => c.id !== cropId));
       alert(t.deleteSuccess);
     } catch (err) {
       console.error("Delete error:", err);
-      alert(`${t.error}: ${err.message}`);
+      alert(`${t.deleteError}${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+      setActiveMenu(null);
     }
-    setActiveMenu(null);
   };
 
   const handleNewInputChange = (e) => {
@@ -263,6 +300,7 @@ const CropManagement = ({ language = "en" }) => {
       return;
     }
 
+    setIsSubmitting(true);
     const formData = new FormData();
     formData.append("farm_id", newCrop.farm_id);
     formData.append("crop_type_id", newCrop.crop_type_id);
@@ -299,7 +337,6 @@ const CropManagement = ({ language = "en" }) => {
         throw new Error(`${t.addError}Invalid JSON response: ${responseText.slice(0, 100)}...`);
       }
 
-      // Ensure farm_name and crop_type_name are included
       const farmName = farms.find((f) => f.id === parseInt(newCrop.farm_id))?.name || "Unknown farm";
       const cropTypeName =
         cropTypes.find((ct) => ct.id === parseInt(newCrop.crop_type_id))?.name || "Unknown crop type";
@@ -329,6 +366,8 @@ const CropManagement = ({ language = "en" }) => {
     } catch (err) {
       console.error("Add crop error:", err);
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -341,6 +380,7 @@ const CropManagement = ({ language = "en" }) => {
       return;
     }
 
+    setIsSubmitting(true);
     const formData = new FormData();
     formData.append("farm_id", editCrop.farm_id);
     formData.append("crop_type_id", editCrop.crop_type_id);
@@ -405,6 +445,8 @@ const CropManagement = ({ language = "en" }) => {
     } catch (err) {
       console.error("Update crop error:", err);
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -429,26 +471,30 @@ const CropManagement = ({ language = "en" }) => {
             <input
               type="text"
               placeholder={t.search}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
         </div>
         {loading ? (
-          <div className="text-center py-12">{t.loading}</div>
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.loading}</div>
+            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
+          </div>
         ) : error ? (
           <div className="text-center py-12">
             <div className="text-red-500 text-lg">{error}</div>
             <button
-              onClick={() => window.location.reload()}
+              onClick={fetchData}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Retry
+              {t.retry}
             </button>
           </div>
         ) : paginatedCrops.length === 0 ? (
-          <div className="text-center py-12">{t.noCropsFound}</div>
+          <div className="text-center py-12">
+            {searchTerm ? t.noCropsFound : t.noCropsAvailable}
+          </div>
         ) : (
           <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -515,6 +561,7 @@ const CropManagement = ({ language = "en" }) => {
                           toggleMenu(crop.id);
                         }}
                         className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-all"
+                        disabled={isSubmitting}
                       >
                         <MoreVertical className="h-5 w-5 text-gray-600" />
                       </button>
@@ -544,8 +591,9 @@ const CropManagement = ({ language = "en" }) => {
                               handleDeleteCrop(crop.id);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            disabled={isSubmitting}
                           >
-                            <Trash2 className="h-4 w-4" /> {t.delete}
+                            <Trash2 className="h-4 w-4" /> {isSubmitting ? t.deleting : t.delete}
                           </button>
                         </div>
                       )}
@@ -598,6 +646,7 @@ const CropManagement = ({ language = "en" }) => {
                       formErrors.farm_id ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   >
                     <option value="">{t.selectFarm}</option>
                     {farms.map((farm) => (
@@ -622,6 +671,7 @@ const CropManagement = ({ language = "en" }) => {
                       formErrors.crop_type_id ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   >
                     <option value="">{t.selectCropType}</option>
                     {cropTypes.map((type) => (
@@ -647,6 +697,7 @@ const CropManagement = ({ language = "en" }) => {
                       formErrors.planting_date ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   />
                   {formErrors.planting_date && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.planting_date}</p>
@@ -663,6 +714,7 @@ const CropManagement = ({ language = "en" }) => {
                     onChange={handleNewInputChange}
                     placeholder="E.g., Seedling, Vegetative"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -674,6 +726,7 @@ const CropManagement = ({ language = "en" }) => {
                     placeholder="Enter notes..."
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -681,14 +734,18 @@ const CropManagement = ({ language = "en" }) => {
                     type="button"
                     onClick={() => setShowAddModal(false)}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    {t.save}
+                    {isSubmitting ? t.saving : t.save}
                   </button>
                 </div>
               </form>
@@ -718,6 +775,7 @@ const CropManagement = ({ language = "en" }) => {
                       formErrors.farm_id ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   >
                     <option value="">{t.selectFarm}</option>
                     {farms.map((farm) => (
@@ -742,6 +800,7 @@ const CropManagement = ({ language = "en" }) => {
                       formErrors.crop_type_id ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   >
                     <option value="">{t.selectCropType}</option>
                     {cropTypes.map((type) => (
@@ -767,6 +826,7 @@ const CropManagement = ({ language = "en" }) => {
                       formErrors.planting_date ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   />
                   {formErrors.planting_date && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.planting_date}</p>
@@ -783,6 +843,7 @@ const CropManagement = ({ language = "en" }) => {
                     onChange={handleEditInputChange}
                     placeholder="E.g., Seedling, Vegetative"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -794,6 +855,7 @@ const CropManagement = ({ language = "en" }) => {
                     placeholder="Enter notes..."
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -801,14 +863,18 @@ const CropManagement = ({ language = "en" }) => {
                     type="button"
                     onClick={() => setShowEditModal(false)}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    {t.update}
+                    {isSubmitting ? t.updating : t.update}
                   </button>
                 </div>
               </form>

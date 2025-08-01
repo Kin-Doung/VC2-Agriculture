@@ -1,7 +1,8 @@
 "use client";
 
 import { ShoppingCart, Search, Filter, X } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import debounce from "lodash/debounce"; // Requires: npm install lodash
 
 const Marketplace = ({ language = "en" }) => {
   // State management
@@ -11,6 +12,7 @@ const Marketplace = ({ language = "en" }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -43,6 +45,7 @@ const Marketplace = ({ language = "en" }) => {
       close: "Close",
       seller: "Seller",
       error: "Failed to load data. Please try again later.",
+      loading: "Loading marketplace data...",
       page: "Page",
       of: "of",
       applyFilters: "Apply Filters",
@@ -74,6 +77,7 @@ const Marketplace = ({ language = "en" }) => {
       close: "បិទ",
       seller: "អ្នកលក់",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      loading: "កំពុងផ្ទុកទិន្នន័យទីផ្សារ...",
       page: "ទំព័រ",
       of: "នៃ",
       applyFilters: "អនុវត្តតម្រង",
@@ -89,27 +93,54 @@ const Marketplace = ({ language = "en" }) => {
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = "your-auth-token-here";
+  const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN || "your-auth-token-here";
+
+  // Debounced search handler
+  const debouncedSetSearchTerm = useCallback(
+    debounce((value) => setSearchTerm(value), 300),
+    []
+  );
+
+  const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
 
   // Fetch products and categories
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       setError(null);
       try {
-        const productResponse = await fetch(API_URL, {
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${AUTH_TOKEN}`,
-          },
-        });
+        const [productResponse, categoryResponse] = await Promise.all([
+          fetch(API_URL, {
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${AUTH_TOKEN}`,
+            },
+          }),
+          fetch(CATEGORIES_API_URL, {
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${AUTH_TOKEN}`,
+            },
+          }),
+        ]);
+
         if (!productResponse.ok) {
           const text = await productResponse.text();
           throw new Error(`Products fetch failed: HTTP ${productResponse.status} ${productResponse.statusText} - ${text}`);
         }
-        const productData = await productResponse.json();
-        if (!Array.isArray(productData)) {
-          throw new Error("Products API response is not an array");
+        if (!categoryResponse.ok) {
+          const text = await categoryResponse.text();
+          throw new Error(`Categories fetch failed: HTTP ${categoryResponse.status} ${categoryResponse.statusText} - ${text}`);
         }
+
+        const [productData, categoryData] = await Promise.all([
+          productResponse.json(),
+          categoryResponse.json(),
+        ]);
+
+        if (!Array.isArray(productData)) throw new Error("Products API response is not an array");
+        if (!Array.isArray(categoryData)) throw new Error("Categories API response is not an array");
+
         const transformedProducts = productData.map((item) => ({
           id: item.id,
           name: item.name || "Unnamed Product",
@@ -124,24 +155,12 @@ const Marketplace = ({ language = "en" }) => {
         }));
         setProducts(transformedProducts);
 
-        const categoryResponse = await fetch(CATEGORIES_API_URL, {
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${AUTH_TOKEN}`,
-          },
-        });
-        if (!categoryResponse.ok) {
-          const text = await categoryResponse.text();
-          throw new Error(`Categories fetch failed: HTTP ${categoryResponse.status} ${categoryResponse.statusText} - ${text}`);
-        }
-        const categoryData = await categoryResponse.json();
-        if (!Array.isArray(categoryData)) {
-          throw new Error("Categories API response is not an array");
-        }
         setCategories(categoryData);
       } catch (err) {
         console.error("Fetch data error:", err);
         setError(`${t.error}: ${err.message}`);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
@@ -334,8 +353,7 @@ const Marketplace = ({ language = "en" }) => {
               <input
                 type="text"
                 placeholder={t.search}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -426,8 +444,13 @@ const Marketplace = ({ language = "en" }) => {
             </div>
           </div>
         )}
-        {/* Error and Product Grid */}
-        {error ? (
+        {/* Loading, Error, and Product Grid */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.loading}</div>
+            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
+          </div>
+        ) : error ? (
           <div className="text-center py-12">
             <div className="text-red-500 text-lg">{error}</div>
             <button
