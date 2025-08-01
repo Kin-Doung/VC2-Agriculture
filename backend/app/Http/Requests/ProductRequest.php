@@ -15,13 +15,13 @@ class ProductRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'crop_id' => 'required|integer|exists:crops,id',
-            'user_id' => 'required|integer|exists:users,id',
-            'category_id' => 'required|integer|exists:categories,id',
-            'description' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',
-            'image_path' => 'nullable|string|max:255',
+            'user_id' => 'required|integer|exists:users,id',
+            'category_id' => 'required|integer|exists:categories,id',
+            'crop_id' => 'required|integer|exists:crops,id',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'available_from' => 'nullable|date',
         ];
     }
