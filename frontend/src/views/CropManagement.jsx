@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Plus,
-  Search,
-  X,
-  MoreVertical,
-  Eye,
-  Edit,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-} from "lucide-react";
+import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown,} from "lucide-react";
 import { useState, useEffect } from "react";
 
 const CropManagement = ({ language = "en" }) => {
