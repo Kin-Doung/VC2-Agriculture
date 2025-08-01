@@ -7,7 +7,6 @@ import {
   TrendingUp,
   Camera,
   MessageCircle,
-  Video,
   HelpCircle,
   Settings,
   User,
