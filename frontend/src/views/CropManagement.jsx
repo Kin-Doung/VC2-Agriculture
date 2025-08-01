@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown,} from "lucide-react";
+import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const CropManagement = ({ language = "en" }) => {
@@ -299,20 +299,23 @@ const CropManagement = ({ language = "en" }) => {
         throw new Error(`${t.addError}Invalid JSON response: ${responseText.slice(0, 100)}...`);
       }
 
-      const farmName = farms.find((f) => f.id === savedCrop.farm_id)?.name || "Unknown farm";
+      // Ensure farm_name and crop_type_name are included
+      const farmName = farms.find((f) => f.id === parseInt(newCrop.farm_id))?.name || "Unknown farm";
       const cropTypeName =
-        cropTypes.find((ct) => ct.id === savedCrop.crop_type_id)?.name || "Unknown crop type";
+        cropTypes.find((ct) => ct.id === parseInt(newCrop.crop_type_id))?.name || "Unknown crop type";
 
-      setCrops((prev) => [
-        {
-          ...savedCrop,
-          farm_name: farmName,
-          crop_type_name: cropTypeName,
-          growth_stage: savedCrop.growth_stage || "No stage",
-          notes: savedCrop.notes || "No notes",
-        },
-        ...prev,
-      ]);
+      const transformedCrop = {
+        id: savedCrop.id,
+        farm_id: parseInt(newCrop.farm_id),
+        farm_name: farmName,
+        crop_type_id: parseInt(newCrop.crop_type_id),
+        crop_type_name: cropTypeName,
+        planting_date: newCrop.planting_date,
+        growth_stage: newCrop.growth_stage || "No stage",
+        notes: newCrop.notes || "No notes",
+      };
+
+      setCrops((prev) => [transformedCrop, ...prev]);
       setNewCrop({
         farm_id: "",
         crop_type_id: "",
