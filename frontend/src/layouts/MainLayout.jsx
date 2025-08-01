@@ -2,30 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { useLocation } from "react-router-dom"
-import { Bell, Menu, Globe, Wifi, WifiOff, User, ChevronDown, Settings, LogOut } from "lucide-react"
+import { Bell, Menu, Globe, User, ChevronDown, Settings, LogOut } from "lucide-react"
 import { Link } from "react-router-dom"
 import Navigation from "../components/Navigation"
 
 const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
-  const [isOnline, setIsOnline] = useState(true)
+  // const [isOnline, setIsOnline] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const location = useLocation()
-
-  // Handle online/offline status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [])
-
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -83,17 +68,11 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-sm">
-              {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-              <span>{isOnline ? t.online : t.offline}</span>
-            </div>
-
             <button
               onClick={() => setLanguage(language === "en" ? "km" : "en")}
               className="p-2 hover:bg-green-700 rounded-lg transition-colors"
             >
               <Globe className="h-4 w-4" />
-              <span className="ml-1">{language === "en" ? "KM" : "EN"}</span>
             </button>
 
             <button className="p-2 hover:bg-green-700 rounded-lg transition-colors">

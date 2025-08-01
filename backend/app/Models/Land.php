@@ -13,6 +13,17 @@ class Land extends Model
         'name',
         'data_area_ha',
         'data_area_acres',
+        'seed_amount_min',
+        'seed_amount_max',
+        'fertilizer_total',
+        'date',
+        'land_type',
         'boundary_points',
+    ];
+
+    protected $casts = [
+        'fertilizer_total' => 'array',
+        'boundary_points' => 'array',
+        'date' => 'date',
     ];
 }
