@@ -9,11 +9,11 @@ class Farm extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'name',
-        'location_lat',
-        'location_lon',
+         'name',
+        'location_at_latitude',
+        'location_longitude',
         'area',
-        'farmer_id', // Assuming there's a user who owns the farm
+        'user_id',
     ];
     public function user()
     {
