@@ -1,117 +1,130 @@
-import React, { useState } from "react"
-import { Dialog, Transition } from "@headlessui/react"
+import React, { useState, useEffect } from "react"
 import { X } from "lucide-react"
+import axios from "axios"
 
 const EditUserForm = ({ user, isOpen, onClose, onSave }) => {
-  const [editedUser, setEditedUser] = useState({
-    name: user.name,
-    isActive: user.isActive,
-    lastLogin: user.lastLogin,
-  })
+  const [name, setName] = useState(user?.name || "")
+  const [email, setEmail] = useState(user?.email || "")
+  const [phone, setPhone] = useState(user?.phone || "")
+  const [farmName, setFarmName] = useState(user?.farm_name || "")
+  const [location, setLocation] = useState(user?.location || "")
+  const [error, setError] = useState(null)
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setEditedUser({
-      ...editedUser,
-      [name]: type === "checkbox" ? checked : value,
-    })
-  }
+  useEffect(() => {
+    setName(user?.name || "")
+    setEmail(user?.email || "")
+    setPhone(user?.phone || "")
+    setFarmName(user?.farm_name || "")
+    setLocation(user?.location || "")
+    setError(null)
+  }, [user])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    onSave({ ...user, ...editedUser })
-    onClose()
+    const token = localStorage.getItem("token")
+
+    try {
+      const updatedData = {
+        name,
+        email,
+        phone,
+        farm_name: farmName,
+        location,
+      }
+
+      const response = await axios.put(`http://localhost:8000/api/admin/users/${user.id}`, updatedData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      onSave(response.data)
+      onClose()
+    } catch (err) {
+      setError("Failed to update user. Please check your input or try again.")
+      console.error("Error updating user:", err)
+    }
   }
+
+  if (!isOpen) return null
 
   return (
-    <Transition appear show={isOpen} as={React.Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child
-          as={React.Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black bg-opacity-50" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child
-              as={React.Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
-                  Edit User
-                </Dialog.Title>
-                <button
-                  onClick={onClose}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={editedUser.name}
-                      onChange={handleChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Active</label>
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={editedUser.isActive}
-                      onChange={handleChange}
-                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Last Login</label>
-                    <input
-                      type="text"
-                      name="lastLogin"
-                      value={editedUser.lastLogin}
-                      onChange={handleChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
+    <div className="fixed inset-0 flex items-center justify-center bg-gray-700 bg-opacity-50 z-50 transition-opacity duration-300">
+      <div className="bg-white p-6 rounded-xl shadow-md max-w-md w-full">
+        <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
+          <h2 className="text-xl font-bold text-gray-800">Edit User</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 rounded-full p-1 transition-colors duration-200"
+          >
+            <X className="h-6 w-6" />
+          </button>
         </div>
-      </Dialog>
-    </Transition>
+        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Phone</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Farm Name</label>
+            <input
+              type="text"
+              value={farmName}
+              onChange={(e) => setFarmName(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Location</label>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-colors duration-200"
+            >
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
