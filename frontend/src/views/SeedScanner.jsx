@@ -1,10 +1,7 @@
 import { useState } from "react";
 import CameraCapture from "../components/ScantTypeOfRice/CameraCapture";
 import ImageUpload from "../components/ScantTypeOfRice/ImageUpload";
-import ScanResults from "../components/ScantTypeOfRice/ScanResults";
-
 import RiceComparisonTool from "../components/ScantTypeOfRice/RiceComparisonTool";
-
 
 // Placeholder UI components
 const Card = ({ children, className }) => (
@@ -22,6 +19,119 @@ const Button = ({ children, className, ...props }) => (
     {children}
   </button>
 );
+
+// Enhanced ScanResults component
+const ScanResults = ({ result, error, isScanning }) => {
+  if (isScanning) {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-gray-600">Scanning in progress...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-red-600">{error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!result || typeof result !== "object") {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-gray-600">No scan results yet. Please scan an image.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const {
+    name = "Unknown",
+    type = "Unknown",
+    varieties = [],
+    confidence = 0,
+    details = "No details available",
+    bad_percent = null,
+    quantity_percent = 0,
+    total_grains = 0,
+    farmer_recommendation = "No recommendation available"
+  } = result;
+  const lastScanTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Scan Results</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div>
+          <p className="text-sm text-gray-600">Paddy Name</p>
+          <p className="text-xl font-bold text-green-800">{name}</p>
+          <p className="text-sm text-gray-500">{details}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-600">Paddy Type</p>
+          <p className="text-lg font-semibold">{type}</p>
+        </div>
+        {varieties.length > 0 && (
+          <div>
+            <p className="text-sm text-gray-600">Paddy Varieties</p>
+            <ul className="list-disc list-inside text-sm text-gray-700">
+              {varieties.map((variety, index) => (
+                <li key={index}>
+                  {variety.name}: {(variety.percentage * 100).toFixed(0)}%
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div>
+          <p className="text-sm text-gray-600">Confidence</p>
+          <p className="text-lg font-semibold">{(confidence * 100).toFixed(0)}%</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-600">Bad Paddy (%)</p>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-red-600 h-2.5 rounded-full"
+              style={{ width: `${bad_percent !== null ? bad_percent : 0}%` }}
+            ></div>
+          </div>
+          <p className="text-lg font-semibold mt-1">{bad_percent !== null ? `${bad_percent}%` : "N/A"}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-600">Quantity (%)</p>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-green-600 h-2.5 rounded-full"
+              style={{ width: `${quantity_percent}%` }}
+            ></div>
+          </div>
+          <p className="text-lg font-semibold mt-1">{quantity_percent}%</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-600">Total Grains</p>
+          <p className="text-lg font-semibold">{total_grains}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-600">Farmer Recommendation</p>
+          <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded-md">{farmer_recommendation}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-600">Last Scan Time</p>
+          <p className="text-sm text-gray-500">{lastScanTime}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function SeedScanner() {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -41,7 +151,7 @@ export default function SeedScanner() {
     setResult(null);
 
     try {
-      console.log("Starting seed scan...");
+      console.log("Starting paddy scan at", new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
 
       const compressedImage = await compressImage(selectedImage);
 
@@ -59,7 +169,7 @@ export default function SeedScanner() {
       console.log("API response status:", response.status);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: "Failed to parse response" }));
         console.error("API error:", errorData);
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
@@ -71,6 +181,8 @@ export default function SeedScanner() {
         throw new Error(data.error);
       }
 
+      // Ensure varieties is an array
+      data.varieties = Array.isArray(data.varieties) ? data.varieties : [];
       setResult(data);
       const scanRecord = {
         id: Date.now(),
@@ -78,21 +190,25 @@ export default function SeedScanner() {
         image: selectedImage,
         result: data,
         confidence: data.confidence,
+        bad_percent: data.bad_percent,
+        type: data.type,
+        varieties: data.varieties,
       };
       setScanHistory((prev) => [scanRecord, ...prev.slice(0, 9)]);
     } catch (err) {
       console.error("Scan error:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Failed to identify seed type: ${errorMessage}. Please try again with a clearer image.`);
+      setError(`Failed to identify paddy type: ${errorMessage}. Please try again with a clearer image.`);
     } finally {
       setIsScanning(false);
     }
   };
 
   const compressImage = async (imageDataUrl) => {
-    const img = new Image();
-    img.src = imageDataUrl;
     return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = imageDataUrl;
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
@@ -101,7 +217,10 @@ export default function SeedScanner() {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL("image/jpeg", 0.7));
       };
-      img.onerror = () => resolve(imageDataUrl);
+      img.onerror = () => {
+        console.error("Image load failed:", imageDataUrl);
+        resolve(imageDataUrl);
+      };
     });
   };
 
@@ -125,8 +244,8 @@ export default function SeedScanner() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 p-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-green-800 mb-2">Seed Scanner</h1>
-          <p className="text-gray-600">Identify rice and seed types using AI-powered image recognition</p>
+          <h1 className="text-4xl font-bold text-green-800 mb-2">Paddy Scanner</h1>
+          <p className="text-gray-600">Identify paddy types, including pure and mixed varieties, with AI-powered analysis</p>
           <div className="flex justify-center gap-4 mt-4">
             <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
               <span className="text-sm text-gray-600">Total Scans: </span>
@@ -135,7 +254,13 @@ export default function SeedScanner() {
             {result && (
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
                 <span className="text-sm text-gray-600">Last Result: </span>
-                <span className="font-semibold text-blue-600">{result.type}</span>
+                <span className="font-semibold text-blue-600">{result.name} ({result.type})</span>
+              </div>
+            )}
+            {result && result.bad_percent && (
+              <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
+                <span className="text-sm text-gray-600">Bad Paddy: </span>
+                <span className="font-semibold text-red-600">{result.bad_percent}%</span>
               </div>
             )}
           </div>
@@ -145,7 +270,7 @@ export default function SeedScanner() {
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle>Capture Seed Image</CardTitle>
+                <CardTitle>Capture Paddy Image</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {!selectedImage && (
@@ -160,8 +285,12 @@ export default function SeedScanner() {
                   <div className="space-y-3">
                     <img
                       src={selectedImage || "/placeholder.svg"}
-                      alt="Selected seed"
+                      alt="Selected paddy"
                       className="w-full rounded-lg border max-h-64 object-cover"
+                      onError={(e) => {
+                        e.target.src = "/placeholder.svg";
+                        console.error("Image load error:", selectedImage);
+                      }}
                     />
                     <div className="flex gap-2">
                       <Button
@@ -179,7 +308,7 @@ export default function SeedScanner() {
                                 cx="12"
                                 cy="12"
                                 r="10"
-                                stroke="currentContent"
+                                stroke="currentColor"
                                 strokeWidth="4"
                                 fill="none"
                               />
@@ -187,7 +316,7 @@ export default function SeedScanner() {
                             Scanning...
                           </span>
                         ) : (
-                          "Scan Seed"
+                          "Scan Paddy"
                         )}
                       </Button>
                       <Button
@@ -201,7 +330,7 @@ export default function SeedScanner() {
                 )}
 
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Quick Actions</h4>
+                  <h4 className="text-sm font-medium text-gray-600 mb-2">Quick Actions</h4>
                   <div className="space-y-2">
                     <Button
                       onClick={() => document.querySelector('input[type="file"]')?.click()}
@@ -238,11 +367,18 @@ export default function SeedScanner() {
                           src={item.image || "/placeholder.svg"}
                           alt="History item"
                           className="w-8 h-8 object-cover rounded"
+                          onError={(e) => {
+                            e.target.src = "/placeholder.svg";
+                            console.error("History image load error:", item.image);
+                          }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{item.result.type}</p>
+                          <p className="text-xs font-medium truncate">{item.result.name} ({item.result.type})</p>
                           <p className="text-xs text-gray-500">
                             {(item.confidence * 100).toFixed(0)}% confidence
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Bad: {item.bad_percent ? `${item.bad_percent}%` : "N/A"}
                           </p>
                         </div>
                       </div>
@@ -261,8 +397,8 @@ export default function SeedScanner() {
         {selectedImage && (
           <RiceComparisonTool
             userImage={selectedImage}
-            detectedType={result?.type}
-            title="Seed Comparison Tool"
+            detectedType={result?.name}
+            title="Paddy Comparison Tool"
           />
         )}
       </div>
