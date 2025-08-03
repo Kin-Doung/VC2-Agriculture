@@ -26,6 +26,13 @@ RICE_PARAMS = {
     "shape_factor": 0.65  # Average shape factor for rice
 }
 
+# Paddy variety parameters (color and shape characteristics)
+PADDY_VARIETIES = {
+    "Jasmine": {"hsv_range": ([5, 50, 50], [25, 255, 255]), "shape_factor": 0.7, "intensity_range": (80, 200)},
+    "Basmati": {"hsv_range": ([10, 30, 60], [30, 200, 255]), "shape_factor": 0.8, "intensity_range": (90, 210)},
+    "Sticky Rice": {"hsv_range": ([0, 20, 100], [20, 100, 255]), "shape_factor": 0.6, "intensity_range": (70, 190)}
+}
+
 # Quality checker
 def check_image_quality(image):
     try:
@@ -79,6 +86,73 @@ def detect_husk_status(image):
         logger.error(f"Error detecting husk status: {str(e)}")
         return False, 0.0
 
+# Detect paddy variety and purity
+def detect_paddy_variety(image, is_husked):
+    try:
+        img_array = np.array(image)
+        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+        hsv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2HSV)
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        
+        # Initialize results
+        variety_scores = []
+        total_pixels = 0
+        
+        # Analyze color distribution for each variety
+        for variety, params in PADDY_VARIETIES.items():
+            lower, upper = params["hsv_range"]
+            mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+            pixels = cv2.countNonZero(mask)
+            total_pixels += pixels
+            variety_scores.append({"name": variety, "pixels": pixels, "shape_factor": params["shape_factor"]})
+        
+        # Calculate percentages and determine purity
+        varieties = []
+        if total_pixels == 0:
+            logger.warning("No valid pixels detected for variety analysis")
+            return "Unknown", "Unknown", [], 0.0
+        
+        dominant_variety = None
+        max_percentage = 0
+        for variety in variety_scores:
+            percentage = variety["pixels"] / total_pixels if total_pixels > 0 else 0
+            if percentage > 0.05:  # Only include varieties with significant presence
+                varieties.append({"name": variety["name"], "percentage": round(percentage, 2)})
+            if percentage > max_percentage:
+                max_percentage = percentage
+                dominant_variety = variety["name"]
+        
+        # Determine if pure or mixed (threshold of 80% for purity)
+        type = "Pure" if max_percentage > 0.8 else "Mixed"
+        confidence = max_percentage if varieties else 0.0
+        name = dominant_variety if dominant_variety else "Unknown"
+        
+        # Validate with shape analysis
+        thresh = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 3
+        )
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        valid_grains = [c for c in contours if RICE_PARAMS["min_area"] <= cv2.contourArea(c) <= RICE_PARAMS["max_area"]]
+        
+        if valid_grains and dominant_variety:
+            shape_confidence = 0
+            for contour in valid_grains:
+                area = cv2.contourArea(contour)
+                perimeter = cv2.arcLength(contour, True)
+                circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
+                if abs(circularity - PADDY_VARIETIES[dominant_variety]["shape_factor"]) < 0.15:
+                    shape_confidence += 1
+            shape_confidence = shape_confidence / len(valid_grains) if valid_grains else 0
+            confidence = (confidence + shape_confidence) / 2
+        
+        varieties = sorted(varieties, key=lambda x: x["percentage"], reverse=True)
+        logger.info(f"Detected paddy: {name} ({type}) with varieties {varieties} and confidence {confidence:.3f}")
+        
+        return name, type, varieties, round(confidence, 3)
+    except Exception as e:
+        logger.error(f"Error detecting paddy variety: {str(e)}")
+        return "Unknown", "Unknown", [], 0.0
+
 # Detect if the image contains rice
 def is_rice_image(image):
     try:
@@ -101,7 +175,7 @@ def is_rice_image(image):
         
         # Estimate confidence based on number of detected grains
         confidence = min(len(rice_grains) / 100.0, 1.0)
-        return True, confidence, "Rice detected"
+        return True, confidence, "Paddy detected"
     except Exception as e:
         logger.error(f"Error detecting rice: {str(e)}")
         return False, 0.0, f"Error detecting rice: {str(e)}"
@@ -210,22 +284,29 @@ def scan_rice():
         is_husked, husk_confidence = detect_husk_status(image)
         logger.info(f"Detected husk status: {'Husked' if is_husked else 'Unhusked'} with confidence {husk_confidence} at {datetime.now().strftime('%H:%M:%S %Y-%m-%d')}")
 
+        # Detect paddy variety and purity
+        name, type, varieties, variety_confidence = detect_paddy_variety(image, is_husked)
+
         # Analyze quantity and quality
         quantity_quality = analyze_rice_quantity_quality(image, is_husked)
 
         # Combine results
         result = {
             "is_rice": True,
-            "confidence": rice_confidence,
-            "details": rice_message,
+            "name": name,
+            "type": type,
+            "varieties": varieties,
+            "confidence": variety_confidence,
+            "details": f"{'Husked' if is_husked else 'Unhusked'} {name} paddy detected",
             "husked": is_husked,
             "husk_confidence": husk_confidence,
             "quantity_percent": quantity_quality["quantity_percent"],
             "bad_percent": quantity_quality["bad_percent"],
             "total_grains": quantity_quality["total_grains"],
-            "farmer_recommendation": "General advice: Use well-drained or flooded fields depending on rice variety. Harvest after 110-160 days. Consult local agricultural extension for best practices."
+            "farmer_recommendation": f"{'For pure' if type == 'Pure' else 'For mixed'} {name} paddy: Use well-drained or flooded fields depending on variety. Harvest after 110-160 days. Consult local agricultural extension for specific practices."
         }
 
+        logger.info(f"Scan result: {result}")
         return jsonify(result), 200
 
     except UnidentifiedImageError:
