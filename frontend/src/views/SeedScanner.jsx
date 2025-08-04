@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CameraCapture from "../components/ScantTypeOfRice/CameraCapture";
 import ImageUpload from "../components/ScantTypeOfRice/ImageUpload";
 import RiceComparisonTool from "../components/ScantTypeOfRice/RiceComparisonTool";
@@ -52,17 +52,7 @@ const ScanResults = ({ result, error, isScanning }) => {
     );
   }
 
-  const {
-    name = "Unknown",
-    type = "Unknown",
-    varieties = [],
-    confidence = 0,
-    details = "No details available",
-    bad_percent = null,
-    quantity_percent = 0,
-    total_grains = 0,
-    farmer_recommendation = "No recommendation available"
-  } = result;
+  const { paddy_name = "Unknown", type = "Unknown", bad_paddy_percent = null } = result;
   const lastScanTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" });
 
   return (
@@ -73,56 +63,21 @@ const ScanResults = ({ result, error, isScanning }) => {
       <CardContent className="space-y-6">
         <div>
           <p className="text-sm text-gray-600">Paddy Name</p>
-          <p className="text-xl font-bold text-green-800">{name}</p>
-          <p className="text-sm text-gray-500">{details}</p>
+          <p className="text-xl font-bold text-green-800">{paddy_name}</p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Paddy Type</p>
           <p className="text-lg font-semibold">{type}</p>
-        </div>
-        {varieties.length > 0 && (
-          <div>
-            <p className="text-sm text-gray-600">Paddy Varieties</p>
-            <ul className="list-disc list-inside text-sm text-gray-700">
-              {varieties.map((variety, index) => (
-                <li key={index}>
-                  {variety.name}: {(variety.percentage * 100).toFixed(0)}%
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <div>
-          <p className="text-sm text-gray-600">Confidence</p>
-          <p className="text-lg font-semibold">{(confidence * 100).toFixed(0)}%</p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Bad Paddy (%)</p>
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-red-600 h-2.5 rounded-full"
-              style={{ width: `${bad_percent !== null ? bad_percent : 0}%` }}
+              style={{ width: `${bad_paddy_percent !== null ? bad_paddy_percent : 0}%` }}
             ></div>
           </div>
-          <p className="text-lg font-semibold mt-1">{bad_percent !== null ? `${bad_percent}%` : "N/A"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Quantity (%)</p>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className="bg-green-600 h-2.5 rounded-full"
-              style={{ width: `${quantity_percent}%` }}
-            ></div>
-          </div>
-          <p className="text-lg font-semibold mt-1">{quantity_percent}%</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Total Grains</p>
-          <p className="text-lg font-semibold">{total_grains}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Farmer Recommendation</p>
-          <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded-md">{farmer_recommendation}</p>
+          <p className="text-lg font-semibold mt-1">{bad_paddy_percent !== null ? `${bad_paddy_percent}%` : "N/A"}</p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Last Scan Time</p>
@@ -139,10 +94,35 @@ export default function SeedScanner() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [scanHistory, setScanHistory] = useState([]);
+  const [isServerReachable, setIsServerReachable] = useState(false);
+
+  // Check server connectivity with GET instead of HEAD
+  useEffect(() => {
+    const checkServer = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/api/scan-rice", {
+          method: "GET",
+          mode: "no-cors",
+        });
+        setIsServerReachable(response.status < 400); // Accept any 2xx or 3xx status
+      } catch (e) {
+        console.error("Server check failed:", e);
+        setIsServerReachable(false);
+      }
+    };
+    checkServer();
+    const interval = setInterval(checkServer, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const scanSeed = async () => {
     if (!selectedImage) {
       setError("Please select or capture an image.");
+      return;
+    }
+
+    if (!isServerReachable) {
+      setError("Server is unreachable. Please ensure the backend is running at http://127.0.0.1:5000.");
       return;
     }
 
@@ -151,14 +131,18 @@ export default function SeedScanner() {
     setResult(null);
 
     try {
-      console.log("Starting paddy scan at", new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      console.log("Scan initiated at", new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
 
       const compressedImage = await compressImage(selectedImage);
+      if (!compressedImage.startsWith("data:image/")) {
+        throw new Error("Invalid image data after compression.");
+      }
+      console.log("Compressed image length:", compressedImage.length, "Sample:", compressedImage.substring(0, 50));
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
-      const response = await fetch("http://localhost:5000/api/scan-rice", {
+      const response = await fetch("http://127.0.0.1:5000/api/scan-rice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: compressedImage }),
@@ -166,11 +150,10 @@ export default function SeedScanner() {
       });
 
       clearTimeout(timeoutId);
-      console.log("API response status:", response.status);
+      console.log("API response status:", response.status, "URL:", response.url);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to parse response" }));
-        console.error("API error:", errorData);
+        const errorData = await response.json().catch(() => ({ error: "Server error" }));
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
@@ -181,24 +164,22 @@ export default function SeedScanner() {
         throw new Error(data.error);
       }
 
-      // Ensure varieties is an array
-      data.varieties = Array.isArray(data.varieties) ? data.varieties : [];
       setResult(data);
       const scanRecord = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
         image: selectedImage,
         result: data,
-        confidence: data.confidence,
-        bad_percent: data.bad_percent,
-        type: data.type,
-        varieties: data.varieties,
       };
       setScanHistory((prev) => [scanRecord, ...prev.slice(0, 9)]);
     } catch (err) {
-      console.error("Scan error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
-      setError(`Failed to identify paddy type: ${errorMessage}. Please try again with a clearer image.`);
+      console.error("Scan error details:", err);
+      const errorMessage = err.message.includes("abort")
+        ? "Request timed out. Please check server connection."
+        : err.message.includes("NetworkError")
+        ? "Network error. Please check your internet connection."
+        : err.message;
+      setError(`Failed to identify paddy type: ${errorMessage}`);
     } finally {
       setIsScanning(false);
     }
@@ -215,11 +196,12 @@ export default function SeedScanner() {
         canvas.width = 800;
         canvas.height = (img.height / img.width) * 800;
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
+        const compressedData = canvas.toDataURL("image/jpeg", 0.7);
+        resolve(compressedData);
       };
       img.onerror = () => {
         console.error("Image load failed:", imageDataUrl);
-        resolve(imageDataUrl);
+        resolve(imageDataUrl); // Fallback to original
       };
     });
   };
@@ -246,6 +228,9 @@ export default function SeedScanner() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-green-800 mb-2">Paddy Scanner</h1>
           <p className="text-gray-600">Identify paddy types, including pure and mixed varieties, with AI-powered analysis</p>
+          {error && !isServerReachable && (
+            <p className="text-red-600 mt-2">Server check failed. Ensure backend is running at http://127.0.0.1:5000.</p>
+          )}
           <div className="flex justify-center gap-4 mt-4">
             <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
               <span className="text-sm text-gray-600">Total Scans: </span>
@@ -254,13 +239,13 @@ export default function SeedScanner() {
             {result && (
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
                 <span className="text-sm text-gray-600">Last Result: </span>
-                <span className="font-semibold text-blue-600">{result.name} ({result.type})</span>
+                <span className="font-semibold text-blue-600">{result.paddy_name} ({result.type})</span>
               </div>
             )}
-            {result && result.bad_percent && (
+            {result && result.bad_paddy_percent !== null && (
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
                 <span className="text-sm text-gray-600">Bad Paddy: </span>
-                <span className="font-semibold text-red-600">{result.bad_percent}%</span>
+                <span className="font-semibold text-red-600">{result.bad_paddy_percent}%</span>
               </div>
             )}
           </div>
@@ -295,7 +280,7 @@ export default function SeedScanner() {
                     <div className="flex gap-2">
                       <Button
                         onClick={scanSeed}
-                        disabled={isScanning}
+                        disabled={isScanning || !isServerReachable}
                         className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white"
                       >
                         {isScanning ? (
@@ -373,12 +358,9 @@ export default function SeedScanner() {
                           }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{item.result.name} ({item.result.type})</p>
+                          <p className="text-xs font-medium truncate">{item.result.paddy_name} ({item.result.type})</p>
                           <p className="text-xs text-gray-500">
-                            {(item.confidence * 100).toFixed(0)}% confidence
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Bad: {item.bad_percent ? `${item.bad_percent}%` : "N/A"}
+                            Bad: {item.result.bad_paddy_percent ? `${item.result.bad_paddy_percent}%` : "N/A"}
                           </p>
                         </div>
                       </div>
@@ -397,7 +379,7 @@ export default function SeedScanner() {
         {selectedImage && (
           <RiceComparisonTool
             userImage={selectedImage}
-            detectedType={result?.name}
+            detectedType={result?.paddy_name}
             title="Paddy Comparison Tool"
           />
         )}
