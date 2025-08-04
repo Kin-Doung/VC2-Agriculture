@@ -15,6 +15,7 @@ import MeasurementHistory from "./views/MeasurementHistory"
 import CropTrackerView from "./views/CropTrackerView"
 import TasksView from "./views/TasksView"
 import Marketplace from "./views/Marketplace"
+import CropManagement from "./views/CropManagement" 
 import Product from "./views/Product"
 import Category from "./views/Category"
 import MarketPricesView from "./views/MarketPricesView"
@@ -34,7 +35,11 @@ import PublicTraining from "./views/public/PublicTraining"
 import Login from "./views/auth/Login"
 import Register from "./views/auth/Register"
 
+// Admin
+import UserList from "./views/admin/UserList"
+
 import "./App.css"
+import { Crop } from "lucide-react"
 
 // Mock measurement data
 const initialMeasurements = [
@@ -70,6 +75,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
   return (
     <Routes>
       <Route path="/" element={<Dashboard language={language} />} />
+      <Route path="/admin/user-logins" element={<UserList />} />
       <Route path="/farm" element={<FarmView language={language} />} />
       <Route
         path="/measure"
@@ -119,6 +125,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       />
       <Route path="/crops" element={<CropTrackerView language={language} />} />
       <Route path="/tasks" element={<TasksView language={language} />} />
+      <Route path="/cropmanagement" element={<CropManagement language={language} />} />
       <Route path="/category" element={<Category language={language} />} />
       <Route path="/product" element={<Product language={language} />} />
       <Route path="/marketplace" element={<Marketplace language={language} />} />
@@ -189,6 +196,7 @@ function App() {
   return (
     <Router>
       {isAuthenticated ? (
+      (
         <MainLayout language={language} setLanguage={setLanguage} user={user} onLogout={handleLogout}>
           <AuthenticatedRoutes
             language={language}
@@ -196,6 +204,7 @@ function App() {
             setMeasurements={setMeasurements}
           />
         </MainLayout>
+      )
       ) : (
         <PublicLayout language={language} setLanguage={setLanguage}>
           <PublicRoutes language={language} handleLogin={handleLogin} />

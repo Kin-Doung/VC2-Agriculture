@@ -13,10 +13,11 @@ import {
   Home,
   Package,
   List,
-  Book
+  Book,
+  Leaf
 } from "lucide-react"
 
-const Navigation = ({ isOpen, language }) => {
+const Navigation = ({ isOpen, language, role }) => {
   const location = useLocation()
 
   const translations = {
@@ -26,6 +27,7 @@ const Navigation = ({ isOpen, language }) => {
       landMeasure: "Measure Land",
       cropTracker: "Crop Tracker",
       tasks: "Tasks & Reminders",
+      cropManagement: "Crop Management",
       category: "Category",
       product: "Product",
       marketplace: "Marketplace",
@@ -37,7 +39,7 @@ const Navigation = ({ isOpen, language }) => {
       support: "Help & Support",
       profile: "Profile",
       settings: "Settings",
-      
+      userList: "Users List",
     },
     km: {
       dashboard: "ផ្ទាំងគ្រប់គ្រង",
@@ -45,6 +47,7 @@ const Navigation = ({ isOpen, language }) => {
       landMeasure: "វាស់ដី",
       cropTracker: "តាមដានដំណាំ",
       tasks: "កិច្ចការ និងការរំលឹក",
+      cropManagement: "ការគ្រប់គ្រងគ្រាប់ពូជ",
       category: "ប្រភេទ",
       product: "ផលិត​ផល",
       marketplace: "ទីផ្សារ",
@@ -56,6 +59,7 @@ const Navigation = ({ isOpen, language }) => {
       support: "ជំនួយ",
       profile: "ប្រវត្តិរូប",
       settings: "ការកំណត់",
+      userList: "បញ្ជីអ្នកប្រើប្រាស់",
     },
   }
 
@@ -67,6 +71,7 @@ const Navigation = ({ isOpen, language }) => {
     { icon: MapPin, label: t.landMeasure, path: "/measure" },
     { icon: Sprout, label: t.cropTracker, path: "/crops" },
     { icon: Calendar, label: t.tasks, path: "/tasks" },
+    { icon: Leaf, label: t.cropManagement, path: "/cropmanagement" },
     { icon: List, label: t.category, path: "/category" },
     { icon: Package, label: t.product, path: "/product" },
     { icon: DollarSign, label: t.marketplace, path: "/marketplace" },
@@ -76,7 +81,17 @@ const Navigation = ({ isOpen, language }) => {
     { icon: Book, label: t.learn, path: "/learn" },
     { icon: DollarSign, label: t.finances, path: "/finances" },
     { icon: HelpCircle, label: t.support, path: "/support" },
+    // { icon: User, label: t.userList, path: "/admin/user-logins" },
   ]
+
+  // ✅ Only add this if the role is "admin"
+  if (role === "admin") {
+    menuItems.push({
+      icon: User,
+      label: t.userList,
+      path: "/admin/user-logins",
+    })
+  }
 
   const isActiveRoute = (path) => {
     return location.pathname === path

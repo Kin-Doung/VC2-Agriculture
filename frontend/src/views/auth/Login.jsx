@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock, Leaf } from "lucide-react"
 import axios from "axios"
+import { useNavigate } from "react-router-dom"
 
 const Login = ({ language, onLogin }) => {
   const [formData, setFormData] = useState({
@@ -72,63 +73,19 @@ const Login = ({ language, onLogin }) => {
     setError("")
   }
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault()
-  //   setIsLoading(true)
-  //   setError("")
+const navigate = useNavigate()
 
-  //   // Basic validation
-  //   if (!formData.email || !formData.password) {
-  //     setError(t.errors.required)
-  //     setIsLoading(false)
-  //     return
-  //   }
-
-  //   // Email validation
-  //   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  //   if (!emailRegex.test(formData.email)) {
-  //     setError(t.errors.invalidEmail)
-  //     setIsLoading(false)
-  //     return
-  //   }
-
-  //   try {
-  //     // Simulate API call
-  //     await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  //     // For demo purposes, accept any valid email/password combination
-  //     // In a real app, this would be an actual API call
-  //     if (formData.email && formData.password.length >= 6) {
-  //       const userData = {
-  //         id: 1,
-  //         name: formData.email === "demo@farmmanager.com" ? "Demo User" : "Farmer User",
-  //         email: formData.email,
-  //         farmName: "Green Valley Farm",
-  //       }
-  //       onLogin(userData)
-  //     } else {
-  //       setError(t.errors.invalidCredentials)
-  //     }
-  //   } catch (err) {
-  //     setError(t.errors.invalidCredentials)
-  //   } finally {
-  //     setIsLoading(false)
-  //   }
-  // }
-
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault()
   setIsLoading(true)
   setError("")
 
-  // Basic validation
   if (!formData.email || !formData.password) {
     setError(t.errors.required)
     setIsLoading(false)
     return
   }
 
-  // Email format validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(formData.email)) {
     setError(t.errors.invalidEmail)
@@ -144,19 +101,26 @@ const Login = ({ language, onLogin }) => {
 
     const data = response.data
 
-    // Save token or user data
     const userData = {
       id: data.user.id,
       name: data.user.name,
       email: data.user.email,
+      role: data.user.role, 
       token: data.token,
     }
 
-    // Optional: Save to localStorage
-    localStorage.setItem("token", data.token)
+    // Save token if needed
+    localStorage.setItem("token", data.access_token)
 
-    // Trigger app login
+    // Trigger login
     onLogin(userData)
+
+    // Redirect based on role
+    if (userData.role === "admin") {
+      navigate("/")
+    } else {
+      navigate("/dashboard")
+    }
 
   } catch (err) {
     console.error("Login error:", err)
@@ -169,7 +133,6 @@ const Login = ({ language, onLogin }) => {
     setIsLoading(false)
   }
 }
-
 
   const handleDemoLogin = () => {
     setFormData({

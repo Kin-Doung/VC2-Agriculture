@@ -129,7 +129,7 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
       </header>
 
       <div className="flex">
-        <Navigation isOpen={showMenu} language={language} currentPath={location.pathname} />
+        <Navigation isOpen={showMenu} language={language} currentPath={location.pathname} role={user?.role}/>
 
         <main className="flex-1">{children}</main>
       </div>
