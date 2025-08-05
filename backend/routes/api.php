@@ -14,10 +14,6 @@ use App\Http\Controllers\TaskController;
 
 Route::apiResource('lands', LandController::class);
 
-// Auth routes
-// Route::post('/register', [AuthController::class, 'register']);
-// Route::post('/login', [AuthController::class, 'login']);
-// Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -33,6 +29,14 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/users/{id}', [AdminController::class, 'show']);
     Route::put('/admin/users/{id}', [AdminController::class, 'update']);
     Route::delete('/admin/users/{id}', [AdminController::class, 'destroy']);
+});
+
+// Route User sanctum
+Route::middleware('auth:sanctum')->group(function () {
+
+    // Category routes
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::post('/categories', [CategoryController::class, 'store']);
 });
 
 
