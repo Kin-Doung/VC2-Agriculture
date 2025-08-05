@@ -11,7 +11,7 @@ class ProductController extends Controller
 {
 public function index()
 {
-    $products = Product::with('category')->get()->map(function ($product) {
+    $products = Product::with('category', "user")->get()->map(function ($product) {
         $product->image_url = $product->image_path
             ? asset('storage/' . $product->image_path)
             : null;

@@ -44,6 +44,7 @@ const Marketplace = ({ language = "en" }) => {
       selectCategory: "Select a category",
       close: "Close",
       seller: "Seller",
+      sellerPhone: "Seller Phone",
       error: "Failed to load data. Please try again later.",
       loading: "Loading marketplace data...",
       page: "Page",
@@ -76,6 +77,7 @@ const Marketplace = ({ language = "en" }) => {
       selectCategory: "ជ្រើសរើសប្រភេទ",
       close: "បិទ",
       seller: "អ្នកលក់",
+      sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       loading: "កំពុងផ្ទុកទិន្នន័យទីផ្សារ...",
       page: "ទំព័រ",
@@ -148,6 +150,7 @@ const Marketplace = ({ language = "en" }) => {
           priceDisplay: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
           image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
           seller: item.user?.name || "",
+          sellerPhone: item.user?.phone || "N/A",
           stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
           description: item.description || "No description available",
           category: item.category?.name || "",
@@ -219,6 +222,7 @@ const Marketplace = ({ language = "en" }) => {
 
   // Handle filter click with row animation
   const handleFilterClick = () => {
+    setShowFilterModal(true);
     setCurrentPage(1); // Reset to first page
     // Cycle rows: move first row to bottom, shift others up
     setRowOrder((prev) => {
@@ -520,7 +524,7 @@ const Marketplace = ({ language = "en" }) => {
                       </div>
                     )}
                     <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.price}</label>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.productPrice}</label>
                       <p className="text-3xl font-bold text-green-600">
                         {selectedProduct.priceDisplay}
                         <span className="text-lg text-gray-500 font-normal">{t.perKg}</span>
@@ -530,6 +534,12 @@ const Marketplace = ({ language = "en" }) => {
                       <div>
                         <label className="block text-lg font-medium text-gray-700 mb-2">{t.seller}</label>
                         <p className="text-xl text-gray-900">{selectedProduct.seller}</p>
+                      </div>
+                    )}
+                    {selectedProduct.sellerPhone && (
+                      <div>
+                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.sellerPhone}</label>
+                        <p className="text-xl text-gray-900">{selectedProduct.sellerPhone}</p>
                       </div>
                     )}
                     <div>

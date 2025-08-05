@@ -14,6 +14,8 @@ cp .env.example .env
 php artisan key:generate
 php artisan migrate
 php artisan serve
+php artisan storage:link
+yarn add react-leaflet leaflet leaflet-image
 ```
 ### Frontend (React)
 ```bash
