@@ -76,6 +76,7 @@ const PublicProducts = ({ language = "en" }) => {
         price: "Price",
         perKg: "/kg",
         seller: "Seller",
+        sellerPhone: "Seller Phone",
         description: "Description",
         error: "Failed to load data. Please try again later.",
         page: "Page",
@@ -142,6 +143,7 @@ const PublicProducts = ({ language = "en" }) => {
         price: "តម្លៃ",
         perKg: "/គ.ក",
         seller: "អ្នកលក់",
+        sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
         description: "ការពិពណ៌នា",
         error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
         page: "ទំព័រ",
@@ -177,6 +179,7 @@ const PublicProducts = ({ language = "en" }) => {
             ? `http://127.0.0.1:8000/storage/${item.image_path}`
             : "/placeholder.svg?height=400&width=400&text=Product+Image",
           seller: item.user?.name || "",
+          sellerPhone: item.user?.phone || "N/A",
           stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
           description: item[`description_${language}`] || item.description || "No description available",
           category: item.category?.[`name_${language}`] || item.category?.name || "",
@@ -417,6 +420,12 @@ const PublicProducts = ({ language = "en" }) => {
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.seller}</label>
                       <p className="text-xl text-gray-900">{selectedProduct.seller}</p>
+                    </div>
+                  )}
+                  {selectedProduct.sellerPhone && selectedProduct.sellerPhone !== "N/A" && (
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.sellerPhone}</label>
+                      <p className="text-xl text-gray-900">{selectedProduct.sellerPhone}</p>
                     </div>
                   )}
                   <div>
