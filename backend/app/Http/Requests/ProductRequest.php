@@ -21,7 +21,7 @@ class ProductRequest extends FormRequest
             'user_id' => 'required|integer|exists:users,id',
             'category_id' => 'required|integer|exists:categories,id',
             'crop_id' => 'required|integer|exists:crops,id',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png',
             'available_from' => 'nullable|date',
         ];
     }
