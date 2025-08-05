@@ -29,7 +29,7 @@ const Product = ({ language = "en" }) => {
     imageFile: null,
     category_id: "",
     crop_id: null,
-    user_id: localStorage.getItem("user_id"),
+    user_id: localStorage.getItem("user_id") || "1",
   });
   const [editProduct, setEditProduct] = useState({
     id: null,
@@ -41,7 +41,7 @@ const Product = ({ language = "en" }) => {
     imageFile: null,
     category_id: "",
     crop_id: null,
-    user_id: localStorage.getItem("user_id"),
+    user_id: localStorage.getItem("user_id") || "1",
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -296,7 +296,7 @@ const Product = ({ language = "en" }) => {
       imageFile: null,
       category_id: product.category_id || "",
       crop_id: product.crop_id || null,
-      user_id: localStorage.getItem("user_id"),
+      user_id: localStorage.getItem("user_id") || "1",
     });
     setSelectedCategory(product.category_id || "");
     setShowEditModal(true);
@@ -471,7 +471,7 @@ const Product = ({ language = "en" }) => {
         imageFile: null,
         category_id: "",
         crop_id: null,
-        user_id: localStorage.getItem("user_id"),
+        user_id: localStorage.getItem("user_id") || "1",
       });
       setFormErrors({});
       setShowAddModal(false);
@@ -555,7 +555,7 @@ const Product = ({ language = "en" }) => {
         imageFile: null,
         category_id: "",
         crop_id: null,
-        user_id: localStorage.getItem("user_id"),
+        user_id: localStorage.getItem("user_id") || "1",
       });
       setFormErrors({});
       setShowEditModal(false);
