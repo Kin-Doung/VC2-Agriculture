@@ -56,11 +56,12 @@ const Marketplace = ({ language = "en" }) => {
       priceRange: "Price Range",
       minPrice: "Min Price",
       maxPrice: "Max Price",
+      noProducts: "No products available",
     },
     km: {
       title: "ទីផ្សារ",
-      subtitle: "ស្វែងរកអ្វីដែលកសិករផ្តល់ជូន",
-      search: "ស្វែងរកផលិតផល...",
+      subtitle: "ស្វែngរកអ្វីដែលកសិករផ្តល់ជូn",
+      search: "ស្វែngរកផលិតផល...",
       filter: "តម្រង",
       price: "តម្លៃ",
       perKg: "/គ.ក",
@@ -70,25 +71,26 @@ const Marketplace = ({ language = "en" }) => {
       viewDetail: "មើលលម្អិត",
       viewProduct: "ព័ត៌មានលម្អិតផលិតផល",
       productName: "ឈ្មោះផលិតផល",
-      productPrice: "តម្លៃក្នុងមួយគីឡូក្រាម",
-      productDescription: "ការពិពណ៌នា",
+      productPrice: "តម្លៃក្នុngមួយគីឡូក្រាម",
+      productDescription: "ការពិពណ៌nា",
       productStock: "ស្ថានភាពស្តុក",
       productCategory: "ប្រភេទ",
       selectCategory: "ជ្រើសរើសប្រភេទ",
       close: "បិទ",
       seller: "អ្នកលក់",
       sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
-      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
-      loading: "កំពុងផ្ទុកទិន្នន័យទីផ្សារ...",
+      error: "បរាជ័យក្នុngការផ្ទុកទិnនន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      loading: "កំពុngផ្ទុកទិnនន័យទីផ្សារ...",
       page: "ទំព័រ",
       of: "នៃ",
       applyFilters: "អនុវត្តតម្រង",
       clearFilters: "លុបតម្រង",
       stock: "ស្តុក",
-      all: "ទាំងអស់",
+      all: "ទាំngអស់",
       priceRange: "ជួរតម្លៃ",
       minPrice: "តម្លៃអប្បបរមា",
       maxPrice: "តម្លៃអតិបរមា",
+      noProducts: "មិនមានផលិតផល",
     },
   };
 
@@ -463,6 +465,10 @@ const Marketplace = ({ language = "en" }) => {
             >
               Retry
             </button>
+          </div>
+        ) : categories.length === 0 || products.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.noProducts}</div>
           </div>
         ) : (
           <>

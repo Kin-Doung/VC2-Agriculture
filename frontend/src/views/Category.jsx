@@ -49,6 +49,7 @@ const Category = ({ language = "en" }) => {
       close: "Close",
       enterCategoryName: "Enter category name...",
       enterDescription: "Enter description...",
+      noCategoriesAvailable: "No category available. Add a new category to get started.",
       noCategoriesFound: "No categories found matching your search.",
       confirmDelete: "Are you sure you want to delete this category?",
       loading: "Loading categories...",
@@ -82,6 +83,7 @@ const Category = ({ language = "en" }) => {
       close: "បិទ",
       enterCategoryName: "បញ្ចូលឈ្មោះប្រភេទ...",
       enterDescription: "បញ្ចូលការពិពណ៌នា...",
+      noCategoriesAvailable: "មិនមានប្រភេទទេ។ បន្ថែមប្រភេទថ្មីដើម្បីចាប់ផ្តើម។",
       noCategoriesFound: "រកមិនឃើញប្រភេទដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបប្រភេទនេះមែនទេ?",
       loading: "កំពុងផ្ទុកប្រភេទ...",
@@ -91,7 +93,7 @@ const Category = ({ language = "en" }) => {
       updateSuccess: "ប្រភេទត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
       addError: "បរាជ័យក្នុងការបន្ថែមប្រភេទ៖ ",
       saving: "កំពុងរក្សាទុក...",
-      updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
+      updating: "កំពុងធ្វើបច្ចុប្បននភាព...",
       deleting: "កំពុងលុប...",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
@@ -408,6 +410,10 @@ const Category = ({ language = "en" }) => {
             >
               Retry
             </button>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.noCategoriesAvailable}</div>
           </div>
         ) : paginatedCategories.length === 0 ? (
           <div className="text-center py-12">{t.noCategoriesFound}</div>

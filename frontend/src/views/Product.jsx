@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Filter, X, Upload, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown,} from "lucide-react";
+import { Plus, Search, Filter, X, Upload, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const Product = ({ language = "en" }) => {
@@ -101,9 +101,9 @@ const Product = ({ language = "en" }) => {
     },
     km: {
       title: "ផលិតផលរបស់ខ្ញុំ",
-      subtitle: "លក់ផលិតផលរបស់អ្នក និងស្វែងរកអ្វីដែលកសិករដទៃផ្តល់ជូន",
+      subtitle: "លក់ផលិតផលរបស់អ្នក និងស្វែngរកអ្វីដែលកសិករដទៃផ្តល់ជូន",
       addProduct: "បន្ថែមផលិតផល",
-      search: "ស្វែងរកផលិតផល...",
+      search: "ស្វែngរកផលិតផល...",
       filter: "តម្រង",
       price: "តម្លៃ",
       perKg: "/គ.ក",
@@ -133,22 +133,22 @@ const Product = ({ language = "en" }) => {
       enterQuantity: "បញ្ចូលបរិមាណ",
       selectCategoryRequired: "ជ្រើសរើសប្រភេទ",
       noProducts: "មិនមានផលិតផល។ បន្ថែមផលិតផលថ្មីដើម្បីចាប់ផ្តើម!",
-      noFilteredProducts: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរក ឬតម្រងរបស់អ្នក។",
+      noFilteredProducts: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែngរក ឬតម្រងរបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
-      loading: "កំពុងផ្ទុកផលិតផល...",
-      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
-      updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពផលិតផល៖ ",
+      loading: "កំពុngផ្ទុកផលិតផល...",
+      error: "បរាជ័យក្នុngការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      updateError: "បរាជ័យក្នុngការធ្វើបច្ចុប្បន្នភាពផលិតផល៖ ",
       deleteSuccess: "ផលិតផលត្រូវបានលុបដោយជោគជ័យ។",
       updateSuccess: "ផលិតផលត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
-      addError: "បរាជ័យក្នុងការបន្ថែមផលិតផល៖ ",
-      prevPage: "មុន",
-      nextPage: "បន្ទាប់",
+      addError: "បរាជ័យក្នុngការបន្ថែមផលិតផល៖ ",
+      prevPage: "មុn",
+      nextPage: "បnទាប់",
       stockStatus: "ស្ថានភាពស្តុក",
-      all: "ទាំងអស់",
+      all: "ទាំngអស់",
       minPrice: "តម្លៃអប្បបរមា",
       maxPrice: "តម្លៃអតិបរមា",
       applyFilters: "អនុវត្តតម្រង",
-      resetFilters: "កំណត់តម្រងឡើងវិញ",
+      resetFilters: "កំnត់តម្រងឡើងវិញ",
     },
   };
 
@@ -199,19 +199,7 @@ const Product = ({ language = "en" }) => {
               category_id: item.category_id || null,
               quantity: item.quantity || 0,
             }))
-          : [
-              {
-                id: 1,
-                name: "Sample Product",
-                price: "$10.00",
-                image: "/placeholder.svg",
-                stock: t.inStock,
-                description: "Sample description",
-                category: "Sample Category",
-                category_id: 1,
-                quantity: 10,
-              },
-            ];
+          : [];
 
         setProducts(transformedProducts);
         console.log("Transformed Products:", transformedProducts);
@@ -718,14 +706,6 @@ const Product = ({ language = "en" }) => {
             <div className="text-gray-600 text-lg">
               {products.length === 0 ? t.noProducts : t.noFilteredProducts}
             </div>
-            {products.length === 0 && (
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                {t.addProduct}
-              </button>
-            )}
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
