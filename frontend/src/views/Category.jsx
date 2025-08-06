@@ -1,7 +1,8 @@
 "use client";
 
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import debounce from "lodash/debounce"; // Requires: npm install lodash
 
 const Category = ({ language = "en" }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -14,6 +15,7 @@ const Category = ({ language = "en" }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // For action loading states
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
@@ -55,6 +57,9 @@ const Category = ({ language = "en" }) => {
       deleteSuccess: "Category deleted successfully.",
       updateSuccess: "Category updated successfully.",
       addError: "Failed to add category: ",
+      saving: "Saving...",
+      updating: "Updating...",
+      deleting: "Deleting...",
       prevPage: "Previous",
       nextPage: "Next",
     },
@@ -77,7 +82,7 @@ const Category = ({ language = "en" }) => {
       close: "បិទ",
       enterCategoryName: "បញ្ចូលឈ្មោះប្រភេទ...",
       enterDescription: "បញ្ចូលការពិពណ៌នា...",
-      noCategoriesFound: "រកមិនឃើញប្រភេទដែលត្រូវនឹងការស្វែngរករបស់អ្នក។",
+      noCategoriesFound: "រកមិនឃើញប្រភេទដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបប្រភេទនេះមែនទេ?",
       loading: "កំពុងផ្ទុកប្រភេទ...",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
@@ -85,6 +90,9 @@ const Category = ({ language = "en" }) => {
       deleteSuccess: "ប្រភេទត្រូវបានលុបដោយជោគជ័យ។",
       updateSuccess: "ប្រភេទត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
       addError: "បរាជ័យក្នុងការបន្ថែមប្រភេទ៖ ",
+      saving: "កំពុងរក្សាទុក...",
+      updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
+      deleting: "កំពុងលុប...",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
     },
@@ -94,6 +102,15 @@ const Category = ({ language = "en" }) => {
   const API_URL = "http://127.0.0.1:8000/api/categories";
   const AUTH_TOKEN = localStorage.getItem("token");
 
+  // Debounced search handler
+  const debouncedSetSearchTerm = useCallback(
+    debounce((value) => setSearchTerm(value), 300),
+    []
+  );
+
+  const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
+
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -124,6 +141,7 @@ const Category = ({ language = "en" }) => {
     fetchData();
   }, [t.error]);
 
+  // Filtering, Sorting, Pagination
   const filteredCategories = categories.filter(
     (category) =>
       category.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -170,6 +188,7 @@ const Category = ({ language = "en" }) => {
 
   const handleDeleteCategory = async (categoryId) => {
     if (!categoryId || !window.confirm(t.confirmDelete)) return;
+    setIsSubmitting(true);
     try {
       const response = await fetch(`${API_URL}/${categoryId}`, {
         method: "DELETE",
@@ -184,8 +203,10 @@ const Category = ({ language = "en" }) => {
     } catch (err) {
       console.error("Delete error:", err);
       alert(`${t.error}: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+      setActiveMenu(null);
     }
-    setActiveMenu(null);
   };
 
   const handleInputChange = (e) => {
@@ -215,6 +236,7 @@ const Category = ({ language = "en" }) => {
       return;
     }
 
+    setIsSubmitting(true);
     const formData = new FormData();
     formData.append("name", newCategory.name);
     if (newCategory.description) formData.append("description", newCategory.description);
@@ -269,6 +291,8 @@ const Category = ({ language = "en" }) => {
     } catch (err) {
       console.error("Add category error:", err);
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -282,6 +306,7 @@ const Category = ({ language = "en" }) => {
       return;
     }
 
+    setIsSubmitting(true);
     const formData = new FormData();
     formData.append("name", editCategory.name);
     if (editCategory.description) formData.append("description", editCategory.description);
@@ -338,6 +363,8 @@ const Category = ({ language = "en" }) => {
     } catch (err) {
       console.error("Update category error:", err);
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -362,14 +389,16 @@ const Category = ({ language = "en" }) => {
             <input
               type="text"
               placeholder={t.search}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
         </div>
         {loading ? (
-          <div className="text-center py-12">{t.loading}</div>
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.loading}</div>
+            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
+          </div>
         ) : error ? (
           <div className="text-center py-12">
             <div className="text-red-500 text-lg">{error}</div>
@@ -428,6 +457,7 @@ const Category = ({ language = "en" }) => {
                           toggleMenu(category.id);
                         }}
                         className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-all"
+                        disabled={isSubmitting}
                       >
                         <MoreVertical className="h-5 w-5 text-gray-600" />
                       </button>
@@ -457,8 +487,9 @@ const Category = ({ language = "en" }) => {
                               handleDeleteCategory(category.id);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            disabled={isSubmitting}
                           >
-                            <Trash2 className="h-4 w-4" /> {t.delete}
+                            <Trash2 className="h-4 w-4" /> {isSubmitting ? t.deleting : t.delete}
                           </button>
                         </div>
                       )}
@@ -515,6 +546,7 @@ const Category = ({ language = "en" }) => {
                       formErrors.name ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   />
                   {formErrors.name && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
@@ -531,6 +563,7 @@ const Category = ({ language = "en" }) => {
                     placeholder={t.enterDescription}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -538,14 +571,18 @@ const Category = ({ language = "en" }) => {
                     type="button"
                     onClick={() => setShowAddModal(false)}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    {t.save}
+                    {isSubmitting ? t.saving : t.save}
                   </button>
                 </div>
               </form>
@@ -579,6 +616,7 @@ const Category = ({ language = "en" }) => {
                       formErrors.name ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   />
                   {formErrors.name && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
@@ -595,6 +633,7 @@ const Category = ({ language = "en" }) => {
                     placeholder={t.enterDescription}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -602,14 +641,18 @@ const Category = ({ language = "en" }) => {
                     type="button"
                     onClick={() => setShowEditModal(false)}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    {t.update}
+                    {isSubmitting ? t.updating : t.update}
                   </button>
                 </div>
               </form>

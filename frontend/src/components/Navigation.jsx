@@ -13,7 +13,8 @@ import {
   Home,
   Package,
   List,
-  Book
+  Book,
+  Leaf
 } from "lucide-react"
 
 const Navigation = ({ isOpen, language, role }) => {
@@ -26,6 +27,7 @@ const Navigation = ({ isOpen, language, role }) => {
       landMeasure: "Measure Land",
       cropTracker: "Crop Tracker",
       tasks: "Tasks & Reminders",
+      cropManagement: "Crop Management",
       category: "Category",
       product: "Product",
       marketplace: "Marketplace",
@@ -45,6 +47,7 @@ const Navigation = ({ isOpen, language, role }) => {
       landMeasure: "វាស់ដី",
       cropTracker: "តាមដានដំណាំ",
       tasks: "កិច្ចការ និងការរំលឹក",
+      cropManagement: "ការគ្រប់គ្រងគ្រាប់ពូជ",
       category: "ប្រភេទ",
       product: "ផលិត​ផល",
       marketplace: "ទីផ្សារ",
@@ -68,6 +71,7 @@ const Navigation = ({ isOpen, language, role }) => {
     { icon: MapPin, label: t.landMeasure, path: "/measure" },
     { icon: Sprout, label: t.cropTracker, path: "/crops" },
     { icon: Calendar, label: t.tasks, path: "/tasks" },
+    { icon: Leaf, label: t.cropManagement, path: "/cropmanagement" },
     { icon: List, label: t.category, path: "/category" },
     { icon: Package, label: t.product, path: "/product" },
     { icon: DollarSign, label: t.marketplace, path: "/marketplace" },
