@@ -88,7 +88,7 @@ const Marketplace = ({ language = "en" }) => {
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = "your-auth-token-here";
+  const AUTH_TOKEN = localStorage.getItem("token");
 
   // Fetch products and categories
   useEffect(() => {
