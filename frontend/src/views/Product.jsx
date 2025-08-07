@@ -30,6 +30,8 @@ const Product = ({ language = "en" }) => {
     category_id: "",
     crop_id: null,
     user_id: localStorage.getItem("user_id") || "1",
+    creation_date: new Date().toISOString().split("T")[0], // Date only
+    expiration_date: "",
   });
   const [editProduct, setEditProduct] = useState({
     id: null,
@@ -42,6 +44,8 @@ const Product = ({ language = "en" }) => {
     category_id: "",
     crop_id: null,
     user_id: localStorage.getItem("user_id") || "1",
+    creation_date: new Date().toISOString().split("T")[0], // Date only
+    expiration_date: "",
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -98,12 +102,16 @@ const Product = ({ language = "en" }) => {
       maxPrice: "Max Price",
       applyFilters: "Apply Filters",
       resetFilters: "Reset Filters",
+      creationDate: "Creation Date",
+      expirationDate: "Expiration Date",
+      enterExpirationDate: "Enter expiration date",
+      invalidDate: "Invalid date format",
     },
     km: {
       title: "ផលិតផលរបស់ខ្ញុំ",
-      subtitle: "លក់ផលិតផលរបស់អ្នក និងស្វែngរកអ្វីដែលកសិករដទៃផ្តល់ជូន",
+      subtitle: "លក់ផលិតផលរបស់អ្នក និងស្វែងរកអ្វីដែលកសិករដទៃផ្តល់ជូន",
       addProduct: "បន្ថែមផលិតផល",
-      search: "ស្វែngរកផលិតផល...",
+      search: "ស្វែងរកផលិតផល...",
       filter: "តម្រង",
       price: "តម្លៃ",
       perKg: "/គ.ក",
@@ -133,22 +141,26 @@ const Product = ({ language = "en" }) => {
       enterQuantity: "បញ្ចូលបរិមាណ",
       selectCategoryRequired: "ជ្រើសរើសប្រភេទ",
       noProducts: "មិនមានផលិតផល។ បន្ថែមផលិតផលថ្មីដើម្បីចាប់ផ្តើម!",
-      noFilteredProducts: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែngរក ឬតម្រងរបស់អ្នក។",
+      noFilteredProducts: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរក ឬតម្រងរបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
-      loading: "កំពុngផ្ទុកផលិតផល...",
-      error: "បរាជ័យក្នុngការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
-      updateError: "បរាជ័យក្នុngការធ្វើបច្ចុប្បន្នភាពផលិតផល៖ ",
+      loading: "កំពុងផ្ទុកផលិតផល...",
+      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពផលិតផល៖ ",
       deleteSuccess: "ផលិតផលត្រូវបានលុបដោយជោគជ័យ។",
       updateSuccess: "ផលិតផលត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
-      addError: "បរាជ័យក្នុngការបន្ថែមផលិតផល៖ ",
-      prevPage: "មុn",
-      nextPage: "បnទាប់",
+      addError: "បរាជ័យក្នុងការបន្ថែមផលិតផល៖ ",
+      prevPage: "មុន",
+      nextPage: "បន្ទាប់",
       stockStatus: "ស្ថានភាពស្តុក",
-      all: "ទាំngអស់",
+      all: "ទាំងអស់",
       minPrice: "តម្លៃអប្បបរមា",
       maxPrice: "តម្លៃអតិបរមា",
       applyFilters: "អនុវត្តតម្រង",
-      resetFilters: "កំnត់តម្រងឡើងវិញ",
+      resetFilters: "កំណត់តម្រងឡើងវិញ",
+      creationDate: "កាលបរិច្ឆេទបង្កើត",
+      expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
+      enterExpirationDate: "បញ្ចូលកាលបរិច្ឆេទផុតកំណត់",
+      invalidDate: "ទម្រង់កាលបរិច្ឆេទមិនត្រឹមត្រូវ",
     },
   };
 
@@ -198,6 +210,8 @@ const Product = ({ language = "en" }) => {
               category: item.category?.name || "Uncategorized",
               category_id: item.category_id || null,
               quantity: item.quantity || 0,
+              creation_date: item.creation_date ? item.creation_date.split("T")[0] : new Date().toISOString().split("T")[0],
+              expiration_date: item.expiration_date ? item.expiration_date.split("T")[0] : "",
             }))
           : [];
 
@@ -285,6 +299,8 @@ const Product = ({ language = "en" }) => {
       category_id: product.category_id || "",
       crop_id: product.crop_id || null,
       user_id: localStorage.getItem("user_id") || "1",
+      creation_date: product.creation_date || new Date().toISOString().split("T")[0],
+      expiration_date: product.expiration_date || "",
     });
     setSelectedCategory(product.category_id || "");
     setShowEditModal(true);
@@ -382,6 +398,11 @@ const Product = ({ language = "en" }) => {
     if (!data.description.trim()) errors.description = t.enterDescription;
     if (!data.category_id) errors.category_id = t.selectCategoryRequired;
     if (data.quantity === "" || parseInt(data.quantity) < 0) errors.quantity = t.enterQuantity;
+    if (!data.creation_date || !/^\d{4}-\d{2}-\d{2}$/.test(data.creation_date))
+      errors.creation_date = t.invalidDate;
+    if (data.quantity == 0 && !data.expiration_date) errors.expiration_date = t.enterExpirationDate;
+    if (data.expiration_date && !/^\d{4}-\d{2}-\d{2}$/.test(data.expiration_date))
+      errors.expiration_date = t.invalidDate;
     return errors;
   };
 
@@ -402,6 +423,8 @@ const Product = ({ language = "en" }) => {
     formData.append("category_id", newProduct.category_id);
     formData.append("crop_id", newProduct.crop_id || 1);
     formData.append("user_id", newProduct.user_id);
+    formData.append("creation_date", newProduct.creation_date);
+    if (newProduct.expiration_date) formData.append("expiration_date", newProduct.expiration_date);
     if (newProduct.imageFile) formData.append("image", newProduct.imageFile);
 
     try {
@@ -431,9 +454,8 @@ const Product = ({ language = "en" }) => {
         throw new Error(`${t.addError}Invalid JSON response: ${responseText.slice(0, 100)}...`);
       }
 
-      // Find the category name from the categories state
       const category = categories.find((c) => c.id === parseInt(newProduct.category_id));
-      console.log("Selected Category ID:", newProduct.category_id, "Category Found:", category); // Debug: Log category details
+      console.log("Selected Category ID:", newProduct.category_id, "Category Found:", category);
 
       const transformedProduct = {
         id: savedProduct.id,
@@ -442,12 +464,14 @@ const Product = ({ language = "en" }) => {
         image: savedProduct.image_url || "/placeholder.svg",
         stock: savedProduct.quantity > 0 ? t.inStock : t.outOfStock,
         description: savedProduct.description,
-        category: category ? category.name : "Uncategorized", // Ensure category name is set
+        category: category ? category.name : "Uncategorized",
         category_id: savedProduct.category_id || newProduct.category_id,
         quantity: savedProduct.quantity,
+        creation_date: savedProduct.creation_date ? savedProduct.creation_date.split("T")[0] : newProduct.creation_date,
+        expiration_date: savedProduct.expiration_date ? savedProduct.expiration_date.split("T")[0] : newProduct.expiration_date,
       };
 
-      console.log("New Product:", transformedProduct); // Debug: Log the new product
+      console.log("New Product:", transformedProduct);
 
       setProducts((prev) => [transformedProduct, ...prev]);
       setNewProduct({
@@ -460,6 +484,8 @@ const Product = ({ language = "en" }) => {
         category_id: "",
         crop_id: null,
         user_id: localStorage.getItem("user_id") || "1",
+        creation_date: new Date().toISOString().split("T")[0],
+        expiration_date: "",
       });
       setFormErrors({});
       setShowAddModal(false);
@@ -489,6 +515,8 @@ const Product = ({ language = "en" }) => {
     formData.append("category_id", editProduct.category_id);
     formData.append("crop_id", editProduct.crop_id || 1);
     formData.append("user_id", editProduct.user_id);
+    formData.append("creation_date", editProduct.creation_date);
+    if (editProduct.expiration_date) formData.append("expiration_date", editProduct.expiration_date);
     if (editProduct.imageFile) formData.append("image", editProduct.imageFile);
     formData.append("_method", "PUT");
 
@@ -530,6 +558,8 @@ const Product = ({ language = "en" }) => {
         category: category ? category.name : "Uncategorized",
         category_id: updatedProduct.category_id,
         quantity: updatedProduct.quantity,
+        creation_date: updatedProduct.creation_date ? updatedProduct.creation_date.split("T")[0] : editProduct.creation_date,
+        expiration_date: updatedProduct.expiration_date ? updatedProduct.expiration_date.split("T")[0] : editProduct.expiration_date,
       };
 
       setProducts(products.map((p) => (p.id === updatedProduct.id ? transformedProduct : p)));
@@ -544,6 +574,8 @@ const Product = ({ language = "en" }) => {
         category_id: "",
         crop_id: null,
         user_id: localStorage.getItem("user_id") || "1",
+        creation_date: new Date().toISOString().split("T")[0],
+        expiration_date: "",
       });
       setFormErrors({});
       setShowEditModal(false);
@@ -760,6 +792,28 @@ const Product = ({ language = "en" }) => {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => requestSort("creation_date")} className="flex items-center gap-1">
+                      {t.creationDate}
+                      {sortConfig.key === "creation_date" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => requestSort("expiration_date")} className="flex items-center gap-1">
+                      {t.expirationDate}
+                      {sortConfig.key === "expiration_date" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -793,6 +847,12 @@ const Product = ({ language = "en" }) => {
                       >
                         {product.stock}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.creation_date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.expiration_date || "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
                       <button
@@ -975,6 +1035,43 @@ const Product = ({ language = "en" }) => {
                   />
                   {formErrors.quantity && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.quantity}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.creationDate} *
+                  </label>
+                  <input
+                    type="date"
+                    name="creation_date"
+                    value={newProduct.creation_date}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.creation_date ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required
+                  />
+                  {formErrors.creation_date && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.creation_date}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.expirationDate} {newProduct.quantity == 0 ? "*" : ""}
+                  </label>
+                  <input
+                    type="date"
+                    name="expiration_date"
+                    value={newProduct.expiration_date}
+                    onChange={handleInputChange}
+                    placeholder={t.enterExpirationDate}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.expiration_date ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required={newProduct.quantity == 0}
+                  />
+                  {formErrors.expiration_date && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.expiration_date}</p>
                   )}
                 </div>
                 <div>
@@ -1181,6 +1278,43 @@ const Product = ({ language = "en" }) => {
                         <p className="text-red-500 text-sm mt-1">{formErrors.quantity}</p>
                       )}
                     </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-3">
+                        {t.creationDate} *
+                      </label>
+                      <input
+                        type="date"
+                        name="creation_date"
+                        value={editProduct.creation_date}
+                        onChange={handleEditInputChange}
+                        className={`w-full px-4 py-3 text-lg border ${
+                          formErrors.creation_date ? "border-red-500" : "border-gray-300"
+                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        required
+                      />
+                      {formErrors.creation_date && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors.creation_date}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-3">
+                        {t.expirationDate} {editProduct.quantity == 0 ? "*" : ""}
+                      </label>
+                      <input
+                        type="date"
+                        name="expiration_date"
+                        value={editProduct.expiration_date}
+                        onChange={handleEditInputChange}
+                        placeholder={t.enterExpirationDate}
+                        className={`w-full px-4 py-3 text-lg border ${
+                          formErrors.expiration_date ? "border-red-500" : "border-gray-300"
+                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        required={editProduct.quantity == 0}
+                      />
+                      {formErrors.expiration_date && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors.expiration_date}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <input type="hidden" name="crop_id" value={editProduct.crop_id || 1} />
@@ -1264,6 +1398,18 @@ const Product = ({ language = "en" }) => {
                     </div>
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">
+                        {t.creationDate}
+                      </label>
+                      <p className="text-xl text-gray-900">{selectedProduct.creation_date}</p>
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">
+                        {t.expirationDate}
+                      </label>
+                      <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">
                         {t.productDescription}
                       </label>
                       <p className="text-lg text-gray-900 leading-relaxed">
@@ -1290,4 +1436,5 @@ const Product = ({ language = "en" }) => {
     </div>
   );
 };
+
 export default Product;
