@@ -30,7 +30,7 @@ class CropController extends Controller
      */
     public function show(string $id)
     {
-        $crop = Crop::with(['farm', 'cropType', 'product'])->findOrFail($id);
+        $crop = Crop::with(['farm', 'product'])->findOrFail($id);
         return response()->json($crop);
     }
 

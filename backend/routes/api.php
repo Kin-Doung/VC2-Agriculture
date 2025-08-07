@@ -14,10 +14,6 @@ use App\Http\Controllers\TaskController;
 
 Route::apiResource('lands', LandController::class);
 
-// Auth routes
-// Route::post('/register', [AuthController::class, 'register']);
-// Route::post('/login', [AuthController::class, 'login']);
-// Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -35,6 +31,21 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::delete('/admin/users/{id}', [AdminController::class, 'destroy']);
 });
 
+// Route User sanctum
+Route::middleware('auth:sanctum')->group(function () {
+
+    // Category routes
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::post('/categories', [CategoryController::class, 'store']);
+
+    // Product routes
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::post('/products', [ProductController::class, 'store']);
+    Route::get('/products/{id}', [ProductController::class, 'show']);
+    Route::put('/products/{id}', [ProductController::class, 'update']);
+    Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+});
+
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
@@ -46,5 +57,5 @@ Route::apiResource("products", ProductController::class);
 
 Route::apiResource("task", TaskController::class);
 Route::apiResource("crops", CropController::class);
-Route::apiResource("croptypes", CropTypeController::class);
+// Route::apiResource("croptypes", CropTypeController::class);
 Route::apiResource("farms", FarmController::class);

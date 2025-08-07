@@ -102,7 +102,7 @@ const Category = ({ language = "en" }) => {
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN || "your-auth-token-here";
+  const AUTH_TOKEN = localStorage.getItem("token");
 
   // Debounced search handler
   const debouncedSetSearchTerm = useCallback(
@@ -119,7 +119,7 @@ const Category = ({ language = "en" }) => {
       setError(null);
       try {
         const response = await fetch(API_URL, {
-          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, Accept: "application/json" },
         });
         if (!response.ok) {
           const errorText = await response.text();

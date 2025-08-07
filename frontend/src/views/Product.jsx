@@ -165,9 +165,9 @@ const Product = ({ language = "en" }) => {
   };
 
   const t = translations[language] || translations.en;
-  const API_URL = "http://127.0.0.1:8000/api/products";
+  const API_URL = "http://127.0.0.1:8000/api/products?only_mine=true";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = "your-auth-token-here"; // Replace with valid token
+  const AUTH_TOKEN = localStorage.getItem("token");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1436,5 +1436,4 @@ const Product = ({ language = "en" }) => {
     </div>
   );
 };
-
 export default Product;

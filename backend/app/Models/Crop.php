@@ -9,16 +9,12 @@ class Crop extends Model
 {
     use HasFactory;
     protected $fillable = [
+        'name',
         'farm_id',
-        'crop_type_id',
         'planting_date',
         'growth_stage',
         'notes',
     ];
-    public function cropType()
-    {
-        return $this->belongsTo(CropType::class, 'crop_type_id');
-    }
     public function farm()
     {
         return $this->belongsTo(Farm::class, 'farm_id');

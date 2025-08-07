@@ -97,15 +97,7 @@ const Marketplace = ({ language = "en" }) => {
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN || "your-auth-token-here";
-
-  // Debounced search handler
-  const debouncedSetSearchTerm = useCallback(
-    debounce((value) => setSearchTerm(value), 300),
-    []
-  );
-
-  const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
+  const AUTH_TOKEN = localStorage.getItem("token");
 
   // Fetch products and categories
   useEffect(() => {
@@ -359,7 +351,6 @@ const Marketplace = ({ language = "en" }) => {
               <input
                 type="text"
                 placeholder={t.search}
-                onChange={handleSearchChange}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>

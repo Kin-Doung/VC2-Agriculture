@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Farm;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +25,15 @@ class AuthController extends Controller
             'phone'     => $request->phone,
         ]);
 
+            // Create Farm
+        $farm = Farm::create([
+            'name' => $request->farm_name,
+            'location_at_latitude' => $request->latitude ?? 0,       
+            'location_longitude'   => $request->longitude ?? 0,
+            'area' => $request->area ?? null,
+            'user_id' => $user->id,
+        ]);
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -31,6 +41,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type'   => 'Bearer',
             'user'         => new UserResource($user),
+            'farm' => $farm,
         ], 201);
     }
 
