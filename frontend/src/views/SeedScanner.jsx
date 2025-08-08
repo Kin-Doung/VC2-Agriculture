@@ -20,7 +20,7 @@ const Button = ({ children, className, ...props }) => (
   </button>
 );
 
-// Enhanced ScanResults component
+// ScanResults component (updated to calculate good_paddy_percent)
 const ScanResults = ({ result, error, isScanning }) => {
   if (isScanning) {
     return (
@@ -52,8 +52,16 @@ const ScanResults = ({ result, error, isScanning }) => {
     );
   }
 
-  const { paddy_name = "Unknown", type = "Unknown", bad_paddy_percent = null } = result;
-  const lastScanTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" });
+  const { 
+    paddy_name = "Unknown", 
+    type = "Unknown", 
+    bad_paddy_percent = null, 
+    good_paddy_score = null,
+    last_scan_time = new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }) 
+  } = result;
+
+  // Calculate good_paddy_percent as 100 - bad_paddy_percent
+  const good_paddy_percent = bad_paddy_percent !== null ? 100 - bad_paddy_percent : null;
 
   return (
     <Card>
@@ -80,8 +88,22 @@ const ScanResults = ({ result, error, isScanning }) => {
           <p className="text-lg font-semibold mt-1">{bad_paddy_percent !== null ? `${bad_paddy_percent}%` : "N/A"}</p>
         </div>
         <div>
+          <p className="text-sm text-gray-600">Good Paddy (%)</p>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-green-600 h-2.5 rounded-full"
+              style={{ width: `${good_paddy_percent !== null ? good_paddy_percent : 0}%` }}
+            ></div>
+          </div>
+          <p className="text-lg font-semibold mt-1">{good_paddy_percent !== null ? `${good_paddy_percent}%` : "N/A"}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-600">Good Paddy Score</p>
+          <p className="text-lg font-semibold">{good_paddy_score !== null ? `${good_paddy_score}%` : "N/A"}</p>
+        </div>
+        <div>
           <p className="text-sm text-gray-600">Last Scan Time</p>
-          <p className="text-sm text-gray-500">{lastScanTime}</p>
+          <p className="text-sm text-gray-500">{last_scan_time}</p>
         </div>
       </CardContent>
     </Card>
@@ -96,21 +118,21 @@ export default function SeedScanner() {
   const [scanHistory, setScanHistory] = useState([]);
   const [isServerReachable, setIsServerReachable] = useState(false);
 
-  // Check server connectivity with GET instead of HEAD
+  // Check server connectivity with the /api/health endpoint
   useEffect(() => {
     const checkServer = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:5000/api/scan-rice", {
+        const response = await fetch("http://127.0.0.1:5000/api/health", {
           method: "GET",
-          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
         });
-        setIsServerReachable(response.status < 400); // Accept any 2xx or 3xx status
+        setIsServerReachable(response.ok); // true if status is 200-299
       } catch (e) {
-        console.error("Server check failed:", e);
+        console.error("Server check failed:", e.message);
         setIsServerReachable(false);
       }
     };
-    checkServer();
+    checkServer(); // Initial check
     const interval = setInterval(checkServer, 5000); // Check every 5 seconds
     return () => clearInterval(interval);
   }, []);
@@ -123,6 +145,11 @@ export default function SeedScanner() {
 
     if (!isServerReachable) {
       setError("Server is unreachable. Please ensure the backend is running at http://127.0.0.1:5000.");
+      return;
+    }
+
+    if (!selectedImage.startsWith("data:image/")) {
+      setError("Invalid image format. Please use a JPG or PNG image.");
       return;
     }
 
@@ -140,7 +167,8 @@ export default function SeedScanner() {
       console.log("Compressed image length:", compressedImage.length, "Sample:", compressedImage.substring(0, 50));
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      // Fixed: Complete the setTimeout call to abort the fetch after 10 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch("http://127.0.0.1:5000/api/scan-rice", {
         method: "POST",
@@ -150,7 +178,6 @@ export default function SeedScanner() {
       });
 
       clearTimeout(timeoutId);
-      console.log("API response status:", response.status, "URL:", response.url);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Server error" }));
@@ -160,25 +187,33 @@ export default function SeedScanner() {
       const data = await response.json();
       console.log("Classification result:", data);
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (!data.success) {
+        throw new Error(data.error || "Server returned an error");
       }
 
-      setResult(data);
+      // Calculate good_paddy_percent for display
+      const enhancedResult = {
+        ...data,
+        good_paddy_percent: data.bad_paddy_percent !== null ? 100 - data.bad_paddy_percent : null,
+        last_scan_time: new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }),
+      };
+
+      setResult(enhancedResult);
       const scanRecord = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
         image: selectedImage,
-        result: data,
+        result: enhancedResult,
       };
       setScanHistory((prev) => [scanRecord, ...prev.slice(0, 9)]);
     } catch (err) {
       console.error("Scan error details:", err);
-      const errorMessage = err.message.includes("abort")
-        ? "Request timed out. Please check server connection."
-        : err.message.includes("NetworkError")
-        ? "Network error. Please check your internet connection."
-        : err.message;
+      const errorMessage =
+        err.name === "AbortError"
+          ? "Request timed out. Please check server connection."
+          : err.message.includes("NetworkError")
+          ? "Network error. Please check your internet connection."
+          : err.message;
       setError(`Failed to identify paddy type: ${errorMessage}`);
     } finally {
       setIsScanning(false);
@@ -186,24 +221,36 @@ export default function SeedScanner() {
   };
 
   const compressImage = async (imageDataUrl) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = imageDataUrl;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = 800;
-        canvas.height = (img.height / img.width) * 800;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressedData = canvas.toDataURL("image/jpeg", 0.7);
-        resolve(compressedData);
-      };
-      img.onerror = () => {
-        console.error("Image load failed:", imageDataUrl);
-        resolve(imageDataUrl); // Fallback to original
-      };
-    });
+    try {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = imageDataUrl;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const maxWidth = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = (maxWidth / width) * height;
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedData = canvas.toDataURL("image/jpeg", 0.7);
+          resolve(compressedData);
+        };
+        img.onerror = () => {
+          console.error("Image load failed:", imageDataUrl);
+          reject(new Error("Failed to load image for compression"));
+        };
+      });
+    } catch (error) {
+      console.error("Compression error:", error);
+      return imageDataUrl; // Fallback to original
+    }
   };
 
   const resetScanner = () => {
@@ -246,6 +293,12 @@ export default function SeedScanner() {
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
                 <span className="text-sm text-gray-600">Bad Paddy: </span>
                 <span className="font-semibold text-red-600">{result.bad_paddy_percent}%</span>
+              </div>
+            )}
+            {result && result.good_paddy_percent !== null && (
+              <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
+                <span className="text-sm text-gray-600">Good Paddy: </span>
+                <span className="font-semibold text-green-600">{result.good_paddy_percent}%</span>
               </div>
             )}
           </div>
@@ -360,7 +413,7 @@ export default function SeedScanner() {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{item.result.paddy_name} ({item.result.type})</p>
                           <p className="text-xs text-gray-500">
-                            Bad: {item.result.bad_paddy_percent ? `${item.result.bad_paddy_percent}%` : "N/A"}
+                            Bad: {item.result.bad_paddy_percent ? `${item.result.bad_paddy_percent}%` : "N/A"}, Good: {item.result.good_paddy_percent ? `${item.result.good_paddy_percent}%` : "N/A"}
                           </p>
                         </div>
                       </div>

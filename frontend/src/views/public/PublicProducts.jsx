@@ -152,7 +152,6 @@ const PublicProducts = ({ language = "en" }) => {
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
-
   // Fetch products
   useEffect(() => {
     const fetchData = async () => {
