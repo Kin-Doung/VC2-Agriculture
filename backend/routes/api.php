@@ -44,6 +44,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+
+    // Crop routes
+    Route::get('/crops', [CropController::class, 'index']);
+    Route::post('/crops', [CropController::class, 'store']);
+    Route::get('/crops/{id}', [CropController::class, 'show']);
+    Route::put('/crops/{id}', [CropController::class, 'update']);
+    Route::delete('/crops/{id}', [CropController::class, 'destroy']);
 });
 
 

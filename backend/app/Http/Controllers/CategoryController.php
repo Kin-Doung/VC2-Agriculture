@@ -78,8 +78,8 @@ class CategoryController extends Controller
         }
 
         $category = Category::where('id', $id)
-                            ->where('user_id', $user->id)
-                            ->first();
+            ->where('user_id', $user->id)
+            ->first();
 
         if (!$category) {
             return response()->json(['message' => 'Category not found or unauthorized.'], 404);
