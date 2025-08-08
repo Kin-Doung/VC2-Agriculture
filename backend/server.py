@@ -8,12 +8,19 @@ import cv2
 import logging
 from datetime import datetime
 import hashlib
+import uuid
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000", "*"]}})  # Allow all origins for testing
+# Relax CORS for development (add common dev ports)
+CORS(app, resources={r"/api/*": {"origins": [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:5173"
+]}})
 
-# Logging with timestamp
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Logging with timestamp and request ID
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [RequestID: %(request_id)s] - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Store first scan quantities
@@ -49,6 +56,8 @@ def check_image_quality(image):
         height, width = img_cv.shape[:2]
         if height < 100 or width < 100:
             return False, "Image is too small. Minimum size is 100x100 pixels."
+        if height * width > 4000 * 4000:  # Limit to 16MP
+            return False, "Image is too large. Maximum resolution is 4000x4000 pixels."
         return True, "Image quality is sufficient."
     except Exception as e:
         return False, f"Error checking image quality: {str(e)}"
@@ -216,11 +225,13 @@ def analyze_rice_quantity_quality(image, is_husked=True):
         total_grains = len([c for c in contours if min_area <= cv2.contourArea(c) <= max_area])
         shape_uniformity = 0.0
         valid_grains = []
+        grain_areas = []
 
         for contour in contours:
             area = cv2.contourArea(contour)
             if min_area <= area <= max_area:
                 valid_grains.append(contour)
+                grain_areas.append(area)
                 perimeter = cv2.arcLength(contour, True)
                 circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
                 if circularity < shape_factor * (0.85 if is_husked else 0.80) or circularity > shape_factor * (1.15 if is_husked else 1.20):
@@ -235,8 +246,12 @@ def analyze_rice_quantity_quality(image, is_husked=True):
 
         if valid_grains:
             shape_uniformity = 1 - (shape_uniformity / len(valid_grains)) / shape_factor if len(valid_grains) > 0 else 0.0
+            average_grain_area = sum(grain_areas) / len(grain_areas) if grain_areas else 0.0
+            grain_density = (total_grains / total_area) * 1000000 if total_area > 0 else 0.0
         else:
             shape_uniformity = 0.0
+            average_grain_area = 0.0
+            grain_density = 0.0
 
         bad_percent = (bad_grains / total_grains) * 100 if total_grains > 0 else 0.0
 
@@ -244,43 +259,83 @@ def analyze_rice_quantity_quality(image, is_husked=True):
             "quantity_percent": round(quantity_percent, 2),
             "bad_percent": round(bad_percent, 2),
             "total_grains": total_grains,
-            "shape_uniformity": round(shape_uniformity * 100, 2)  # Percentage of uniformity
+            "average_grain_area": round(average_grain_area, 2),
+            "grain_density": round(grain_density, 2),
+            "shape_uniformity": round(shape_uniformity * 100, 2)
         }
 
         QUANTITY_CACHE[cache_key] = result
         logger.info(f"Cached quantity for rice (husked: {is_husked}): {result}")
-
         return result
     except Exception as e:
         logger.error(f"Error analyzing quantity/quality: {str(e)}")
-        return {"quantity_percent": 0.0, "bad_percent": 0.0, "total_grains": 0, "shape_uniformity": 0.0}
+        return {
+            "quantity_percent": 0.0,
+            "bad_percent": 0.0,
+            "total_grains": 0,
+            "average_grain_area": 0.0,
+            "grain_density": 0.0,
+            "shape_uniformity": 0.0
+        }
+
+@app.route("/api/health", methods=["GET"])
+def health():
+    """Health check endpoint to verify server availability."""
+    return jsonify({"status": "ok"}), 200
 
 @app.route("/api/scan-rice", methods=["POST"])
 def scan_rice():
+    request_id = str(uuid.uuid4())  # Generate unique request ID for logging
+    extra = {"request_id": request_id}
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra)
+
     try:
+        if not request.is_json:
+            logger.error("Request is not JSON")
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+
         data = request.get_json()
         logger.info(f"Received request data: {data}")
         if not data or "image" not in data:
-            return jsonify({"error": "No image provided"}), 400
+            logger.error("No image provided in request")
+            return jsonify({"success": False, "error": "No image provided"}), 400
 
         base64_string = data["image"]
-        if not base64_string.startswith("data:image/"):
-            return jsonify({"error": "Invalid image format. Use JPG or PNG."}), 400
+        # Accept both raw base64 and data URI formats
+        if base64_string.startswith("data:image/"):
+            try:
+                base64_string = base64_string.split(",")[1]
+            except IndexError:
+                logger.error("Invalid data URI format")
+                return jsonify({"success": False, "error": "Invalid data URI format. Expected format: data:image/jpeg;base64,..."}), 400
 
-        base64_string = base64_string.split(",")[1]
-        image_data = base64.b64decode(base64_string)
-        image = Image.open(BytesIO(image_data)).convert("RGB")
+        # Validate base64 string
+        try:
+            # Pad base64 string if necessary (ensure length is multiple of 4)
+            base64_string = base64_string + "=" * (4 - len(base64_string) % 4) if len(base64_string) % 4 != 0 else base64_string
+            image_data = base64.b64decode(base64_string)
+        except (base64.binascii.Error, ValueError) as e:
+            logger.error(f"Invalid base64 string: {str(e)}")
+            return jsonify({"success": False, "error": f"Invalid base64 string: {str(e)}"}), 400
+
+        try:
+            image = Image.open(BytesIO(image_data)).convert("RGB")
+        except UnidentifiedImageError as e:
+            logger.error(f"Invalid or corrupted image data: {str(e)}")
+            return jsonify({"success": False, "error": "Invalid or corrupted image data. Use JPG or PNG."}), 400
 
         is_good_quality, quality_message = check_image_quality(image)
         if not is_good_quality:
-            return jsonify({"error": quality_message}), 400
+            logger.error(f"Image quality check failed: {quality_message}")
+            return jsonify({"success": False, "error": quality_message}), 400
 
         is_rice, rice_confidence, rice_message = is_rice_image(image)
         if not is_rice:
-            return jsonify({"error": rice_message}), 400
+            logger.error(f"Rice detection failed: {rice_message}")
+            return jsonify({"success": False, "error": rice_message}), 400
 
         is_husked, husk_confidence = detect_husk_status(image)
-        logger.info(f"Detected husk status: {'Husked' if is_husked else 'Unhusked'} with confidence {husk_confidence} at {datetime.now().strftime('%H:%M:%S %Y-%m-%d')}")
+        logger.info(f"Detected husk status: {'Husked' if is_husked else 'Unhusked'} with confidence {husk_confidence}")
 
         paddy_name, type, confidence = detect_paddy_variety(image, is_husked)
 
@@ -292,31 +347,33 @@ def scan_rice():
         shape_weight = 0.2  # 20% weight on shape uniformity
         husk_weight = 0.1  # 10% weight on husk confidence
         good_paddy_score = (
-            (100 - min(quantity_quality["bad_percent"], 100)) * bad_weight +  # Invert bad percent
-            min(quantity_quality["quantity_percent"], 100) * quantity_weight +  # Cap at 100
+            (100 - min(quantity_quality["bad_percent"], 100)) * bad_weight +
+            min(quantity_quality["quantity_percent"], 100) * quantity_weight +
             quantity_quality["shape_uniformity"] * shape_weight +
             (husk_confidence * 100) * husk_weight
         )
 
         result = {
+            "success": True,
             "paddy_name": paddy_name,
             "type": type,
             "bad_paddy_percent": quantity_quality["bad_percent"],
             "quantity_percent": quantity_quality["quantity_percent"],
+            "total_grains": quantity_quality["total_grains"],
+            "average_grain_area": quantity_quality["average_grain_area"],
+            "grain_density": quantity_quality["grain_density"],
             "shape_uniformity": quantity_quality["shape_uniformity"],
-            "husk_confidence": round(husk_confidence * 100, 2),  # Convert to percentage
-            "good_paddy_score": round(good_paddy_score, 2),  # Overall quality score
+            "husk_confidence": round(husk_confidence * 100, 2),
+            "good_paddy_score": round(good_paddy_score, 2),
             "quality_summary": "Good" if good_paddy_score > 75 else "Average" if good_paddy_score > 50 else "Poor"
         }
 
         logger.info(f"Scan result: {result}")
         return jsonify(result), 200
 
-    except UnidentifiedImageError:
-        return jsonify({"error": "Invalid or corrupted image data."}), 400
     except Exception as e:
-        logger.error(f"Error: {str(e)} at {datetime.now().strftime('%H:%M:%S %Y-%m-%d')}")
-        return jsonify({"error": f"Failed to process image: {str(e)}"}), 500
+        logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"success": False, "error": f"Failed to process image: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
