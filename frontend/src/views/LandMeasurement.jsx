@@ -428,63 +428,94 @@ export default function LandMeasurement({ onBack, onSave, initialMeasurement, la
     iconAnchor: [15, 15],
   });
 
-  const handleSave = async () => {
-    if (points.length < 3 || !landName.trim() || isMapLoading) {
-      alert("Please add at least 3 points and provide a land name.");
-      return;
-    }
+const handleSave = async () => {
+  // Clear previous errors
+  setError(null);
 
-    if (isNaN(area) || area <= 0) {
-      alert("Invalid area calculated. Please ensure points form a valid polygon.");
-      return;
-    }
+  // Validate inputs
+  if (points.length < 3) {
+    setError("Please add at least 3 points to form a valid polygon.");
+    alert("Please add at least 3 points to form a valid polygon.");
+    return;
+  }
 
-    const now = new Date();
-    const { seedAmountMin, seedAmountMax, fertilizerTotal } = estimateAmounts(area, landType);
+  if (!landName.trim()) {
+    setError("Please provide a valid land name.");
+    alert("Please provide a valid land name.");
+    return;
+  }
 
-    const measurement = {
-      id: initialMeasurement?.id || Date.now().toString(),
-      name: landName.trim(),
-      data_area_ha: parseFloat(area.toFixed(2)),
-      data_area_acres: parseFloat((area * 2.471).toFixed(2)),
-      points: points.map(point => ({
-        lat: point.lat,
-        lng: point.lng,
-        id: point.id,
-        isGPS: point.isGPS,
-      })),
-      landType,
-      seedAmountMin: parseFloat(seedAmountMin.toFixed(2)),
-      seedAmountMax: parseFloat(seedAmountMax.toFixed(2)),
-      fertilizerTotal,
-      date: now.toLocaleDateString('en-CA'),
-    };
+  if (isMapLoading) {
+    setError("Map is still loading. Please wait.");
+    alert("Map is still loading. Please wait.");
+    return;
+  }
 
-    try {
-      const authToken = localStorage.getItem("authToken") || "YOUR_AUTH_TOKEN_HERE";
-      setAuthToken(authToken);
+  if (isNaN(area) || area <= 0) {
+    setError("Invalid area calculated. Please ensure points form a valid polygon.");
+    alert("Invalid area calculated. Please ensure points form a valid polygon.");
+    return;
+  }
 
-      console.log("Payload being sent:", measurement);
+  if (!landType) {
+    setError("Please select a land type.");
+    alert("Please select a land type.");
+    return;
+  }
 
-      const measurementResponse = await insertMeasurement(measurement);
-      console.log("Measurement insertion response:", measurementResponse);
+  const authToken = localStorage.getItem("token");
+  if (!authToken || authToken === "token") {
+    setError("Authentication required. Please log in.");
+    alert("You must be logged in to save measurements.");
+    window.location.href = "/login";
+    return;
+  }
 
-      onSave(measurement);
-      setError(null);
-      alert("Measurement saved successfully!");
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message;
-      const validationErrors = error.response?.data?.errors || {};
-      console.error("Error saving data:", {
-        message: errorMessage,
-        validation: validationErrors,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
-      setError(`Failed to save measurement: ${errorMessage}`);
-      alert(`Failed to save measurement: ${errorMessage}. Check console for details.`);
-    }
+  setAuthToken(authToken);
+
+  const now = new Date();
+  const { seedAmountMin, seedAmountMax, fertilizerTotal } = estimateAmounts(area, landType);
+
+  const measurement = {
+    id: initialMeasurement?.id || Date.now().toString(),
+    name: landName.trim(),
+    data_area_ha: parseFloat(area.toFixed(2)),
+    data_area_acres: parseFloat((area * 2.471).toFixed(2)),
+    points: points.map(point => ({
+      lat: parseFloat(point.lat.toFixed(6)),
+      lng: parseFloat(point.lng.toFixed(6)),
+      id: point.id,
+      isGPS: point.isGPS,
+    })),
+    landType,
+    seedAmountMin: parseFloat(seedAmountMin.toFixed(2)),
+    seedAmountMax: parseFloat(seedAmountMax.toFixed(2)),
+    fertilizerTotal,
+    date: now.toISOString().split('T')[0], 
+    district: district || null,
   };
+
+  try {
+    console.log("Attempting to save measurement with payload:", JSON.stringify(measurement, null, 2));
+    const measurementResponse = await insertMeasurement(measurement);
+    console.log("Measurement saved successfully:", measurementResponse);
+
+    onSave(measurement);
+    setError(null);
+    alert("Measurement saved successfully!");
+  } catch (error) {
+    const errorMessage = error.message || "Unknown error occurred";
+    console.error("Error saving measurement:", {
+      message: errorMessage,
+      status: error.response?.status,
+      url: error.config?.url,
+      payload: JSON.stringify(measurement, null, 2),
+      code: error.code,
+    });
+    setError(`Failed to save measurement: ${errorMessage}. Check server status or network connection.`);
+    alert(`Failed to save measurement: ${errorMessage}. Check server status or network connection.`);
+  }
+};
 
   const handleSuggestionClick = (suggestion) => {
     setLocationSearch(suggestion);

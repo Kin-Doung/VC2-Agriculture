@@ -154,6 +154,7 @@ const Product = ({ language = "en" }) => {
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products?only_mine=true";
+  const PRODUCT_BASE_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
   const AUTH_TOKEN = localStorage.getItem("token");
 
@@ -306,7 +307,7 @@ const Product = ({ language = "en" }) => {
   const handleDeleteProduct = async (productId) => {
     if (!productId || !window.confirm(t.confirmDelete)) return;
     try {
-      const response = await fetch(`${API_URL}/${productId}`, {
+      const response = await fetch(`${PRODUCT_BASE_URL}/${productId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
@@ -505,7 +506,7 @@ const Product = ({ language = "en" }) => {
     formData.append("_method", "PUT");
 
     try {
-      const response = await fetch(`${API_URL}/${editProduct.id}`, {
+      const response = await fetch(`${PRODUCT_BASE_URL}/${editProduct.id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
