@@ -46,8 +46,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
     // Authenticated category CRUD
-    Route::get('/categories', [CategoryController::class, 'index']);
-    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::apiResource('categories', CategoryController::class);
 
     // Authenticated product CRUD
     Route::apiResource("products", ProductController::class);
