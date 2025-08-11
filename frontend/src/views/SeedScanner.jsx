@@ -20,7 +20,7 @@ const Button = ({ children, className, ...props }) => (
   </button>
 );
 
-// ScanResults component (updated to calculate good_paddy_percent)
+// ScanResults component
 const ScanResults = ({ result, error, isScanning }) => {
   if (isScanning) {
     return (
@@ -54,14 +54,15 @@ const ScanResults = ({ result, error, isScanning }) => {
 
   const { 
     paddy_name = "Unknown", 
-    type = "Unknown", 
-    bad_paddy_percent = null, 
-    good_paddy_score = null,
+    mixed_paddy_percent = 0, 
+    pure_paddy_percent = 0, 
+    good_paddy_score = 0,
     last_scan_time = new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }) 
   } = result;
 
-  // Calculate good_paddy_percent as 100 - bad_paddy_percent
-  const good_paddy_percent = bad_paddy_percent !== null ? 100 - bad_paddy_percent : null;
+  // Ensure percentages sum to 100
+  const normalized_pure = Math.min(Math.max(pure_paddy_percent, 0), 100);
+  const normalized_mixed = Math.min(Math.max(100 - normalized_pure, 0), 100);
 
   return (
     <Card>
@@ -74,32 +75,28 @@ const ScanResults = ({ result, error, isScanning }) => {
           <p className="text-xl font-bold text-green-800">{paddy_name}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600">Paddy Type</p>
-          <p className="text-lg font-semibold">{type}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Bad Paddy (%)</p>
+          <p className="text-sm text-gray-600">Percentage of Mixed Paddy</p>
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-red-600 h-2.5 rounded-full"
-              style={{ width: `${bad_paddy_percent !== null ? bad_paddy_percent : 0}%` }}
+              style={{ width: `${normalized_mixed}%` }}
             ></div>
           </div>
-          <p className="text-lg font-semibold mt-1">{bad_paddy_percent !== null ? `${bad_paddy_percent}%` : "N/A"}</p>
+          <p className="text-lg font-semibold mt-1">{normalized_mixed}%</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600">Good Paddy (%)</p>
+          <p className="text-sm text-gray-600">{paddy_name} Percentage of Pure Paddy Type</p>
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-green-600 h-2.5 rounded-full"
-              style={{ width: `${good_paddy_percent !== null ? good_paddy_percent : 0}%` }}
+              style={{ width: `${normalized_pure}%` }}
             ></div>
           </div>
-          <p className="text-lg font-semibold mt-1">{good_paddy_percent !== null ? `${good_paddy_percent}%` : "N/A"}</p>
+          <p className="text-lg font-semibold mt-1">{normalized_pure}%</p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Good Paddy Score</p>
-          <p className="text-lg font-semibold">{good_paddy_score !== null ? `${good_paddy_score}%` : "N/A"}</p>
+          <p className="text-lg font-semibold">{good_paddy_score}%</p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Last Scan Time</p>
@@ -126,14 +123,14 @@ export default function SeedScanner() {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
-        setIsServerReachable(response.ok); // true if status is 200-299
+        setIsServerReachable(response.ok);
       } catch (e) {
         console.error("Server check failed:", e.message);
         setIsServerReachable(false);
       }
     };
-    checkServer(); // Initial check
-    const interval = setInterval(checkServer, 5000); // Check every 5 seconds
+    checkServer();
+    const interval = setInterval(checkServer, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -167,7 +164,6 @@ export default function SeedScanner() {
       console.log("Compressed image length:", compressedImage.length, "Sample:", compressedImage.substring(0, 50));
 
       const controller = new AbortController();
-      // Fixed: Complete the setTimeout call to abort the fetch after 10 seconds
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch("http://127.0.0.1:5000/api/scan-rice", {
@@ -191,19 +187,12 @@ export default function SeedScanner() {
         throw new Error(data.error || "Server returned an error");
       }
 
-      // Calculate good_paddy_percent for display
-      const enhancedResult = {
-        ...data,
-        good_paddy_percent: data.bad_paddy_percent !== null ? 100 - data.bad_paddy_percent : null,
-        last_scan_time: new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }),
-      };
-
-      setResult(enhancedResult);
+      setResult(data);
       const scanRecord = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
         image: selectedImage,
-        result: enhancedResult,
+        result: data,
       };
       setScanHistory((prev) => [scanRecord, ...prev.slice(0, 9)]);
     } catch (err) {
@@ -249,7 +238,7 @@ export default function SeedScanner() {
       });
     } catch (error) {
       console.error("Compression error:", error);
-      return imageDataUrl; // Fallback to original
+      return imageDataUrl;
     }
   };
 
@@ -286,19 +275,19 @@ export default function SeedScanner() {
             {result && (
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
                 <span className="text-sm text-gray-600">Last Result: </span>
-                <span className="font-semibold text-blue-600">{result.paddy_name} ({result.type})</span>
+                <span className="font-semibold text-blue-600">{result.paddy_name}</span>
               </div>
             )}
-            {result && result.bad_paddy_percent !== null && (
+            {result && result.mixed_paddy_percent !== null && (
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
-                <span className="text-sm text-gray-600">Bad Paddy: </span>
-                <span className="font-semibold text-red-600">{result.bad_paddy_percent}%</span>
+                <span className="text-sm text-gray-600">Mixed Paddy: </span>
+                <span className="font-semibold text-red-600">{result.mixed_paddy_percent}%</span>
               </div>
             )}
-            {result && result.good_paddy_percent !== null && (
+            {result && result.pure_paddy_percent !== null && (
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
-                <span className="text-sm text-gray-600">Good Paddy: </span>
-                <span className="font-semibold text-green-600">{result.good_paddy_percent}%</span>
+                <span className="text-sm text-gray-600">Pure Paddy: </span>
+                <span className="font-semibold text-green-600">{result.pure_paddy_percent}%</span>
               </div>
             )}
           </div>
@@ -411,9 +400,9 @@ export default function SeedScanner() {
                           }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{item.result.paddy_name} ({item.result.type})</p>
+                          <p className="text-xs font-medium truncate">{item.result.paddy_name}</p>
                           <p className="text-xs text-gray-500">
-                            Bad: {item.result.bad_paddy_percent ? `${item.result.bad_paddy_percent}%` : "N/A"}, Good: {item.result.good_paddy_percent ? `${item.result.good_paddy_percent}%` : "N/A"}
+                            Pure: {item.result.pure_paddy_percent}% / Mixed: {item.result.mixed_paddy_percent}%
                           </p>
                         </div>
                       </div>
