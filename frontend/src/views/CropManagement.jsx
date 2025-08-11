@@ -49,7 +49,6 @@ const CropManagement = ({ language = "en" }) => {
       retry: "Retry",
     },
     km: {
-      // Khmer translations (unchanged for brevity, same as provided)
       title: "គ្រប់គ្រងដំណាំ",
       subtitle: "គ្រប់គ្រងដំណាំ និងព័ត៌មានការបង្កាត់",
       addCrop: "បន្ថែមដំណាំ",
@@ -81,7 +80,7 @@ const CropManagement = ({ language = "en" }) => {
       updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពដំណាំ៖ ",
       deleteSuccess: "ដំណាំត្រូវបានលុបដោយជោគជ័យ។",
       deleteError: "បរាជ័យក្នុងការលុបដំណាំ៖ ",
-      updateSuccess: "ដំណាំត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ១",
+      updateSuccess: "ដំណាំត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
       addError: "បរាជ័យក្នុងការបន្ថែមដំណាំ៖ ",
       saving: "កំពុងរក្សាទុក...",
       updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
@@ -104,10 +103,10 @@ const CropManagement = ({ language = "en" }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // Added for custom delete confirmation
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedCrop, setSelectedCrop] = useState(null);
-  const [cropToDelete, setCropToDelete] = useState(null); // Track crop for deletion
+  const [cropToDelete, setCropToDelete] = useState(null);
   const [crops, setCrops] = useState([]);
   const [farms, setFarms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -370,11 +369,12 @@ const CropManagement = ({ language = "en" }) => {
       }
 
       const updatedCrop = await response.json();
-      const farmName = farms.find((f) => f.id === updatedCrop.farm_id)?.name || "Unknown farm";
+      // Ensure farm_name is correctly assigned using the farm_id from the form
+      const farmName = farms.find((f) => f.id === parseInt(editCrop.farm_id))?.name || "Unknown farm";
       const transformed = {
         id: updatedCrop.id,
         name: updatedCrop.name,
-        farm_id: updatedCrop.farm_id,
+        farm_id: parseInt(editCrop.farm_id), // Use editCrop.farm_id to ensure latest selection
         farm_name: farmName,
         planting_date: updatedCrop.planting_date,
         growth_stage: updatedCrop.growth_stage || "No stage",
