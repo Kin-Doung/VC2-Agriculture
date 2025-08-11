@@ -4,7 +4,7 @@ import { Plus, Search, Filter, X, Upload, MoreVertical, Eye, Edit, Trash2, Chevr
 import { useState, useEffect } from "react";
 
 const Product = ({ language = "en" }) => {
-  // State declarations for managing UI and data
+  // State declarations
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCrop, setSelectedCrop] = useState("");
@@ -15,6 +15,9 @@ const Product = ({ language = "en" }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // New state for delete modal
+  const [productToDelete, setProductToDelete] = useState(null); // New state for product to delete
+  const [isSubmitting, setIsSubmitting] = useState(false); // New state for submission status
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
@@ -95,14 +98,13 @@ const Product = ({ language = "en" }) => {
       noProducts: "No products available. Add a new product to get started!",
       noFilteredProducts: "No products match your search or filters.",
       confirmDelete: "Are you sure you want to delete this product?",
+      deleting: "Deleting...", // Added for delete modal
+      deleteSuccess: "Product deleted successfully.",
+      deleteError: "Failed to delete product: ",
       loading: "Loading products...",
       error: "Failed to load data. Please try again later.",
       addSuccess: "Product added successfully.",
       updateSuccess: "Product updated successfully.",
-      deleteSuccess: "Product deleted successfully.",
-      addError: "Failed to add product: ",
-      updateError: "Failed to update product: ",
-      deleteError: "Failed to delete product: ",
       prevPage: "Previous",
       nextPage: "Next",
       stockStatus: "Stock Status",
@@ -156,14 +158,13 @@ const Product = ({ language = "en" }) => {
       noProducts: "មិនមានផលិតផល។ បន្ថែមផលិតផលថ្មីដើម្បីចាប់ផ្តើម!",
       noFilteredProducts: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរក ឬតម្រងរបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
+      deleting: "កំពុងលុប...", // Added for delete modal
+      deleteSuccess: "ផលិតផលត្រូវបានលុបដោយជោគជ័យ។",
+      deleteError: "បរាជ័យក្នុងការលុបផលិតផល៖ ",
       loading: "កំពុងផ្ទុកផលិតផល...",
-      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ �สូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       addSuccess: "ផលិតផលត្រូវបានបន្ថែមដោយជោគជ័យ។",
       updateSuccess: "ផលិតផលត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
-      deleteSuccess: "ផលិតផលត្រូវបានលុបដោយជោគជ័យ។",
-      addError: "បរាជ័យក្នុងការបន្ថែមផលិតផល៖ ",
-      updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពផលិតផល៖ ",
-      deleteError: "បរាជ័យក្នុងការលុបផលិតផល៖ ",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
       stockStatus: "ស្ថានភាពស្តុក",
@@ -329,22 +330,43 @@ const Product = ({ language = "en" }) => {
     setActiveMenu(null);
   };
 
-  // Delete product
-  const handleDeleteProduct = async (productId) => {
-    if (!window.confirm(t.confirmDelete)) return;
+  // Delete product: Open confirmation modal
+  const handleDeleteProduct = (product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+    setActiveMenu(null);
+  };
+
+  // Confirm delete product
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsSubmitting(true);
     try {
-      const response = await fetch(`${PRODUCT_BASE_URL}/${productId}`, {
+      const response = await fetch(`${PRODUCT_BASE_URL}/${productToDelete.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
-      if (!response.ok) throw new Error(`${t.deleteError}${await response.text()}`);
-      setProducts(products.filter((p) => p.id !== productId));
+      const responseText = await response.text();
+      if (!response.ok) {
+        let errorMessage = `${t.deleteError}Unexpected error`;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = `${t.deleteError}${errorData.message || "Unknown error"}`;
+        } catch (parseErr) {
+          errorMessage = `${t.deleteError}${responseText.slice(0, 100)}...`;
+        }
+        throw new Error(errorMessage);
+      }
+      setProducts(products.filter((p) => p.id !== productToDelete.id));
+      setShowDeleteModal(false);
       alert(t.deleteSuccess);
     } catch (err) {
       console.error("Delete error:", err);
-      alert(`${t.deleteError}${err.message}`);
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+      setProductToDelete(null);
     }
-    setActiveMenu(null);
   };
 
   // Handle input changes for new product form
@@ -540,7 +562,7 @@ const Product = ({ language = "en" }) => {
     }
   };
 
-  // Update existing product (Fixed ESLint error)
+  // Update existing product
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
     const errors = validateForm(editProduct);
@@ -563,7 +585,7 @@ const Product = ({ language = "en" }) => {
     if (editProduct.imageFile) formData.append("image", editProduct.imageFile);
     formData.append("_method", "PUT"); // Method spoofing for Laravel
 
-    let responseText = null; // Declare responseText to fix no-undef error
+    let responseText = null;
 
     try {
       const response = await fetch(`${PRODUCT_BASE_URL}/${editProduct.id}`, {
@@ -937,6 +959,7 @@ const Product = ({ language = "en" }) => {
                           toggleMenu(product.id);
                         }}
                         className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-all"
+                        disabled={isSubmitting}
                       >
                         <MoreVertical className="h-5 w-5 text-gray-600" />
                       </button>
@@ -963,11 +986,12 @@ const Product = ({ language = "en" }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteProduct(product.id);
+                              handleDeleteProduct(product);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            disabled={isSubmitting}
                           >
-                            <Trash2 className="h-4 w-4" /> {t.delete}
+                            <Trash2 className="h-4 w-4" /> {isSubmitting ? t.deleting : t.delete}
                           </button>
                         </div>
                       )}
@@ -997,6 +1021,46 @@ const Product = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && productToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-bold text-gray-800">{t.confirmDelete}</h2>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-600">
+                  {t.confirmDelete} <strong>{productToDelete.name}</strong>?
+                </p>
+              </div>
+              <div className="flex gap-3 p-6 border-t">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  disabled={isSubmitting}
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={confirmDeleteProduct}
+                  className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${
+                    isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? t.deleting : t.delete}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Add Product Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -1223,6 +1287,7 @@ const Product = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Edit Product Modal */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1459,6 +1524,7 @@ const Product = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* View Product Modal */}
         {showViewModal && selectedProduct && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
