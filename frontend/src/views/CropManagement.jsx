@@ -1,11 +1,12 @@
+
 "use client";
 
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import debounce from "lodash/debounce"; // Requires: npm install lodash
+import debounce from "lodash/debounce";
 
 const CropManagement = ({ language = "en" }) => {
-  // Localization texts (English + Khmer)
+  // Localization texts
   const translations = {
     en: {
       title: "Crop Management",
@@ -19,7 +20,7 @@ const CropManagement = ({ language = "en" }) => {
       editCrop: "Edit Crop",
       viewCrop: "Crop Details",
       farm: "Farm",
-      cropType: "Crop Type",
+      name: "Crop Name",
       plantingDate: "Planting Date",
       growthStage: "Growth Stage",
       notes: "Notes",
@@ -28,14 +29,13 @@ const CropManagement = ({ language = "en" }) => {
       update: "Update Crop",
       close: "Close",
       selectFarm: "Select a farm...",
-      selectCropType: "Select a crop type...",
+      enterName: "Enter crop name...",
       noCropsFound: "No crops found matching your search.",
       noCropsAvailable: "No crops available. Add a new crop to get started.",
       confirmDelete: "Are you sure you want to delete this crop?",
       loading: "Loading data...",
       error: "Failed to load data",
       farmsError: "Failed to load farms",
-      cropTypesError: "Failed to load crop types",
       cropsError: "Failed to load crops",
       updateError: "Failed to update crop: ",
       deleteSuccess: "Crop deleted successfully.",
@@ -61,7 +61,7 @@ const CropManagement = ({ language = "en" }) => {
       editCrop: "កែប្រែដំណាំ",
       viewCrop: "ព័ត៌មានលម្អិតដំណាំ",
       farm: "កសិដ្ឋាន",
-      cropType: "ប្រភេទដំណាំ",
+      name: "ឈ្មោះដំណាំ",
       plantingDate: "ថ្ងៃដាំដំណាំ",
       growthStage: "ដំណាក់កាលដំណាំ",
       notes: "កំណត់ចំណាំ",
@@ -70,14 +70,13 @@ const CropManagement = ({ language = "en" }) => {
       update: "ធ្វើបច្ចុប្បន្នភាពដំណាំ",
       close: "បិទ",
       selectFarm: "ជ្រើសរើសកសិដ្ឋាន...",
-      selectCropType: "ជ្រើសរើសប្រភេទដំណាំ...",
+      enterName: "បញ្ចូលឈ្មោះដំណាំ...",
       noCropsFound: "រកមិនឃើញដំណាំណាមួយដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
       noCropsAvailable: "មិនមានដំណាំទេ។ បន្ថែមដំណាំថ្មីដើម្បីចាប់ផ្តើម។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបដំណាំនេះមែនទេ?",
       loading: "កំពុងផ្ទុកទិន្នន័យ...",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ",
       farmsError: "បរាជ័យក្នុងការផ្ទុកកសិដ្ឋាន",
-      cropTypesError: "បរាជ័យក្នុងការផ្ទុកប្រភេទដំណាំ",
       cropsError: "បរាជ័យក្នុងការផ្ទុកដំណាំ",
       updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពដំណាំ៖ ",
       deleteSuccess: "ដំណាំត្រូវបានលុបដោយជោគជ័យ។",
@@ -95,11 +94,9 @@ const CropManagement = ({ language = "en" }) => {
 
   const t = translations[language] || translations.en;
 
-  // API URLs and Auth token (replace with secure method)
+  // API URLs and Auth token
   const API_URL = "http://127.0.0.1:8000/api/crops";
   const API_FARMS_URL = "http://127.0.0.1:8000/api/farms";
-  const API_CROPTYPES_URL = "http://127.0.0.1:8000/api/croptypes";
-  // TODO: Replace with secure token (e.g., process.env.AUTH_TOKEN or context)
   const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN || "your-auth-token-here";
 
   // States
@@ -111,22 +108,21 @@ const CropManagement = ({ language = "en" }) => {
   const [selectedCrop, setSelectedCrop] = useState(null);
   const [crops, setCrops] = useState([]);
   const [farms, setFarms] = useState([]);
-  const [cropTypes, setCropTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false); // For action loading states
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newCrop, setNewCrop] = useState({
+    name: "",
     farm_id: "",
-    crop_type_id: "",
     planting_date: "",
     growth_stage: "",
     notes: "",
   });
   const [editCrop, setEditCrop] = useState({
     id: null,
+    name: "",
     farm_id: "",
-    crop_type_id: "",
     planting_date: "",
     growth_stage: "",
     notes: "",
@@ -143,16 +139,14 @@ const CropManagement = ({ language = "en" }) => {
 
   const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
 
-  // Fetch data (parallelized)
+  // Fetch data
   const fetchData = async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const [farmsResp, cropTypesResp, cropsResp] = await Promise.all([
+      const [farmsResp, cropsResp] = await Promise.all([
         fetch(API_FARMS_URL, {
-          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
-        }),
-        fetch(API_CROPTYPES_URL, {
           headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         }),
         fetch(API_URL, {
@@ -161,30 +155,34 @@ const CropManagement = ({ language = "en" }) => {
       ]);
 
       const errors = [];
-      if (!farmsResp.ok) errors.push(t.farmsError);
-      if (!cropTypesResp.ok) errors.push(t.cropTypesError);
-      if (!cropsResp.ok) errors.push(t.cropsError);
+      let farmsData, cropsData;
+
+      if (!farmsResp.ok) {
+        const errorText = await farmsResp.text();
+        errors.push(`${t.farmsError}: ${errorText || farmsResp.statusText}`);
+      } else {
+        farmsData = await farmsResp.json();
+      }
+
+      if (!cropsResp.ok) {
+        const errorText = await cropsResp.text();
+        errors.push(`${t.cropsError}: ${errorText || cropsResp.statusText}`);
+      } else {
+        cropsData = await cropsResp.json();
+      }
+
       if (errors.length) throw new Error(errors.join("; "));
 
-      const [farmsData, cropTypesData, cropsData] = await Promise.all([
-        farmsResp.json(),
-        cropTypesResp.json(),
-        cropsResp.json(),
-      ]);
-
       setFarms(farmsData);
-      setCropTypes(cropTypesData);
 
-      const transformed = cropsData.map((c) => ({
-        id: c.id,
-        farm_id: c.farm_id,
-        farm_name: farmsData.find((f) => f.id === c.farm_id)?.name || "Unknown farm",
-        crop_type_id: c.crop_type_id,
-        crop_type_name:
-          cropTypesData.find((ct) => ct.id === c.crop_type_id)?.name || "Unknown crop type",
-        planting_date: c.planting_date,
-        growth_stage: c.growth_stage || "No stage",
-        notes: c.notes || "No notes",
+      const transformed = cropsData.map((crop) => ({
+        id: crop.id,
+        name: crop.name,
+        farm_id: crop.farm_id,
+        farm_name: farmsData.find((f) => f.id === crop.farm_id)?.name || "Unknown farm",
+        planting_date: crop.planting_date,
+        growth_stage: crop.growth_stage || "No stage",
+        notes: crop.notes || "No notes",
       }));
 
       setCrops(transformed);
@@ -204,19 +202,19 @@ const CropManagement = ({ language = "en" }) => {
   // Filtering, Sorting, Pagination
   const filteredCrops = crops.filter(
     (crop) =>
-      crop.farm_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      crop.crop_type_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      crop.growth_stage?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      crop.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+      (crop.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (crop.farm_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (crop.growth_stage?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (crop.notes?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
   const sortedCrops = [...filteredCrops].sort((a, b) => {
     if (!sortConfig.key) return 0;
-    const aValue = a[sortConfig.key] ?? "";
-    const bValue = b[sortConfig.key] ?? "";
-    if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-    return 0;
+    const aValue = a[sortConfig.key] || "";
+    const bValue = b[sortConfig.key] || "";
+    return sortConfig.direction === "asc"
+      ? aValue.localeCompare(bValue)
+      : bValue.localeCompare(aValue);
   });
 
   const totalPages = Math.ceil(sortedCrops.length / itemsPerPage);
@@ -243,7 +241,14 @@ const CropManagement = ({ language = "en" }) => {
   };
 
   const handleEditCrop = (crop) => {
-    setEditCrop({ ...crop });
+    setEditCrop({
+      id: crop.id,
+      name: crop.name || "",
+      farm_id: crop.farm_id,
+      planting_date: crop.planting_date,
+      growth_stage: crop.growth_stage || "",
+      notes: crop.notes || "",
+    });
     setShowEditModal(true);
     setActiveMenu(null);
   };
@@ -258,7 +263,7 @@ const CropManagement = ({ language = "en" }) => {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(errorText);
+        throw new Error(errorText || response.statusText);
       }
       setCrops(crops.filter((c) => c.id !== cropId));
       alert(t.deleteSuccess);
@@ -285,9 +290,11 @@ const CropManagement = ({ language = "en" }) => {
 
   const validateForm = (data) => {
     const errors = {};
+    if (!data.name) errors.name = t.enterName;
     if (!data.farm_id) errors.farm_id = t.selectFarm;
-    if (!data.crop_type_id) errors.crop_type_id = t.selectCropType;
-    if (!data.planting_date) errors.planting_date = `${t.plantingDate} is required`;
+    if (!data.planting_date || !/^\d{4}-\d{2}-\d{2}$/.test(data.planting_date)) {
+      errors.planting_date = `${t.plantingDate} must be in YYYY-MM-DD format`;
+    }
     return errors;
   };
 
@@ -302,19 +309,16 @@ const CropManagement = ({ language = "en" }) => {
 
     setIsSubmitting(true);
     const formData = new FormData();
+    formData.append("name", newCrop.name);
     formData.append("farm_id", newCrop.farm_id);
-    formData.append("crop_type_id", newCrop.crop_type_id);
     formData.append("planting_date", newCrop.planting_date);
-    formData.append("growth_stage", newCrop.growth_stage);
-    formData.append("notes", newCrop.notes);
+    formData.append("growth_stage", newCrop.growth_stage || "");
+    formData.append("notes", newCrop.notes || "");
 
     try {
       const response = await fetch(API_URL, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
       });
 
@@ -338,15 +342,12 @@ const CropManagement = ({ language = "en" }) => {
       }
 
       const farmName = farms.find((f) => f.id === parseInt(newCrop.farm_id))?.name || "Unknown farm";
-      const cropTypeName =
-        cropTypes.find((ct) => ct.id === parseInt(newCrop.crop_type_id))?.name || "Unknown crop type";
 
       const transformedCrop = {
         id: savedCrop.id,
+        name: savedCrop.name,
         farm_id: parseInt(newCrop.farm_id),
         farm_name: farmName,
-        crop_type_id: parseInt(newCrop.crop_type_id),
-        crop_type_name: cropTypeName,
         planting_date: newCrop.planting_date,
         growth_stage: newCrop.growth_stage || "No stage",
         notes: newCrop.notes || "No notes",
@@ -354,8 +355,8 @@ const CropManagement = ({ language = "en" }) => {
 
       setCrops((prev) => [transformedCrop, ...prev]);
       setNewCrop({
+        name: "",
         farm_id: "",
-        crop_type_id: "",
         planting_date: "",
         growth_stage: "",
         notes: "",
@@ -382,20 +383,17 @@ const CropManagement = ({ language = "en" }) => {
 
     setIsSubmitting(true);
     const formData = new FormData();
+    formData.append("name", editCrop.name);
     formData.append("farm_id", editCrop.farm_id);
-    formData.append("crop_type_id", editCrop.crop_type_id);
     formData.append("planting_date", editCrop.planting_date);
-    formData.append("growth_stage", editCrop.growth_stage);
-    formData.append("notes", editCrop.notes);
+    formData.append("growth_stage", editCrop.growth_stage || "");
+    formData.append("notes", editCrop.notes || "");
     formData.append("_method", "PUT");
 
     try {
       const response = await fetch(`${API_URL}/${editCrop.id}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
       });
 
@@ -419,13 +417,13 @@ const CropManagement = ({ language = "en" }) => {
       }
 
       const farmName = farms.find((f) => f.id === updatedCrop.farm_id)?.name || "Unknown farm";
-      const cropTypeName =
-        cropTypes.find((ct) => ct.id === updatedCrop.crop_type_id)?.name || "Unknown crop type";
 
       const transformed = {
-        ...updatedCrop,
+        id: updatedCrop.id,
+        name: updatedCrop.name,
+        farm_id: updatedCrop.farm_id,
         farm_name: farmName,
-        crop_type_name: cropTypeName,
+        planting_date: updatedCrop.planting_date,
         growth_stage: updatedCrop.growth_stage || "No stage",
         notes: updatedCrop.notes || "No notes",
       };
@@ -433,8 +431,8 @@ const CropManagement = ({ language = "en" }) => {
       setCrops(crops.map((c) => (c.id === transformed.id ? transformed : c)));
       setEditCrop({
         id: null,
+        name: "",
         farm_id: "",
-        crop_type_id: "",
         planting_date: "",
         growth_stage: "",
         notes: "",
@@ -501,9 +499,9 @@ const CropManagement = ({ language = "en" }) => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort("farm_name")} className="flex items-center gap-1">
-                      {t.farm}
-                      {sortConfig.key === "farm_name" &&
+                    <button onClick={() => requestSort("name")} className="flex items-center gap-1">
+                      {t.name}
+                      {sortConfig.key === "name" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
                         ) : (
@@ -512,9 +510,9 @@ const CropManagement = ({ language = "en" }) => {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort("crop_type_name")} className="flex items-center gap-1">
-                      {t.cropType}
-                      {sortConfig.key === "crop_type_name" &&
+                    <button onClick={() => requestSort("farm_name")} className="flex items-center gap-1">
+                      {t.farm}
+                      {sortConfig.key === "farm_name" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
                         ) : (
@@ -548,18 +546,17 @@ const CropManagement = ({ language = "en" }) => {
                 {paginatedCrops.map((crop) => (
                   <tr key={crop.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {crop.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {crop.farm_name}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{crop.crop_type_name}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{crop.planting_date}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{crop.growth_stage}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{crop.notes}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleMenu(crop.id);
-                        }}
+                        onClick={() => toggleMenu(crop.id)}
                         className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-all"
                         disabled={isSubmitting}
                       >
@@ -568,28 +565,19 @@ const CropManagement = ({ language = "en" }) => {
                       {activeMenu === crop.id && (
                         <div className="absolute right-6 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-30">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewCrop(crop);
-                            }}
+                            onClick={() => handleViewCrop(crop)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                           >
                             <Eye className="h-4 w-4" /> {t.view}
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditCrop(crop);
-                            }}
+                            onClick={() => handleEditCrop(crop)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                           >
                             <Edit className="h-4 w-4" /> {t.edit}
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCrop(crop.id);
-                            }}
+                            onClick={() => handleDeleteCrop(crop.id)}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                             disabled={isSubmitting}
                           >
@@ -637,6 +625,24 @@ const CropManagement = ({ language = "en" }) => {
               </div>
               <form onSubmit={handleAddCrop} className="p-6 space-y-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.name} *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={newCrop.name}
+                    onChange={handleNewInputChange}
+                    placeholder={t.enterName}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required
+                    disabled={isSubmitting}
+                  />
+                  {formErrors.name && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">{t.farm} *</label>
                   <select
                     name="farm_id"
@@ -660,34 +666,7 @@ const CropManagement = ({ language = "en" }) => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.cropType} *
-                  </label>
-                  <select
-                    name="crop_type_id"
-                    value={newCrop.crop_type_id}
-                    onChange={handleNewInputChange}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.crop_type_id ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="">{t.selectCropType}</option>
-                    {cropTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.crop_type_id && (
-                    <p className="text-red-500 text-sm mt-1">{formErrors.crop_type_id}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.plantingDate} *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.plantingDate} *</label>
                   <input
                     type="date"
                     name="planting_date"
@@ -704,9 +683,7 @@ const CropManagement = ({ language = "en" }) => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.growthStage}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.growthStage}</label>
                   <input
                     type="text"
                     name="growth_stage"
@@ -766,6 +743,24 @@ const CropManagement = ({ language = "en" }) => {
               </div>
               <form onSubmit={handleUpdateCrop} className="p-6 space-y-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.name} *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={editCrop.name}
+                    onChange={handleEditInputChange}
+                    placeholder={t.enterName}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required
+                    disabled={isSubmitting}
+                  />
+                  {formErrors.name && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">{t.farm} *</label>
                   <select
                     name="farm_id"
@@ -789,34 +784,7 @@ const CropManagement = ({ language = "en" }) => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.cropType} *
-                  </label>
-                  <select
-                    name="crop_type_id"
-                    value={editCrop.crop_type_id}
-                    onChange={handleEditInputChange}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.crop_type_id ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="">{t.selectCropType}</option>
-                    {cropTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.crop_type_id && (
-                    <p className="text-red-500 text-sm mt-1">{formErrors.crop_type_id}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.plantingDate} *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.plantingDate} *</label>
                   <input
                     type="date"
                     name="planting_date"
@@ -833,9 +801,7 @@ const CropManagement = ({ language = "en" }) => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.growthStage}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.growthStage}</label>
                   <input
                     type="text"
                     name="growth_stage"
@@ -895,23 +861,19 @@ const CropManagement = ({ language = "en" }) => {
               </div>
               <div className="p-6 space-y-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.name}</label>
+                  <p className="text-lg font-medium text-gray-900">{selectedCrop.name}</p>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">{t.farm}</label>
                   <p className="text-lg font-medium text-gray-900">{selectedCrop.farm_name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.cropType}</label>
-                  <p className="text-sm text-gray-600">{selectedCrop.crop_type_name}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.plantingDate}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.plantingDate}</label>
                   <p className="text-sm text-gray-600">{selectedCrop.planting_date}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.growthStage}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.growthStage}</label>
                   <p className="text-sm text-gray-600">{selectedCrop.growth_stage}</p>
                 </div>
                 <div>

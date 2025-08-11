@@ -12,24 +12,23 @@ class ProductController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:sanctum'); 
+        $this->middleware('auth:sanctum');
     }
 
-public function index(Request $request)
-{
-    $query = Product::with(['category', 'user']);
+    public function index(Request $request)
+    {
+        $query = Product::with(['category', 'user']);
+        // If ?only_mine=true, filter to only current user's products
+        if ($request->query('only_mine') === 'true') {
+            $query->where('user_id', Auth::id());
+        }
 
-    // If ?only_mine=true, filter to only current user's products
-    if ($request->query('only_mine') === 'true') {
-        $query->where('user_id', Auth::id());
-    }
-
-    $products = $query->get()->map(function ($product) {
-        $product->image_url = $product->image_path
-            ? asset('storage/' . $product->image_path)
-            : null;
-        return $product;
-    });
+        $products = $query->get()->map(function ($product) {
+            $product->image_url = $product->image_path
+                ? asset('storage/' . $product->image_path)
+                : null;
+            return $product;
+        });
 
         return response()->json($products, 200);
     }
