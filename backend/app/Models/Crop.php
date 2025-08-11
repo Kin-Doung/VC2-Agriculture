@@ -14,6 +14,7 @@ class Crop extends Model
         'planting_date',
         'growth_stage',
         'notes',
+        'user_id',
     ];
     public function farm()
     {
@@ -22,5 +23,10 @@ class Crop extends Model
     public function product()
     {
         return $this->hasMany(Product::class, 'product_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

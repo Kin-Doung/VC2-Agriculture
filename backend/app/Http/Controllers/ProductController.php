@@ -80,6 +80,8 @@ class ProductController extends Controller
             $validated['image_path'] = $path;
         }
 
+            unset($validated['user_id']);
+
         $product->update($validated);
         $product->image_url = $product->image_path ? asset('storage/' . $product->image_path) : null;
 

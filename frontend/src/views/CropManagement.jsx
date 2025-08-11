@@ -97,7 +97,8 @@ const CropManagement = ({ language = "en" }) => {
   // API URLs and Auth token
   const API_URL = "http://127.0.0.1:8000/api/crops";
   const API_FARMS_URL = "http://127.0.0.1:8000/api/farms";
-  const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN || "your-auth-token-here";
+  const API_CROPTYPES_URL = "http://127.0.0.1:8000/api/croptypes";
+  const AUTH_TOKEN = localStorage.getItem("token");
 
   // States
   const [searchTerm, setSearchTerm] = useState("");

@@ -182,6 +182,7 @@ const Product = ({ language = "en" }) => {
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products?only_mine=true";
+  const PRODUCT_BASE_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
   const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
@@ -332,7 +333,7 @@ const Product = ({ language = "en" }) => {
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm(t.confirmDelete)) return;
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/products/${productId}`, {
+      const response = await fetch(`${PRODUCT_BASE_URL}/${productId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
@@ -565,12 +566,9 @@ const Product = ({ language = "en" }) => {
     let responseText = null; // Declare responseText to fix no-undef error
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/products/${editProduct.id}`, {
-        method: "POST", // Using POST with _method=PUT for Laravel
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
+      const response = await fetch(`${PRODUCT_BASE_URL}/${editProduct.id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
       });
 

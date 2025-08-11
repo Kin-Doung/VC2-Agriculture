@@ -12,18 +12,25 @@ use App\Http\Controllers\FarmController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TaskController;
 
-Route::apiResource('lands', LandController::class);
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Public Routes
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Authenticated Routes
+/*
+|--------------------------------------------------------------------------
+| Admin Routes (Require auth & admin middleware)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/users', [AdminController::class, 'index']);
     Route::get('/admin/users/{id}', [AdminController::class, 'show']);
@@ -31,29 +38,42 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::delete('/admin/users/{id}', [AdminController::class, 'destroy']);
 });
 
-// Route User sanctum
+/*
+|--------------------------------------------------------------------------
+| Authenticated User Routes
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Category routes
-    Route::get('/categories', [CategoryController::class, 'index']);
-    Route::post('/categories', [CategoryController::class, 'store']);
+    // Authenticated category CRUD
+    Route::apiResource('categories', CategoryController::class);
 
-    // Product routes
-    Route::get('/products', [ProductController::class, 'index']);
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::get('/products/{id}', [ProductController::class, 'show']);
-    Route::put('/products/{id}', [ProductController::class, 'update']);
-    Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+    // Authenticated product CRUD
+    Route::apiResource("products", ProductController::class);
+
+    // Crop routes
+    Route::get('/crops', [CropController::class, 'index']);
+    Route::post('/crops', [CropController::class, 'store']);
+    Route::get('/crops/{id}', [CropController::class, 'show']);
+    Route::put('/crops/{id}', [CropController::class, 'update']);
+    Route::delete('/crops/{id}', [CropController::class, 'destroy']);
+
+    // Land routes
+    Route::get('/lands', [LandController::class, 'index']);
+    Route::post('/lands', [LandController::class, 'store']);
+    Route::get('/lands/{id}', [LandController::class, 'show']);
+    Route::put('/lands/{id}', [LandController::class, 'update']);
+    Route::delete('/lands/{id}', [LandController::class, 'destroy']);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Logout Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
-
-// Category Routes
-Route::apiResource('categories', CategoryController::class);
-
-// Product 
-Route::apiResource("products", ProductController::class);
 
 Route::apiResource("task", TaskController::class);
 Route::apiResource("crops", CropController::class);
