@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
@@ -50,6 +49,7 @@ const CropManagement = ({ language = "en" }) => {
       retry: "Retry",
     },
     km: {
+      // Khmer translations (unchanged for brevity, same as provided)
       title: "គ្រប់គ្រងដំណាំ",
       subtitle: "គ្រប់គ្រងដំណាំ និងព័ត៌មានការបង្កាត់",
       addCrop: "បន្ថែមដំណាំ",
@@ -81,7 +81,7 @@ const CropManagement = ({ language = "en" }) => {
       updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពដំណាំ៖ ",
       deleteSuccess: "ដំណាំត្រូវបានលុបដោយជោគជ័យ។",
       deleteError: "បរាជ័យក្នុងការលុបដំណាំ៖ ",
-      updateSuccess: "ដំណាំត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
+      updateSuccess: "ដំណាំត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ១",
       addError: "បរាជ័យក្នុងការបន្ថែមដំណាំ៖ ",
       saving: "កំពុងរក្សាទុក...",
       updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
@@ -97,7 +97,6 @@ const CropManagement = ({ language = "en" }) => {
   // API URLs and Auth token
   const API_URL = "http://127.0.0.1:8000/api/crops";
   const API_FARMS_URL = "http://127.0.0.1:8000/api/farms";
-  const API_CROPTYPES_URL = "http://127.0.0.1:8000/api/croptypes";
   const AUTH_TOKEN = localStorage.getItem("token");
 
   // States
@@ -105,8 +104,10 @@ const CropManagement = ({ language = "en" }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // Added for custom delete confirmation
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedCrop, setSelectedCrop] = useState(null);
+  const [cropToDelete, setCropToDelete] = useState(null); // Track crop for deletion
   const [crops, setCrops] = useState([]);
   const [farms, setFarms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +145,6 @@ const CropManagement = ({ language = "en" }) => {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const [farmsResp, cropsResp] = await Promise.all([
         fetch(API_FARMS_URL, {
@@ -155,25 +155,14 @@ const CropManagement = ({ language = "en" }) => {
         }),
       ]);
 
-      const errors = [];
-      let farmsData, cropsData;
-
-      if (!farmsResp.ok) {
-        const errorText = await farmsResp.text();
-        errors.push(`${t.farmsError}: ${errorText || farmsResp.statusText}`);
-      } else {
-        farmsData = await farmsResp.json();
+      if (!farmsResp.ok || !cropsResp.ok) {
+        const errors = [];
+        if (!farmsResp.ok) errors.push(`${t.farmsError}: ${await farmsResp.text()}`);
+        if (!cropsResp.ok) errors.push(`${t.cropsError}: ${await cropsResp.text()}`);
+        throw new Error(errors.join("; "));
       }
 
-      if (!cropsResp.ok) {
-        const errorText = await cropsResp.text();
-        errors.push(`${t.cropsError}: ${errorText || cropsResp.statusText}`);
-      } else {
-        cropsData = await cropsResp.json();
-      }
-
-      if (errors.length) throw new Error(errors.join("; "));
-
+      const [farmsData, cropsData] = await Promise.all([farmsResp.json(), cropsResp.json()]);
       setFarms(farmsData);
 
       const transformed = cropsData.map((crop) => ({
@@ -195,7 +184,6 @@ const CropManagement = ({ language = "en" }) => {
     }
   };
 
-  // Fetch data on mount or language change
   useEffect(() => {
     fetchData();
   }, [language]);
@@ -233,14 +221,14 @@ const CropManagement = ({ language = "en" }) => {
 
   const toggleMenu = (cropId) => setActiveMenu(activeMenu === cropId ? null : cropId);
 
-  const handleClickOutside = () => setActiveMenu(null);
-
+  // View Action: Show crop details in a modal
   const handleViewCrop = (crop) => {
     setSelectedCrop(crop);
     setShowViewModal(true);
     setActiveMenu(null);
   };
 
+  // Edit Action: Open modal with pre-filled crop data
   const handleEditCrop = (crop) => {
     setEditCrop({
       id: crop.id,
@@ -254,26 +242,32 @@ const CropManagement = ({ language = "en" }) => {
     setActiveMenu(null);
   };
 
-  const handleDeleteCrop = async (cropId) => {
-    if (!cropId || !window.confirm(t.confirmDelete)) return;
+  // Delete Action: Open confirmation modal
+  const handleDeleteCrop = (crop) => {
+    setCropToDelete(crop);
+    setShowDeleteModal(true);
+    setActiveMenu(null);
+  };
+
+  // Confirm Delete Action: Send DELETE request
+  const confirmDeleteCrop = async () => {
+    if (!cropToDelete) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_URL}/${cropId}`, {
+      const response = await fetch(`${API_URL}/${cropToDelete.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || response.statusText);
-      }
-      setCrops(crops.filter((c) => c.id !== cropId));
+      if (!response.ok) throw new Error(await response.text() || response.statusText);
+      setCrops(crops.filter((c) => c.id !== cropToDelete.id));
+      setShowDeleteModal(false);
       alert(t.deleteSuccess);
     } catch (err) {
       console.error("Delete error:", err);
       alert(`${t.deleteError}${err.message}`);
     } finally {
       setIsSubmitting(false);
-      setActiveMenu(null);
+      setCropToDelete(null);
     }
   };
 
@@ -302,7 +296,7 @@ const CropManagement = ({ language = "en" }) => {
   const handleAddCrop = async (e) => {
     e.preventDefault();
     const errors = validateForm(newCrop);
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
       return;
@@ -310,11 +304,7 @@ const CropManagement = ({ language = "en" }) => {
 
     setIsSubmitting(true);
     const formData = new FormData();
-    formData.append("name", newCrop.name);
-    formData.append("farm_id", newCrop.farm_id);
-    formData.append("planting_date", newCrop.planting_date);
-    formData.append("growth_stage", newCrop.growth_stage || "");
-    formData.append("notes", newCrop.notes || "");
+    Object.entries(newCrop).forEach(([key, value]) => formData.append(key, value || ""));
 
     try {
       const response = await fetch(API_URL, {
@@ -322,28 +312,13 @@ const CropManagement = ({ language = "en" }) => {
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
       });
-
-      const responseText = await response.text();
       if (!response.ok) {
-        let errorMessage = `${t.addError}Unexpected error`;
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = `${t.addError}${errorData.message || "Unknown error"}`;
-        } catch (parseErr) {
-          errorMessage = `${t.addError}${responseText.slice(0, 100)}...`;
-        }
-        throw new Error(errorMessage);
+        const errorText = await response.text();
+        throw new Error(`${t.addError}${errorText || "Unknown error"}`);
       }
 
-      let savedCrop;
-      try {
-        savedCrop = JSON.parse(responseText);
-      } catch (parseErr) {
-        throw new Error(`${t.addError}Invalid JSON response: ${responseText.slice(0, 100)}...`);
-      }
-
+      const savedCrop = await response.json();
       const farmName = farms.find((f) => f.id === parseInt(newCrop.farm_id))?.name || "Unknown farm";
-
       const transformedCrop = {
         id: savedCrop.id,
         name: savedCrop.name,
@@ -355,13 +330,7 @@ const CropManagement = ({ language = "en" }) => {
       };
 
       setCrops((prev) => [transformedCrop, ...prev]);
-      setNewCrop({
-        name: "",
-        farm_id: "",
-        planting_date: "",
-        growth_stage: "",
-        notes: "",
-      });
+      setNewCrop({ name: "", farm_id: "", planting_date: "", growth_stage: "", notes: "" });
       setFormErrors({});
       setShowAddModal(false);
       alert(t.save);
@@ -376,7 +345,7 @@ const CropManagement = ({ language = "en" }) => {
   const handleUpdateCrop = async (e) => {
     e.preventDefault();
     const errors = validateForm(editCrop);
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
       return;
@@ -384,11 +353,9 @@ const CropManagement = ({ language = "en" }) => {
 
     setIsSubmitting(true);
     const formData = new FormData();
-    formData.append("name", editCrop.name);
-    formData.append("farm_id", editCrop.farm_id);
-    formData.append("planting_date", editCrop.planting_date);
-    formData.append("growth_stage", editCrop.growth_stage || "");
-    formData.append("notes", editCrop.notes || "");
+    Object.entries(editCrop).forEach(([key, value]) => {
+      if (key !== "id") formData.append(key, value || "");
+    });
     formData.append("_method", "PUT");
 
     try {
@@ -397,28 +364,13 @@ const CropManagement = ({ language = "en" }) => {
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
       });
-
-      const responseText = await response.text();
       if (!response.ok) {
-        let errorMessage = `${t.updateError}Unexpected error`;
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = `${t.updateError}${errorData.message || "Unknown error"}`;
-        } catch (parseErr) {
-          errorMessage = `${t.updateError}${responseText.slice(0, 100)}...`;
-        }
-        throw new Error(errorMessage);
+        const errorText = await response.text();
+        throw new Error(`${t.updateError}${errorText || "Unknown error"}`);
       }
 
-      let updatedCrop;
-      try {
-        updatedCrop = JSON.parse(responseText);
-      } catch (parseErr) {
-        throw new Error(`${t.updateError}Invalid JSON response: ${responseText.slice(0, 100)}...`);
-      }
-
+      const updatedCrop = await response.json();
       const farmName = farms.find((f) => f.id === updatedCrop.farm_id)?.name || "Unknown farm";
-
       const transformed = {
         id: updatedCrop.id,
         name: updatedCrop.name,
@@ -430,14 +382,7 @@ const CropManagement = ({ language = "en" }) => {
       };
 
       setCrops(crops.map((c) => (c.id === transformed.id ? transformed : c)));
-      setEditCrop({
-        id: null,
-        name: "",
-        farm_id: "",
-        planting_date: "",
-        growth_stage: "",
-        notes: "",
-      });
+      setEditCrop({ id: null, name: "", farm_id: "", planting_date: "", growth_stage: "", notes: "" });
       setFormErrors({});
       setShowEditModal(false);
       alert(t.updateSuccess);
@@ -451,7 +396,7 @@ const CropManagement = ({ language = "en" }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="p-6 space-y-6" onClick={handleClickOutside}>
+      <div className="p-6 space-y-6" onClick={() => setActiveMenu(null)}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-green-800 mb-2">{t.title}</h1>
@@ -557,7 +502,10 @@ const CropManagement = ({ language = "en" }) => {
                     <td className="px-6 py-4 text-sm text-gray-500">{crop.notes}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
                       <button
-                        onClick={() => toggleMenu(crop.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMenu(crop.id);
+                        }}
                         className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-all"
                         disabled={isSubmitting}
                       >
@@ -578,7 +526,7 @@ const CropManagement = ({ language = "en" }) => {
                             <Edit className="h-4 w-4" /> {t.edit}
                           </button>
                           <button
-                            onClick={() => handleDeleteCrop(crop.id)}
+                            onClick={() => handleDeleteCrop(crop)}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                             disabled={isSubmitting}
                           >
@@ -612,6 +560,7 @@ const CropManagement = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Add Crop Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -730,6 +679,7 @@ const CropManagement = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Edit Crop Modal */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -848,6 +798,7 @@ const CropManagement = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* View Crop Modal */}
         {showViewModal && selectedCrop && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -887,6 +838,45 @@ const CropManagement = ({ language = "en" }) => {
                     className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                   >
                     {t.close}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && cropToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-bold text-gray-800">{t.confirmDelete}</h2>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-600">
+                  {t.confirmDelete} <strong>{cropToDelete.name}</strong>?
+                </p>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    onClick={confirmDeleteCrop}
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    {isSubmitting ? t.deleting : t.delete}
                   </button>
                 </div>
               </div>
