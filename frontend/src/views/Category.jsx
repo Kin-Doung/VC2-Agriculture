@@ -2,20 +2,22 @@
 
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import debounce from "lodash/debounce"; // Requires: npm install lodash
+import debounce from "lodash/debounce";
 
 const Category = ({ language = "en" }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // Added for delete confirmation modal
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null); // Track category to delete
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false); // For action loading states
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
@@ -56,6 +58,7 @@ const Category = ({ language = "en" }) => {
       error: "Failed to load data. Please try again later.",
       updateError: "Failed to update category: ",
       deleteSuccess: "Category deleted successfully.",
+      deleteError: "Failed to delete category: ",
       updateSuccess: "Category updated successfully.",
       addError: "Failed to add category: ",
       saving: "Saving...",
@@ -83,17 +86,18 @@ const Category = ({ language = "en" }) => {
       close: "បិទ",
       enterCategoryName: "បញ្ចូលឈ្មោះប្រភេទ...",
       enterDescription: "បញ្ចូលការពិពណ៌នា...",
-      noCategoriesAvailable: "មិនមានប្រភេទទេ។ បន្ថែមប្រភេទថ្មីដើម្បីចាប់ផ្តើម។",
+      noCategoriesAvailable: "មិនមានប្រភេទទេ។ បន្ថែមប្រភេទថ្មីដើម្បីចាប់ផ្តើម�।",
       noCategoriesFound: "រកមិនឃើញប្រភេទដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបប្រភេទនេះមែនទេ?",
       loading: "កំពុងផ្ទុកប្រភេទ...",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពប្រភេទ៖ ",
       deleteSuccess: "ប្រភេទត្រូវបានលុបដោយជោគជ័យ។",
+      deleteError: "បរាជ័យក្នុងការលុបប្រភេទ៖ ",
       updateSuccess: "ប្រភេទត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
       addError: "បរាជ័យក្នុងការបន្ថែមប្រភេទ៖ ",
       saving: "កំពុងរក្សាទុក...",
-      updating: "កំពុងធ្វើបច្ចុប្បននភាព...",
+      updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
       deleting: "កំពុងលុប...",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
@@ -119,7 +123,7 @@ const Category = ({ language = "en" }) => {
       setError(null);
       try {
         const response = await fetch(API_URL, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, Accept: "application/json" },
+          headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         });
         if (!response.ok) {
           const errorText = await response.text();
@@ -176,38 +180,49 @@ const Category = ({ language = "en" }) => {
 
   const handleClickOutside = () => setActiveMenu(null);
 
+  // View Action: Show category details in a modal
   const handleViewCategory = (category) => {
     setSelectedCategory(category);
     setShowViewModal(true);
     setActiveMenu(null);
   };
 
+  // Edit Action: Open modal with pre-filled category data
   const handleEditCategory = (category) => {
     setEditCategory({ ...category });
     setShowEditModal(true);
     setActiveMenu(null);
   };
 
-  const handleDeleteCategory = async (categoryId) => {
-    if (!categoryId || !window.confirm(t.confirmDelete)) return;
+  // Delete Action: Open confirmation modal
+  const handleDeleteCategory = (category) => {
+    setCategoryToDelete(category);
+    setShowDeleteModal(true);
+    setActiveMenu(null);
+  };
+
+  // Confirm Delete Action: Send DELETE request
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_URL}/${categoryId}`, {
+      const response = await fetch(`${API_URL}/${categoryToDelete.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Delete failed: ${errorText}`);
+        throw new Error(`${t.deleteError}${errorText || "Unknown error"}`);
       }
-      setCategories(categories.filter((c) => c.id !== categoryId));
+      setCategories(categories.filter((c) => c.id !== categoryToDelete.id));
+      setShowDeleteModal(false);
       alert(t.deleteSuccess);
     } catch (err) {
       console.error("Delete error:", err);
-      alert(`${t.error}: ${err.message}`);
+      alert(err.message);
     } finally {
       setIsSubmitting(false);
-      setActiveMenu(null);
+      setCategoryToDelete(null);
     }
   };
 
@@ -223,15 +238,15 @@ const Category = ({ language = "en" }) => {
     setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const validateForm = () => {
+  const validateForm = (category) => {
     const errors = {};
-    if (!newCategory.name.trim()) errors.name = t.enterCategoryName;
+    if (!category.name.trim()) errors.name = t.enterCategoryName;
     return errors;
   };
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
-    const errors = validateForm();
+    const errors = validateForm(newCategory);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
@@ -300,8 +315,7 @@ const Category = ({ language = "en" }) => {
 
   const handleUpdateCategory = async (e) => {
     e.preventDefault();
-    const errors = {};
-    if (!editCategory.name.trim()) errors.name = t.enterCategoryName;
+    const errors = validateForm(editCategory);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
@@ -424,7 +438,7 @@ const Category = ({ language = "en" }) => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("name")} className="flex items-center gap-1">
-                      {t.categoryName}{" "}
+                      {t.categoryName}
                       {sortConfig.key === "name" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
@@ -435,7 +449,7 @@ const Category = ({ language = "en" }) => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("description")} className="flex items-center gap-1">
-                      {t.categoryDescription}{" "}
+                      {t.categoryDescription}
                       {sortConfig.key === "description" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
@@ -490,7 +504,7 @@ const Category = ({ language = "en" }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteCategory(category.id);
+                              handleDeleteCategory(category);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                             disabled={isSubmitting}
@@ -525,6 +539,7 @@ const Category = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Add Category Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -595,6 +610,7 @@ const Category = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Edit Category Modal */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -665,6 +681,7 @@ const Category = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* View Category Modal */}
         {showViewModal && selectedCategory && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -696,6 +713,45 @@ const Category = ({ language = "en" }) => {
                     className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                   >
                     {t.close}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && categoryToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-bold text-gray-800">{t.confirmDelete}</h2>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-600">
+                  {t.confirmDelete} <strong>{categoryToDelete.name}</strong>?
+                </p>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    onClick={confirmDeleteCategory}
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    {isSubmitting ? t.deleting : t.delete}
                   </button>
                 </div>
               </div>
