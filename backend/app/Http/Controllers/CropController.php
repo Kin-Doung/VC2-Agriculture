@@ -9,7 +9,7 @@ class CropController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:sanctum'); 
+        $this->middleware('auth:sanctum');
     }
     /**
      * Display a listing of the resource.
@@ -34,7 +34,11 @@ class CropController extends Controller
      */
     public function show(string $id)
     {
-        $crop = Crop::with(['farm', 'product'])->findOrFail($id);
+        $crop = Crop::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->with(['farm', 'products'])
+            ->firstOrFail();
+
         return response()->json($crop);
     }
 
