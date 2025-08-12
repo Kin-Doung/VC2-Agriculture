@@ -15,9 +15,9 @@ const Product = ({ language = "en" }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // New state for delete modal
-  const [productToDelete, setProductToDelete] = useState(null); // New state for product to delete
-  const [isSubmitting, setIsSubmitting] = useState(false); // New state for submission status
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
@@ -98,7 +98,7 @@ const Product = ({ language = "en" }) => {
       noProducts: "No products available. Add a new product to get started!",
       noFilteredProducts: "No products match your search or filters.",
       confirmDelete: "Are you sure you want to delete this product?",
-      deleting: "Deleting...", // Added for delete modal
+      deleting: "Deleting...",
       deleteSuccess: "Product deleted successfully.",
       deleteError: "Failed to delete product: ",
       loading: "Loading products...",
@@ -158,7 +158,7 @@ const Product = ({ language = "en" }) => {
       noProducts: "មិនមានផលិតផល។ បន្ថែមផលិតផលថ្មីដើម្បីចាប់ផ្តើម!",
       noFilteredProducts: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរក ឬតម្រងរបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
-      deleting: "កំពុងលុប...", // Added for delete modal
+      deleting: "កំពុងលុប...",
       deleteSuccess: "ផលិតផលត្រូវបានលុបដោយជោគជ័យ។",
       deleteError: "បរាជ័យក្នុងការលុបផលិតផល៖ ",
       loading: "កំពុងផ្ទុកផលិតផល...",
@@ -219,21 +219,27 @@ const Product = ({ language = "en" }) => {
         if (!Array.isArray(cropData)) throw new Error("Crops API response is not an array");
 
         // Transform product data for frontend display
-        const transformedProducts = productData.map((item) => ({
-          id: item.id,
-          name: item.name || "Unnamed Product",
-          price: `$${Number(item.price || 0).toFixed(2)}`,
-          image: item.image_url || "/placeholder.svg",
-          stock: item.quantity > 0 ? t.inStock : t.outOfStock,
-          description: item.description || "No description",
-          category: item.category?.name || "Uncategorized",
-          category_id: item.category_id || null,
-          crop: item.crop?.name || "No Crop",
-          crop_id: item.crop_id || null,
-          quantity: item.quantity || 0,
-          creation_date: item.creation_date ? item.creation_date.split("T")[0] : new Date().toISOString().split("T")[0],
-          expiration_date: item.expiration_date ? item.expiration_date.split("T")[0] : "",
-        }));
+        const transformedProducts = productData.map((item) => {
+          const today = new Date();
+          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+          const isExpired = expirationDate && expirationDate < today;
+
+          return {
+            id: item.id,
+            name: item.name || "Unnamed Product",
+            price: `$${Number(item.price || 0).toFixed(2)}`,
+            image: item.image_url || "/placeholder.svg",
+            stock: isExpired || item.quantity === 0 ? t.outOfStock : t.inStock,
+            description: item.description || "No description",
+            category: item.category?.name || "Uncategorized",
+            category_id: item.category_id || null,
+            crop: item.crop?.name || "No Crop",
+            crop_id: item.crop_id || null,
+            quantity: item.quantity || 0,
+            creation_date: item.creation_date ? item.creation_date.split("T")[0] : new Date().toISOString().split("T")[0],
+            expiration_date: item.expiration_date ? item.expiration_date.split("T")[0] : "",
+          };
+        });
 
         setProducts(transformedProducts);
         setCategories(categoryData.map((item) => ({ id: item.id, name: item.name || "Uncategorized" })));
@@ -519,13 +525,16 @@ const Product = ({ language = "en" }) => {
       const savedProduct = JSON.parse(responseText);
       const category = categories.find((c) => c.id === parseInt(newProduct.category_id));
       const crop = crops.find((c) => c.id === parseInt(newProduct.crop_id));
+      const today = new Date();
+      const expirationDate = savedProduct.expiration_date ? new Date(savedProduct.expiration_date) : null;
+      const isExpired = expirationDate && expirationDate < today;
 
       const transformedProduct = {
         id: savedProduct.id,
         name: savedProduct.name,
         price: `$${Number(savedProduct.price).toFixed(2)}`,
         image: savedProduct.image_url || "/placeholder.svg",
-        stock: savedProduct.quantity > 0 ? t.inStock : t.outOfStock,
+        stock: isExpired || savedProduct.quantity === 0 ? t.outOfStock : t.inStock,
         description: savedProduct.description,
         category: category ? category.name : "Uncategorized",
         category_id: savedProduct.category_id,
@@ -583,7 +592,7 @@ const Product = ({ language = "en" }) => {
     formData.append("creation_date", editProduct.creation_date);
     if (editProduct.expiration_date) formData.append("expiration_date", editProduct.expiration_date);
     if (editProduct.imageFile) formData.append("image", editProduct.imageFile);
-    formData.append("_method", "PUT"); // Method spoofing for Laravel
+    formData.append("_method", "PUT");
 
     let responseText = null;
 
@@ -609,13 +618,16 @@ const Product = ({ language = "en" }) => {
       const updatedProduct = JSON.parse(responseText);
       const category = categories.find((c) => c.id === parseInt(updatedProduct.category_id));
       const crop = crops.find((c) => c.id === parseInt(updatedProduct.crop_id));
+      const today = new Date();
+      const expirationDate = updatedProduct.expiration_date ? new Date(updatedProduct.expiration_date) : null;
+      const isExpired = expirationDate && expirationDate < today;
 
       const transformedProduct = {
         id: updatedProduct.id,
         name: updatedProduct.name,
         price: `$${Number(updatedProduct.price).toFixed(2)}`,
         image: updatedProduct.image_url || "/placeholder.svg",
-        stock: updatedProduct.quantity > 0 ? t.inStock : t.outOfStock,
+        stock: isExpired || updatedProduct.quantity === 0 ? t.outOfStock : t.inStock,
         description: updatedProduct.description,
         category: category ? category.name : "Uncategorized",
         category_id: updatedProduct.category_id,
