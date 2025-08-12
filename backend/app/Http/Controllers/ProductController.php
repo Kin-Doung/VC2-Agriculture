@@ -17,7 +17,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'user']);
+        $query = Product::with(['category', 'user','crop']);
         // If ?only_mine=true, filter to only current user's products
         if ($request->query('only_mine') === 'true') {
             $query->where('user_id', Auth::id());
