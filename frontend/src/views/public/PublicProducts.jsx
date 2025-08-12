@@ -78,6 +78,7 @@ const PublicProducts = ({ language = "en" }) => {
         seller: "Seller",
         sellerPhone: "Seller Phone",
         description: "Description",
+        expirationDate: "Expiration Date",
         error: "Failed to load data. Please try again later.",
         page: "Page",
         of: "of",
@@ -145,6 +146,7 @@ const PublicProducts = ({ language = "en" }) => {
         seller: "អ្នកលក់",
         sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
         description: "ការពិពណ៌នា",
+        expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
         error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
         page: "ទំព័រ",
         of: "នៃ",
@@ -160,30 +162,41 @@ const PublicProducts = ({ language = "en" }) => {
     const fetchData = async () => {
       setError(null);
       try {
+        const token = localStorage.getItem("token"); // Retrieve token from localStorage
+        if (!token) {
+          throw new Error("No authentication token found. Please log in.");
+        }
+
         const response = await axios.get(API_URL, {
           headers: {
             "Content-Type": "application/json",
-            // Add Authorization header if needed (e.g., from context or environment variable)
-            // "Authorization": `Bearer ${process.env.REACT_APP_API_TOKEN}`,
+            Authorization: `Bearer ${token}`, // Include bearer token
           },
         });
         const productData = response.data;
         if (!Array.isArray(productData)) {
           throw new Error("Products API response is not an array");
         }
-        const transformedProducts = productData.map((item) => ({
-          id: item.id,
-          name: item[`name_${language}`] || item.name || "Unnamed Product",
-          price: item.price ? `${Number(item.price).toFixed(2)} KHR` : "0.00 KHR",
-          image: item.image_path
-            ? `http://127.0.0.1:8000/storage/${item.image_path}`
-            : "/placeholder.svg?height=400&width=400&text=Product+Image",
-          seller: item.user?.name || "",
-          sellerPhone: item.user?.phone || "N/A",
-          stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
-          description: item[`description_${language}`] || item.description || "No description available",
-          category: item.category?.[`name_${language}`] || item.category?.name || "",
-        }));
+        const transformedProducts = productData.map((item) => {
+          const today = new Date();
+          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+          const isExpired = expirationDate && expirationDate < today;
+
+          return {
+            id: item.id,
+            name: item[`name_${language}`] || item.name || "Unnamed Product",
+            price: item.price ? `${Number(item.price).toFixed(2)} KHR` : "0.00 KHR",
+            image: item.image_path
+              ? `http://127.0.0.1:8000/storage/${item.image_path}`
+              : "/placeholder.svg?height=400&width=400&text=Product+Image",
+            seller: item.user?.name || "",
+            sellerPhone: item.user?.phone || "N/A",
+            stock: isExpired || item.quantity === 0 ? t.modal.outOfStock : t.modal.inStock,
+            description: item[`description_${language}`] || item.description || "No description available",
+            category: item.category?.[`name_${language}`] || item.category?.name || "",
+            expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
+          };
+        });
         setProducts(transformedProducts);
       } catch (err) {
         console.error("Fetch data error:", err);
@@ -191,7 +204,7 @@ const PublicProducts = ({ language = "en" }) => {
       }
     };
     fetchData();
-  }, [language, t.modal.error]);
+  }, [language, t.modal.error, t.modal.inStock, t.modal.outOfStock]);
 
   // Pagination logic
   const totalPages = Math.ceil(products.length / itemsPerPage);
@@ -259,7 +272,7 @@ const PublicProducts = ({ language = "en" }) => {
                     <div className="absolute top-2 right-2 z-10">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                          product.stock === "In Stock" ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
+                          product.stock === t.modal.inStock ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
                         }`}
                       >
                         {product.stock}
@@ -432,7 +445,7 @@ const PublicProducts = ({ language = "en" }) => {
                     <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.stock}</label>
                     <span
                       className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
-                        selectedProduct.stock === "In Stock"
+                        selectedProduct.stock === t.modal.inStock
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
@@ -440,6 +453,12 @@ const PublicProducts = ({ language = "en" }) => {
                       {selectedProduct.stock}
                     </span>
                   </div>
+                  {selectedProduct.expiration_date && (
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.expirationDate}</label>
+                      <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.description}</label>
                     <p className="text-lg text-gray-900 leading-relaxed">{selectedProduct.description}</p>
