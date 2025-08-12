@@ -79,6 +79,7 @@ const PublicProducts = ({ language = "en" }) => {
         sellerPhone: "Seller Phone",
         description: "Description",
         expirationDate: "Expiration Date",
+        order: "Order Product",
         error: "Failed to load data. Please try again later.",
         page: "Page",
         of: "of",
@@ -147,6 +148,7 @@ const PublicProducts = ({ language = "en" }) => {
         sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
         description: "ការពិពណ៌នា",
         expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
+        order: "បញ្ជាទិញផលិតផល",
         error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
         page: "ទំព័រ",
         of: "នៃ",
@@ -264,7 +266,6 @@ const PublicProducts = ({ language = "en" }) => {
                   <div
                     key={product.id}
                     className="bg-white rounded-lg shadow-lg overflow-hidden relative group hover:shadow-xl transition-all duration-300 h-96 cursor-pointer"
-                    onClick={() => openModal(product)}
                     role="article"
                     aria-labelledby={`product-title-${product.id}`}
                   >
@@ -324,13 +325,31 @@ const PublicProducts = ({ language = "en" }) => {
                             <span className="text-xs text-gray-300">{t.modal.perKg}</span>
                           </div>
                         </div>
-                        <button
-                          onClick={() => openModal(product)}
-                          className="w-full px-3 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                          aria-label={`${t.modal.viewDetails} for ${product.name}`}
-                        >
-                          {t.modal.viewDetails}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openModal(product)}
+                            className="flex-1 px-3 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                            aria-label={`${t.modal.viewDetails} for ${product.name}`}
+                          >
+                            {t.modal.viewDetails}
+                          </button>
+                          <Link
+                            to="/register"
+                            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              product.stock === t.modal.inStock
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            }`}
+                            aria-label={`${t.modal.order} ${product.name}`}
+                            onClick={(e) => {
+                              if (product.stock === t.modal.outOfStock) {
+                                e.preventDefault();
+                              }
+                            }}
+                          >
+                            {t.modal.order}
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
