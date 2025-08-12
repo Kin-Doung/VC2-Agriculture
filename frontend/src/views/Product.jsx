@@ -237,7 +237,7 @@ const Product = ({ language = "en" }) => {
             crop_id: item.crop_id || null,
             quantity: item.quantity || 0,
             creation_date: item.creation_date ? item.creation_date.split("T")[0] : new Date().toISOString().split("T")[0],
-            expiration_date: item.expiration_date ? item.expiration_date.split("T")[0] : "",
+            expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
           };
         });
 
@@ -328,7 +328,7 @@ const Product = ({ language = "en" }) => {
       crop_id: product.crop_id || "",
       user_id: localStorage.getItem("user_id") || "1",
       creation_date: product.creation_date,
-      expiration_date: product.expiration_date,
+      expiration_date: product.expiration_date || "",
     });
     setSelectedCategory(product.category_id || "");
     setSelectedCrop(product.crop_id || "");
@@ -542,7 +542,7 @@ const Product = ({ language = "en" }) => {
         crop_id: savedProduct.crop_id,
         quantity: savedProduct.quantity,
         creation_date: savedProduct.creation_date ? savedProduct.creation_date.split("T")[0] : newProduct.creation_date,
-        expiration_date: savedProduct.expiration_date ? savedProduct.expiration_date.split("T")[0] : newProduct.expiration_date,
+        expiration_date: savedProduct.expiration_date ? new Date(savedProduct.expiration_date).toISOString().split("T")[0] : newProduct.expiration_date,
       };
 
       setProducts((prev) => [transformedProduct, ...prev]);
@@ -635,7 +635,7 @@ const Product = ({ language = "en" }) => {
         crop_id: updatedProduct.crop_id,
         quantity: updatedProduct.quantity,
         creation_date: updatedProduct.creation_date ? updatedProduct.creation_date.split("T")[0] : editProduct.creation_date,
-        expiration_date: updatedProduct.expiration_date ? updatedProduct.expiration_date.split("T")[0] : editProduct.expiration_date,
+        expiration_date: updatedProduct.expiration_date ? new Date(updatedProduct.expiration_date).toISOString().split("T")[0] : editProduct.expiration_date,
       };
 
       setProducts(products.map((p) => (p.id === updatedProduct.id ? transformedProduct : p)));
