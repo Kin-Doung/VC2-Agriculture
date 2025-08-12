@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useLocation } from "react-router-dom"
-import { Bell, Menu, Globe, User, ChevronDown, Settings, LogOut } from "lucide-react"
+import { Bell, Menu, Globe, User, ChevronDown, Settings, LogOut, MessageCircle } from "lucide-react"
 import { Link } from "react-router-dom"
 import Navigation from "../components/Navigation"
 
@@ -72,7 +72,13 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
               onClick={() => setLanguage(language === "en" ? "km" : "en")}
               className="p-2 hover:bg-green-700 rounded-lg transition-colors"
             >
-              <Globe className="h-4 w-4" />
+              <Globe className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setLanguage(language === "en" ? "km" : "en")}
+              className="p-2 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1"
+            >
+              <MessageCircle className="h-5 w-5" />
             </button>
 
             <button className="p-2 hover:bg-green-700 rounded-lg transition-colors">
@@ -129,7 +135,7 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
       </header>
 
       <div className="flex">
-        <Navigation isOpen={showMenu} language={language} currentPath={location.pathname} role={user?.role}/>
+        <Navigation isOpen={showMenu} language={language} currentPath={location.pathname} role={user?.role} />
 
         <main className="flex-1">{children}</main>
       </div>
