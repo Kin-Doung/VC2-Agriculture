@@ -44,6 +44,7 @@ const Marketplace = ({ language = "en" }) => {
       close: "Close",
       seller: "Seller",
       sellerPhone: "Seller Phone",
+      expirationDate: "Expiration Date",
       error: "Failed to load data. Please try again later.",
       loading: "Loading marketplace data...",
       page: "Page",
@@ -78,6 +79,7 @@ const Marketplace = ({ language = "en" }) => {
       close: "បិទ",
       seller: "អ្នកលក់",
       sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
+      expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       loading: "កំពុងផ្ទុកទិន្នន័យទីផ្សារ...",
       page: "ទំព័រ",
@@ -108,13 +110,13 @@ const Marketplace = ({ language = "en" }) => {
           fetch(API_URL, {
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${AUTH_TOKEN}`,
+              Authorization: `Bearer ${AUTH_TOKEN}`,
             },
           }),
           fetch(CATEGORIES_API_URL, {
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${AUTH_TOKEN}`,
+              Authorization: `Bearer ${AUTH_TOKEN}`,
             },
           }),
         ]);
@@ -136,19 +138,26 @@ const Marketplace = ({ language = "en" }) => {
         if (!Array.isArray(productData)) throw new Error("Products API response is not an array");
         if (!Array.isArray(categoryData)) throw new Error("Categories API response is not an array");
 
-        const transformedProducts = productData.map((item) => ({
-          id: item.id,
-          name: item.name || "Unnamed Product",
-          price: item.price ? Number(item.price) : 0,
-          priceDisplay: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
-          image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
-          seller: item.user?.name || "",
-          sellerPhone: item.user?.phone || "N/A",
-          stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
-          description: item.description || "No description available",
-          category: item.category?.name || "",
-          category_id: item.category_id,
-        }));
+        const transformedProducts = productData.map((item) => {
+          const today = new Date();
+          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+          const isExpired = expirationDate && expirationDate < today;
+
+          return {
+            id: item.id,
+            name: item.name || "Unnamed Product",
+            price: item.price ? Number(item.price) : 0,
+            priceDisplay: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
+            image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
+            seller: item.user?.name || "",
+            sellerPhone: item.user?.phone || "N/A",
+            stock: isExpired || item.quantity === 0 ? t.outOfStock : t.inStock,
+            description: item.description || "No description available",
+            category: item.category?.name || "",
+            category_id: item.category_id,
+            expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
+          };
+        });
         setProducts(transformedProducts);
 
         setCategories(categoryData);
@@ -160,7 +169,7 @@ const Marketplace = ({ language = "en" }) => {
       }
     };
     fetchData();
-  }, [t.error]);
+  }, [t.error, t.inStock, t.outOfStock]);
 
   // Filter products using useMemo for performance
   const filteredProducts = useMemo(() => {
@@ -286,10 +295,10 @@ const Marketplace = ({ language = "en" }) => {
             <div className="absolute top-2 right-2 z-10">
               <span
                 className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                  product.stock === "In Stock" ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
+                  product.stock === t.inStock ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
                 }`}
               >
-                {product.stock === "In Stock" ? t.inStock : t.outOfStock}
+                {product.stock}
               </span>
             </div>
             <div className="relative w-full h-full">
@@ -404,8 +413,8 @@ const Marketplace = ({ language = "en" }) => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="all">{t.all}</option>
-                    <option value="In Stock">{t.inStock}</option>
-                    <option value="Out of Stock">{t.outOfStock}</option>
+                    <option value={t.inStock}>{t.inStock}</option>
+                    <option value={t.outOfStock}>{t.outOfStock}</option>
                   </select>
                 </div>
                 {/* Price Range Filter */}
@@ -552,14 +561,20 @@ const Marketplace = ({ language = "en" }) => {
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.productStock}</label>
                       <span
                         className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
-                          selectedProduct.stock === "In Stock"
+                          selectedProduct.stock === t.inStock
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {selectedProduct.stock === "In Stock" ? t.inStock : t.outOfStock}
+                        {selectedProduct.stock}
                       </span>
                     </div>
+                    {selectedProduct.expiration_date && (
+                      <div>
+                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.expirationDate}</label>
+                        <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.productDescription}</label>
                       <p className="text-lg text-gray-900 leading-relaxed">{selectedProduct.description}</p>
