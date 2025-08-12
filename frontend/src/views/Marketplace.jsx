@@ -2,7 +2,6 @@
 
 import { ShoppingCart, Search, Filter, X } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import debounce from "lodash/debounce"; // Requires: npm install lodash
 
 const Marketplace = ({ language = "en" }) => {
   // State management
@@ -60,8 +59,8 @@ const Marketplace = ({ language = "en" }) => {
     },
     km: {
       title: "ទីផ្សារ",
-      subtitle: "ស្វែngរកអ្វីដែលកសិករផ្តល់ជូn",
-      search: "ស្វែngរកផលិតផល...",
+      subtitle: "ស្វែងរកអ្វីដែលកសិករផ្តល់ជូន",
+      search: "ស្វែងរកផលិតផល...",
       filter: "តម្រង",
       price: "តម្លៃ",
       perKg: "/គ.ក",
@@ -71,22 +70,22 @@ const Marketplace = ({ language = "en" }) => {
       viewDetail: "មើលលម្អិត",
       viewProduct: "ព័ត៌មានលម្អិតផលិតផល",
       productName: "ឈ្មោះផលិតផល",
-      productPrice: "តម្លៃក្នុngមួយគីឡូក្រាម",
-      productDescription: "ការពិពណ៌nា",
+      productPrice: "តម្លៃក្នុងមួយគីឡូក្រាម",
+      productDescription: "ការពិពណ៌នា",
       productStock: "ស្ថានភាពស្តុក",
       productCategory: "ប្រភេទ",
       selectCategory: "ជ្រើសរើសប្រភេទ",
       close: "បិទ",
       seller: "អ្នកលក់",
       sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
-      error: "បរាជ័យក្នុngការផ្ទុកទិnនន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
-      loading: "កំពុngផ្ទុកទិnនន័យទីផ្សារ...",
+      error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+      loading: "កំពុងផ្ទុកទិន្នន័យទីផ្សារ...",
       page: "ទំព័រ",
       of: "នៃ",
       applyFilters: "អនុវត្តតម្រង",
       clearFilters: "លុបតម្រង",
       stock: "ស្តុក",
-      all: "ទាំngអស់",
+      all: "ទាំងអស់",
       priceRange: "ជួរតម្លៃ",
       minPrice: "តម្លៃអប្បបរមា",
       maxPrice: "តម្លៃអតិបរមា",
@@ -217,13 +216,6 @@ const Marketplace = ({ language = "en" }) => {
   // Handle filter click with row animation
   const handleFilterClick = () => {
     setShowFilterModal(true);
-    setCurrentPage(1); // Reset to first page
-    // Cycle rows: move first row to bottom, shift others up
-    setRowOrder((prev) => {
-      if (prev.length <= 1) return prev; // No change if less than 2 rows
-      const newOrder = [...prev.slice(1), prev[0]]; // Shift first row to end
-      return newOrder;
-    });
   };
 
   // Handle view product
@@ -235,6 +227,12 @@ const Marketplace = ({ language = "en" }) => {
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    // Cycle rows: move first row to bottom, shift others up
+    setRowOrder((prev) => {
+      if (prev.length <= 1) return prev; // No change if less than 2 rows
+      const newOrder = [...prev.slice(1), prev[0]]; // Shift first row to end
+      return newOrder;
+    });
   };
 
   // Handle clear filters
@@ -244,12 +242,21 @@ const Marketplace = ({ language = "en" }) => {
     setMinPrice("");
     setMaxPrice("");
     setShowFilterModal(false);
+    setCurrentPage(1);
+    // Reset row order
+    setRowOrder((prev) => Array.from({ length: prev.length }, (_, i) => i));
   };
 
   // Handle apply filters
   const handleApplyFilters = () => {
     setShowFilterModal(false);
     setCurrentPage(1);
+    // Cycle rows: move first row to bottom, shift others up
+    setRowOrder((prev) => {
+      if (prev.length <= 1) return prev; // No change if less than 2 rows
+      const newOrder = [...prev.slice(1), prev[0]]; // Shift first row to end
+      return newOrder;
+    });
   };
 
   // Render products grouped by rows
@@ -351,6 +358,8 @@ const Marketplace = ({ language = "en" }) => {
               <input
                 type="text"
                 placeholder={t.search}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
