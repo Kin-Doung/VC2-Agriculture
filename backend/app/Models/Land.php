@@ -19,6 +19,7 @@ class Land extends Model
         'date',
         'land_type',
         'boundary_points',
+        'user_id',
     ];
 
     protected $casts = [

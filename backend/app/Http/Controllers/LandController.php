@@ -8,9 +8,15 @@ use App\Http\Requests\LandRequest;
 
 class LandController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
+
     public function index()
     {
-        return response()->json(Land::all(), 200);
+        $lands = Land::where('user_id', auth()->id())->get();
+        return response()->json($lands, 200);
     }
 
     public function create()
@@ -19,19 +25,22 @@ class LandController extends Controller
     }
 
     public function store(LandRequest $request)
-{
-    // Validated data is automatically available
-    $land = Land::create($request->validated());
+    {
+        $data = $request->validated();
+        $data['user_id'] = auth()->id();
+        // dd($data);
 
-    return response()->json([
-        'message' => 'Land created successfully',
-        'data' => $land
-    ], 201);
-}
+        $land = Land::create($data);
+
+        return response()->json([
+            'message' => 'Land created successfully',
+            'data' => $land
+        ], 201);
+    }
 
     public function show($id)
     {
-        $land = Land::find($id);
+        $land = Land::where('id', $id)->where('user_id', auth()->id())->first();
 
         if (!$land) {
             return response()->json(['message' => 'Land Not Found'], 404);
@@ -47,10 +56,10 @@ class LandController extends Controller
 
     public function update(Request $request, $id)
     {
-        $land = Land::find($id);
+        $land = Land::where('id', $id)->where('user_id', auth()->id())->first();
 
         if (!$land) {
-            return response()->json(['message' => 'Land Not Found'], 404);
+            return response()->json(['message' => 'Land Not Found or Unauthorized'], 404);
         }
 
         $validated = $request->validate([
@@ -70,7 +79,7 @@ class LandController extends Controller
 
     public function destroy($id)
     {
-        $land = Land::find($id);
+        $land = Land::where('id', $id)->where('user_id', auth()->id())->first();
 
         if (!$land) {
             return response()->json(['message' => 'Land Not Found'], 404);

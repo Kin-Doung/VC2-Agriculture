@@ -2,7 +2,6 @@
 
 import { ShoppingCart, Search, Filter, X } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import debounce from "lodash/debounce"; // Requires: npm install lodash
 
 const Marketplace = ({ language = "en" }) => {
   // State management
@@ -44,6 +43,8 @@ const Marketplace = ({ language = "en" }) => {
       selectCategory: "Select a category",
       close: "Close",
       seller: "Seller",
+      sellerPhone: "Seller Phone",
+      expirationDate: "Expiration Date",
       error: "Failed to load data. Please try again later.",
       loading: "Loading marketplace data...",
       page: "Page",
@@ -55,6 +56,7 @@ const Marketplace = ({ language = "en" }) => {
       priceRange: "Price Range",
       minPrice: "Min Price",
       maxPrice: "Max Price",
+      noProducts: "No products available",
     },
     km: {
       title: "ទីផ្សារ",
@@ -76,6 +78,8 @@ const Marketplace = ({ language = "en" }) => {
       selectCategory: "ជ្រើសរើសប្រភេទ",
       close: "បិទ",
       seller: "អ្នកលក់",
+      sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
+      expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       loading: "កំពុងផ្ទុកទិន្នន័យទីផ្សារ...",
       page: "ទំព័រ",
@@ -87,21 +91,14 @@ const Marketplace = ({ language = "en" }) => {
       priceRange: "ជួរតម្លៃ",
       minPrice: "តម្លៃអប្បបរមា",
       maxPrice: "តម្លៃអតិបរមា",
+      noProducts: "មិនមានផលិតផល",
     },
   };
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN || "your-auth-token-here";
-
-  // Debounced search handler
-  const debouncedSetSearchTerm = useCallback(
-    debounce((value) => setSearchTerm(value), 300),
-    []
-  );
-
-  const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
+  const AUTH_TOKEN = localStorage.getItem("token");
 
   // Fetch products and categories
   useEffect(() => {
@@ -113,13 +110,13 @@ const Marketplace = ({ language = "en" }) => {
           fetch(API_URL, {
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${AUTH_TOKEN}`,
+              Authorization: `Bearer ${AUTH_TOKEN}`,
             },
           }),
           fetch(CATEGORIES_API_URL, {
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${AUTH_TOKEN}`,
+              Authorization: `Bearer ${AUTH_TOKEN}`,
             },
           }),
         ]);
@@ -141,18 +138,26 @@ const Marketplace = ({ language = "en" }) => {
         if (!Array.isArray(productData)) throw new Error("Products API response is not an array");
         if (!Array.isArray(categoryData)) throw new Error("Categories API response is not an array");
 
-        const transformedProducts = productData.map((item) => ({
-          id: item.id,
-          name: item.name || "Unnamed Product",
-          price: item.price ? Number(item.price) : 0,
-          priceDisplay: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
-          image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
-          seller: item.user?.name || "",
-          stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
-          description: item.description || "No description available",
-          category: item.category?.name || "",
-          category_id: item.category_id,
-        }));
+        const transformedProducts = productData.map((item) => {
+          const today = new Date();
+          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+          const isExpired = expirationDate && expirationDate < today;
+
+          return {
+            id: item.id,
+            name: item.name || "Unnamed Product",
+            price: item.price ? Number(item.price) : 0,
+            priceDisplay: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
+            image: item.image_url || "/placeholder.svg?height=400&width=400&text=Product+Image",
+            seller: item.user?.name || "",
+            sellerPhone: item.user?.phone || "N/A",
+            stock: isExpired || item.quantity === 0 ? t.outOfStock : t.inStock,
+            description: item.description || "No description available",
+            category: item.category?.name || "",
+            category_id: item.category_id,
+            expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
+          };
+        });
         setProducts(transformedProducts);
 
         setCategories(categoryData);
@@ -164,7 +169,7 @@ const Marketplace = ({ language = "en" }) => {
       }
     };
     fetchData();
-  }, [t.error]);
+  }, [t.error, t.inStock, t.outOfStock]);
 
   // Filter products using useMemo for performance
   const filteredProducts = useMemo(() => {
@@ -219,13 +224,7 @@ const Marketplace = ({ language = "en" }) => {
 
   // Handle filter click with row animation
   const handleFilterClick = () => {
-    setCurrentPage(1); // Reset to first page
-    // Cycle rows: move first row to bottom, shift others up
-    setRowOrder((prev) => {
-      if (prev.length <= 1) return prev; // No change if less than 2 rows
-      const newOrder = [...prev.slice(1), prev[0]]; // Shift first row to end
-      return newOrder;
-    });
+    setShowFilterModal(true);
   };
 
   // Handle view product
@@ -237,6 +236,12 @@ const Marketplace = ({ language = "en" }) => {
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    // Cycle rows: move first row to bottom, shift others up
+    setRowOrder((prev) => {
+      if (prev.length <= 1) return prev; // No change if less than 2 rows
+      const newOrder = [...prev.slice(1), prev[0]]; // Shift first row to end
+      return newOrder;
+    });
   };
 
   // Handle clear filters
@@ -246,12 +251,21 @@ const Marketplace = ({ language = "en" }) => {
     setMinPrice("");
     setMaxPrice("");
     setShowFilterModal(false);
+    setCurrentPage(1);
+    // Reset row order
+    setRowOrder((prev) => Array.from({ length: prev.length }, (_, i) => i));
   };
 
   // Handle apply filters
   const handleApplyFilters = () => {
     setShowFilterModal(false);
     setCurrentPage(1);
+    // Cycle rows: move first row to bottom, shift others up
+    setRowOrder((prev) => {
+      if (prev.length <= 1) return prev; // No change if less than 2 rows
+      const newOrder = [...prev.slice(1), prev[0]]; // Shift first row to end
+      return newOrder;
+    });
   };
 
   // Render products grouped by rows
@@ -281,10 +295,10 @@ const Marketplace = ({ language = "en" }) => {
             <div className="absolute top-2 right-2 z-10">
               <span
                 className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                  product.stock === "In Stock" ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
+                  product.stock === t.inStock ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
                 }`}
               >
-                {product.stock === "In Stock" ? t.inStock : t.outOfStock}
+                {product.stock}
               </span>
             </div>
             <div className="relative w-full h-full">
@@ -353,7 +367,8 @@ const Marketplace = ({ language = "en" }) => {
               <input
                 type="text"
                 placeholder={t.search}
-                onChange={handleSearchChange}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -398,8 +413,8 @@ const Marketplace = ({ language = "en" }) => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="all">{t.all}</option>
-                    <option value="In Stock">{t.inStock}</option>
-                    <option value="Out of Stock">{t.outOfStock}</option>
+                    <option value={t.inStock}>{t.inStock}</option>
+                    <option value={t.outOfStock}>{t.outOfStock}</option>
                   </select>
                 </div>
                 {/* Price Range Filter */}
@@ -459,6 +474,10 @@ const Marketplace = ({ language = "en" }) => {
             >
               Retry
             </button>
+          </div>
+        ) : categories.length === 0 || products.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.noProducts}</div>
           </div>
         ) : (
           <>
@@ -520,7 +539,7 @@ const Marketplace = ({ language = "en" }) => {
                       </div>
                     )}
                     <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.price}</label>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.productPrice}</label>
                       <p className="text-3xl font-bold text-green-600">
                         {selectedProduct.priceDisplay}
                         <span className="text-lg text-gray-500 font-normal">{t.perKg}</span>
@@ -532,18 +551,30 @@ const Marketplace = ({ language = "en" }) => {
                         <p className="text-xl text-gray-900">{selectedProduct.seller}</p>
                       </div>
                     )}
+                    {selectedProduct.sellerPhone && (
+                      <div>
+                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.sellerPhone}</label>
+                        <p className="text-xl text-gray-900">{selectedProduct.sellerPhone}</p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.productStock}</label>
                       <span
                         className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
-                          selectedProduct.stock === "In Stock"
+                          selectedProduct.stock === t.inStock
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {selectedProduct.stock === "In Stock" ? t.inStock : t.outOfStock}
+                        {selectedProduct.stock}
                       </span>
                     </div>
+                    {selectedProduct.expiration_date && (
+                      <div>
+                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.expirationDate}</label>
+                        <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">{t.productDescription}</label>
                       <p className="text-lg text-gray-900 leading-relaxed">{selectedProduct.description}</p>

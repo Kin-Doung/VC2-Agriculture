@@ -14,8 +14,8 @@ class CropRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => 'required|string|max:255',
             'farm_id' => 'required|integer|exists:farms,id',
-            'crop_type_id' => 'required|integer|exists:crop_types,id',
             'planting_date' => 'nullable|date',
             'growth_stage' => 'nullable|string|max:255',
             'notes' => 'nullable|string',

@@ -37,7 +37,7 @@ import Register from "./views/auth/Register"
 
 // Admin
 import UserList from "./views/admin/UserList"
-
+import { setAuthToken } from './api';
 import "./App.css"
 import { Crop } from "lucide-react"
 
@@ -173,6 +173,13 @@ function App() {
     }
 
     setIsLoadingAuth(false); // Done loading auth
+  }, []);
+
+  useEffect(() => {
+  const token = localStorage.getItem('token');
+  if (token && token !== "token") {
+    setAuthToken(token); // Set Authorization header globally
+  }
   }, []);
 
   const handleLogin = (userData) => {

@@ -19,6 +19,7 @@ pip install pillow
 pip install numpy
 pip install opencv-python
 
+php artisan storage:link
 ```
 ### Frontend (React)
 ```bash

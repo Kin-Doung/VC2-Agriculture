@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('market_prices', function (Blueprint $table) {
-            $table->id();
-            $table->decimal('price', 10, 2);
-            $table->date('date_recorded');
-            $table->string('region')->nullable();
-            $table->timestamps();
+        Schema::table('lands', function (Blueprint $table) {
+            $table->foreignId('user_id')->after('id')->constrained()->onDelete('cascade');
         });
     }
 
@@ -25,6 +21,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('market_prices');
+        Schema::table('lands', function (Blueprint $table) {
+            $table->dropForeign(['user_id']);
+            $table->dropColumn('user_id');
+        });
     }
 };
