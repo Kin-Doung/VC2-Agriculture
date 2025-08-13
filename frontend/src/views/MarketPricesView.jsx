@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 // Responsive Chart Component
 const SimpleLineChart = ({ data, products, colors }) => {
@@ -353,11 +353,30 @@ const MarketPricesView = ({ language = "en" }) => {
   const paddyVarieties = getPaddyVarieties(t)
   const allVarieties = [...riceVarieties, ...paddyVarieties]
   const top5Products = getTop5Products(t)
+  const [prices, setPrices] = useState([]);
+
+  useEffect(() => {
+    async function fetchMarketPrice() {
+      const apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=10`;
+
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        if (data.success) {
+          setPrices(data.result.records);
+        }
+      } catch (error) {
+        console.error("Error fetching market prices:", error);
+      }
+    }
+
+    fetchMarketPrice();
+  }, []);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "KHR",
       minimumFractionDigits: 0,
     }).format(price)
   }
@@ -471,8 +490,19 @@ const MarketPricesView = ({ language = "en" }) => {
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold text-green-800 mb-3 sm:mb-4">{t.riceVarieties}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                  {riceVarieties.map((variety) => (
-                    <PriceCard key={variety.id} variety={variety} showExport={false} />
+                  {prices.map((item, index) => (
+                    <PriceCard
+                      key={index}
+                      variety={{
+                        name: item.commodity || "Unknown",
+                        trend: item.trend || "up",
+                        change: item.change || 0,
+                        localPrice: item.price || 0,
+                        exportPrice: item.usdprice || 0,
+                        unit: item.unit || "KHR/kg",
+                        lastUpdated: item.last_updated || "N/A",
+                      }}
+                    />
                   ))}
                 </div>
               </div>
