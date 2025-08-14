@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { debounce } from 'lodash';
 
 // Responsive Chart Component
 const SimpleLineChart = ({ data, products, colors }) => {
@@ -347,6 +348,7 @@ const MarketPricesView = ({ language = "en" }) => {
   const [alerts, setAlerts] = useState([])
   const [alertPrice, setAlertPrice] = useState("")
   const [selectedVariety, setSelectedVariety] = useState("")
+  const [searchTerm, setSearchTerm] = useState("");
 
   const t = translations[language] || translations.en
   const riceVarieties = getRiceVarieties(t)
@@ -355,23 +357,35 @@ const MarketPricesView = ({ language = "en" }) => {
   const top5Products = getTop5Products(t)
   const [prices, setPrices] = useState([]);
 
-  useEffect(() => {
-    async function fetchMarketPrice() {
-      const apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=10`;
+useEffect(() => {
+  async function fetchMarketPrice() {
+    let apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=5000`;
 
-      try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        if (data.success) {
-          setPrices(data.result.records);
+    try {
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      if (data.success) {
+        let records = data.result.records;
+
+        // Search filter
+        if (searchTerm.trim() !== "") {
+          records = records.filter(record =>
+            record.commodity?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
         }
-      } catch (error) {
-        console.error("Error fetching market prices:", error);
-      }
-    }
 
-    fetchMarketPrice();
-  }, []);
+        // Show only first 10 results
+        setPrices(records.slice(0, 10));
+      }
+    } catch (error) {
+      console.error("Error fetching market prices:", error);
+    }
+  }
+
+  const delayDebounce = setTimeout(fetchMarketPrice, 500);
+  return () => clearTimeout(delayDebounce);
+}, [searchTerm]);
+
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-US", {
@@ -452,11 +466,6 @@ const MarketPricesView = ({ language = "en" }) => {
           </h1>
           <p className="text-sm sm:text-base text-green-600 leading-relaxed">{t.subtitle}</p>
         </div>
-        <button className="flex items-center gap-2 px-3 sm:px-4 py-2 border-2 border-green-600 text-green-600 rounded-md hover:bg-green-50 transition-colors duration-200 text-sm sm:text-base whitespace-nowrap">
-          <span>🔄</span>
-          <span className="hidden sm:inline">{t.refreshPrices}</span>
-          <span className="sm:hidden">Refresh</span>
-        </button>
       </div>
 
       {/* Tabs */}
@@ -482,6 +491,16 @@ const MarketPricesView = ({ language = "en" }) => {
           </button>
         </div>
 
+        <div className="w-full">
+          <input
+            type="text"
+            placeholder="Search product..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="block w-full px-3 sm:px-4 py-2 border-2 border-gray-500 text-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 text-sm sm:text-base"
+          />
+        </div>
+
         {/* Tab Content */}
         <div className="min-h-64 sm:min-h-96">
           {activeTab === "local" && (
@@ -504,6 +523,9 @@ const MarketPricesView = ({ language = "en" }) => {
                       }}
                     />
                   ))}
+                  {prices.length === 0 ? (
+                    <p className="col-span-full text-gray-500">No local prices found.</p>
+                  ) : null}
                 </div>
               </div>
 
