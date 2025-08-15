@@ -1,77 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const CropTrackerView = ({ language }) => {
-  const [crops, setCrops] = useState([
-    {
-      name: "Corn Field 1",
-      status: "Growing",
-      planted: "May 10th, 2024",
-      location: "North Field",
-      progress: "2 / 11 stages completed",
-      details: {
-        stages: [
-          { stage: "Germination", completed: true, date: "May 15th, 2024" },
-          { stage: "Vegetative Growth (V6-VT)", completed: true, date: "June 6th, 2024" },
-          { stage: "Rapid Growth (V6-VT)", completed: false, date: "Pending" },
-          { stage: "Tasseling (VT)", completed: false, date: "Pending" },
-          { stage: "Silking (R1)", completed: false, date: "Pending" },
-          { stage: "Blister (R2)", completed: false, date: "Pending" },
-          { stage: "Milk (R3)", completed: false, date: "Pending" },
-          { stage: "Dough (R4)", completed: false, date: "Pending" },
-          { stage: "Dent (R5)", completed: false, date: "Pending" },
-          { stage: "Physiological Maturity (R6)", completed: false, date: "Pending" },
-          { stage: "Harvest Ready", completed: false, date: "Pending" },
-        ],
-        notes: "Initial growth looks strong. Some weed pressure observed.",
-        photoUrl: "/placeholder-photo.jpg",
-        reminders: "High nutrient demand. Ensure adequate water supply.",
-      },
-    },
-    {
-      name: "Rice Paddy 3",
-      status: "Growing",
-      planted: "April 20th, 2024",
-      location: "South Paddy",
-      progress: "3 / 11 stages completed",
-      details: {
-        stages: [
-          { stage: "Germination", completed: true, date: "April 25th, 2024" },
-          { stage: "Tillering", completed: true, date: "May 10th, 2024" },
-          { stage: "Stem Elongation", completed: true, date: "June 5th, 2024" },
-          { stage: "Panicle Initiation", completed: false, date: "Pending" },
-          { stage: "Flowering", completed: false, date: "Pending" },
-          { stage: "Grain Filling", completed: false, date: "Pending" },
-        ],
-        notes: "Maintain consistent water levels in the paddy.",
-        photoUrl: "/placeholder-photo.jpg",
-        reminders: "Check for weed growth and apply herbicide if needed.",
-      },
-    },
-    {
-      name: "Wheat Field A",
-      status: "Harvested",
-      planted: "October 15th, 2023",
-      location: "West Hill",
-      progress: "11 / 11 stages completed",
-      details: {
-        stages: [
-          { stage: "Germination", completed: true, date: "October 20th, 2023" },
-          { stage: "Tillering", completed: true, date: "November 10th, 2023" },
-          { stage: "Stem Extension", completed: true, date: "March 1st, 2024" },
-          { stage: "Heading", completed: true, date: "April 15th, 2024" },
-          { stage: "Grain Filling", completed: true, date: "May 20th, 2024" },
-          { stage: "Harvest", completed: true, date: "June 10th, 2024" },
-        ],
-        notes: "Harvest completed successfully.",
-        photoUrl: "/placeholder-photo.jpg",
-        reminders: "Prepare field for next planting season.",
-      },
-    },
-  ]);
+  const cropStages = {
+    Corn: [
+      { stage: "Germination", completed: false, date: "Pending" },
+      { stage: "Vegetative Growth (V6-VT)", completed: false, date: "Pending" },
+      { stage: "Rapid Growth (V6-VT)", completed: false, date: "Pending" },
+      { stage: "Tasseling (VT)", completed: false, date: "Pending" },
+      { stage: "Silking (R1)", completed: false, date: "Pending" },
+      { stage: "Blister (R2)", completed: false, date: "Pending" },
+      { stage: "Milk (R3)", completed: false, date: "Pending" },
+      { stage: "Dough (R4)", completed: false, date: "Pending" },
+      { stage: "Dent (R5)", completed: false, date: "Pending" },
+      { stage: "Physiological Maturity (R6)", completed: false, date: "Pending" },
+      { stage: "Harvest Ready", completed: false, date: "Pending" },
+    ],
+    Rice: [
+      { stage: "Germination", completed: false, date: "Pending" },
+      { stage: "Tillering", completed: false, date: "Pending" },
+      { stage: "Stem Elongation", completed: false, date: "Pending" },
+      { stage: "Panicle Initiation", completed: false, date: "Pending" },
+      { stage: "Flowering", completed: false, date: "Pending" },
+      { stage: "Grain Filling", completed: false, date: "Pending" },
+    ],
+    Wheat: [
+      { stage: "Germination", completed: false, date: "Pending" },
+      { stage: "Tillering", completed: false, date: "Pending" },
+      { stage: "Stem Extension", completed: false, date: "Pending" },
+      { stage: "Heading", completed: false, date: "Pending" },
+      { stage: "Grain Filling", completed: false, date: "Pending" },
+      { stage: "Harvest", completed: false, date: "Pending" },
+    ],
+  };
 
-  const currentDateTime = "09:29 AM +07, Friday, August 15, 2025";
+  const defaultDetails = {
+    stages: [],
+    notes: "",
+    photoUrl: "/placeholder-photo.jpg",
+    reminders: "",
+  };
+
+  const [crops, setCrops] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedCrop, setSelectedCrop] = useState(null);
   const [notes, setNotes] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -80,13 +53,104 @@ const CropTrackerView = ({ language }) => {
     status: "Growing",
     planted: "",
     location: "",
-    progress: "0 / 11 stages completed",
-    details: { stages: [], notes: "", photoUrl: "/placeholder-photo.jpg", reminders: "" },
+    cropType: "Corn",
+    progress: "0 / 0 stages completed",
+    details: defaultDetails,
   });
 
+  const currentDateTime = "10:40 AM +07, Friday, August 15, 2025";
+  const API_URL = "http://127.0.0.1:8000/api/croptrackers";
+  const API_CROPS_URL = "http://127.0.0.1:8000/api/crops";
+  const AUTH_TOKEN = localStorage.getItem("token");
+
+  // Format ISO date to "Month Day, Year"
+  const formatDate = (isoDate) => {
+    if (!isoDate || isoDate === "Unknown") return "Unknown";
+    try {
+      const date = new Date(isoDate);
+      return date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).replace(/(\d+)(st|nd|rd|th)/, "$1th");
+    } catch {
+      return isoDate;
+    }
+  };
+
+  // Normalize crop data
+  const normalizeCrop = (crop) => {
+    const cropType = crop.crop_type || crop.crop?.crop_type || crop.cropType || "Corn";
+    const stages = cropStages[cropType] || [];
+    const normalized = {
+      ...crop,
+      id: crop.id || crop.crop_id || Date.now(),
+      name: crop.name || crop.crop?.name || `Crop ${crop.id || crop.crop_id || "Unknown"}`,
+      status: crop.status || crop.crop?.growth_stage || "Growing",
+      planted: formatDate(crop.planted || crop.crop?.planting_date || "Unknown"),
+      location: crop.location || "Unknown",
+      progress: crop.progress || `0 / ${stages.length} stages completed`,
+      crop_type: cropType,
+      details: crop.details && typeof crop.details === "object" ? { ...defaultDetails, ...crop.details } : {
+        ...defaultDetails,
+        stages,
+        notes: crop.crop?.notes || "",
+        photoUrl: crop.image_path || "/placeholder-photo.jpg",
+      },
+    };
+    if (!Array.isArray(normalized.details.stages)) {
+      normalized.details.stages = stages;
+      normalized.progress = `0 / ${stages.length} stages completed`;
+    }
+    return normalized;
+  };
+
+  // Fetch crops with retry mechanism
+  const fetchCrops = async (retries = 3, delay = 1000) => {
+    try {
+      setLoading(true);
+      const response = await fetch(API_URL, { // Changed to API_URL to fetch croptrackers
+        headers: {
+          "Content-Type": "application/json",
+          ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch crops: ${response.statusText} (Status: ${response.status})`);
+      }
+      const data = await response.json();
+      console.log("API Response:", data);
+      if (!Array.isArray(data)) {
+        throw new Error("API response is not an array");
+      }
+      setCrops(data.map(normalizeCrop));
+      setLoading(false);
+      setError(null);
+    } catch (err) {
+      if (retries > 0) {
+        setTimeout(() => fetchCrops(retries - 1, delay * 2), delay);
+      } else {
+        setError(err.message);
+        setCrops([]);
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (AUTH_TOKEN) {
+      fetchCrops();
+    } else {
+      setError("Authentication token not found. Please log in.");
+      setCrops([]);
+      setLoading(false);
+    }
+  }, []);
+
   const openDetails = (crop) => {
-    setSelectedCrop(crop);
-    setNotes(crop.details.notes || "");
+    const normalizedCrop = normalizeCrop(crop);
+    setSelectedCrop(normalizedCrop);
+    setNotes(normalizedCrop.details.notes || "");
   };
 
   const closeDetails = () => {
@@ -105,44 +169,143 @@ const CropTrackerView = ({ language }) => {
       status: "Growing",
       planted: "",
       location: "",
-      progress: "0 / 11 stages completed",
-      details: { stages: [], notes: "", photoUrl: "/placeholder-photo.jpg", reminders: "" },
+      cropType: "Corn",
+      progress: "0 / 0 stages completed",
+      details: defaultDetails,
     });
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewCrop((prev) => ({ ...prev, [name]: value }));
+    if (name === "cropType") {
+      const stages = cropStages[value] || [];
+      setNewCrop((prev) => ({
+        ...prev,
+        cropType: value,
+        progress: `0 / ${stages.length} stages completed`,
+        details: { ...prev.details, stages },
+      }));
+    } else if (name === "reminders") {
+      setNewCrop((prev) => ({ ...prev, details: { ...prev.details, reminders: value } }));
+    } else {
+      setNewCrop((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleCreateCrop = () => {
-    setCrops((prevCrops) => [...prevCrops, newCrop]);
-    closeCreateModal();
+  const handleCreateCrop = async () => {
+    try {
+      const cropToCreate = {
+        ...newCrop,
+        crop_type: newCrop.cropType,
+        details: {
+          ...newCrop.details,
+          stages: cropStages[newCrop.cropType] || [],
+        },
+        progress: `0 / ${cropStages[newCrop.cropType]?.length || 0} stages completed`,
+      };
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
+        },
+        body: JSON.stringify(cropToCreate),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create crop: ${response.statusText}`);
+      }
+      const createdCrop = await response.json();
+      console.log("Created Crop:", createdCrop);
+      setCrops((prevCrops) => [...prevCrops, normalizeCrop(createdCrop)]);
+      closeCreateModal();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  const markComplete = (stageIndex) => {
+  const markComplete = async (stageIndex) => {
     const updatedCrop = { ...selectedCrop };
     updatedCrop.details.stages[stageIndex].completed = true;
     updatedCrop.details.stages[stageIndex].date = currentDateTime;
-    const completedCount = updatedCrop.details.stages.filter(s => s.completed).length;
+    const completedCount = updatedCrop.details.stages.filter((s) => s.completed).length;
     updatedCrop.progress = `${completedCount} / ${updatedCrop.details.stages.length} stages completed`;
-    setSelectedCrop(updatedCrop);
-    setCrops((prevCrops) =>
-      prevCrops.map((crop) =>
-        crop.name === updatedCrop.name ? updatedCrop : crop
-      )
-    );
+
+    try {
+      const response = await fetch(`${API_URL}/${updatedCrop.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
+        },
+        body: JSON.stringify({
+          ...updatedCrop,
+          crop_type: updatedCrop.crop_type,
+          image_path: updatedCrop.details.photoUrl !== "/placeholder-photo.jpg" ? updatedCrop.details.photoUrl : null,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to update crop: ${response.statusText}`);
+      }
+      setSelectedCrop(updatedCrop);
+      setCrops((prevCrops) =>
+        prevCrops.map((crop) =>
+          crop.id === updatedCrop.id ? updatedCrop : crop
+        )
+      );
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  const saveNotes = () => {
+  const saveNotes = async () => {
     const updatedCrop = { ...selectedCrop, details: { ...selectedCrop.details, notes } };
-    setSelectedCrop(updatedCrop);
-    setCrops((prevCrops) =>
-      prevCrops.map((crop) =>
-        crop.name === updatedCrop.name ? updatedCrop : crop
-      )
-    );
+
+    try {
+      const response = await fetch(`${API_URL}/${updatedCrop.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
+        },
+        body: JSON.stringify({
+          ...updatedCrop,
+          crop_type: updatedCrop.crop_type,
+          image_path: updatedCrop.details.photoUrl !== "/placeholder-photo.jpg" ? updatedCrop.details.photoUrl : null,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to save notes: ${response.statusText}`);
+      }
+      setSelectedCrop(updatedCrop);
+      setCrops((prevCrops) =>
+        prevCrops.map((crop) =>
+          crop.id === updatedCrop.id ? updatedCrop : crop
+        )
+      );
+    } catch (err) {
+      setError(err.message);
+    }
   };
+
+  if (loading) {
+    return <div className="p-6 text-center">Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-600 mb-4">
+          {error}. Please check the backend server at {API_URL}.
+        </p>
+        <button
+          className="bg-blue-600 text-white py-2 px-4 rounded"
+          onClick={() => fetchCrops()}
+        >
+          Retry API
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -162,11 +325,11 @@ const CropTrackerView = ({ language }) => {
           <p className="text-green-600 mb-8">
             {language === "en"
               ? `Here you can see all your registered crops. Click on a crop to view its detailed growth progress.`
-              : `នៅទីនេះអ្នកអាចមើលដំណាំដែលបានចុះឈ្មោះទាំងអស់។ ចុចលើដំណាំមួយដើម្បីមើលវឌ្ឍនភាពកំណើនលម្អិត។`}
+              : `នៅទីនេះអ្នកអាចមើលដំណាំដែលបានចុះឈ្មោះទាំងអស់។ ចុចលើដំណាំមួយដើម្បីមើលវឌ្ឍនភាពកំណើនលម្អិត។ (ធ្វើបច្ចុប្បន្នភាពចុងក្រោយ: ${currentDateTime})`}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {crops.map((crop, index) => (
-              <div key={index} className="bg-white p-4 rounded-lg shadow">
+            {crops.map((crop) => (
+              <div key={crop.id} className="bg-white p-4 rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-2">{crop.name}</h2>
                 <p><strong>Status:</strong> {crop.status}</p>
                 <p><span role="img" aria-label="calendar">📅</span> Planted: {crop.planted}</p>
@@ -205,10 +368,10 @@ const CropTrackerView = ({ language }) => {
                     <div className="w-full bg-gray-200 rounded-full h-2.5 ml-2">
                       <div
                         className="bg-black h-2.5 rounded-full"
-                        style={{ width: `${(selectedCrop.details.stages.filter(s => s.completed).length / selectedCrop.details.stages.length) * 100}%` }}
+                        style={{ width: `${(selectedCrop.details.stages.filter((s) => s.completed).length / selectedCrop.details.stages.length) * 100}%` }}
                       ></div>
                     </div>
-                    <span className="ml-2">{selectedCrop.details.stages.filter(s => s.completed).length} / {selectedCrop.details.stages.length} stages completed</span>
+                    <span className="ml-2">{selectedCrop.details.stages.filter((s) => s.completed).length} / {selectedCrop.details.stages.length} stages completed</span>
                   </div>
                 </div>
                 <div className="mb-6">
@@ -257,7 +420,7 @@ const CropTrackerView = ({ language }) => {
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <p className="text-gray-600 mb-2">Growth Reminders & Tips</p>
                   <p className="text-sm text-gray-500 mb-2">Automated alerts and care tips.</p>
-                  <p><span role="img" aria-label="alert">⚠️</span> Current Stage: {selectedCrop.details.stages.find(s => !s.completed)?.stage || "N/A"}</p>
+                  <p><span role="img" aria-label="alert">⚠️</span> Current Stage: {selectedCrop.details.stages.find((s) => !s.completed)?.stage || "N/A"}</p>
                   <p>{selectedCrop.details.reminders}</p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
@@ -277,6 +440,19 @@ const CropTrackerView = ({ language }) => {
             <h2 className="text-2xl font-bold text-green-800 mb-4">
               {language === "en" ? "Create New Crop Tracker" : "បង្កើតតាមដានដំណាំថ្មី"}
             </h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Crop Type</label>
+              <select
+                name="cropType"
+                value={newCrop.cropType}
+                onChange={handleInputChange}
+                className="mt-1 p-2 w-full border rounded"
+              >
+                <option value="Corn">Corn</option>
+                <option value="Rice">Rice</option>
+                <option value="Wheat">Wheat</option>
+              </select>
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Crop Name</label>
               <input
@@ -309,7 +485,7 @@ const CropTrackerView = ({ language }) => {
                 value={newCrop.planted}
                 onChange={handleInputChange}
                 className="mt-1 p-2 w-full border rounded"
-                placeholder={language === "en" ? "e.g., May 10th, 2024" : "ឧ. ថ្ងៃទី ១០ ឧសភា ២០២៤"}
+                placeholder={language === "en" ? "e.g., August 14th, 2025" : "ឧ. ថ្ងៃទី ១៤ សីហា ២៦៨២"}
               />
             </div>
             <div className="mb-4">
@@ -329,7 +505,7 @@ const CropTrackerView = ({ language }) => {
                 type="text"
                 name="reminders"
                 value={newCrop.details.reminders}
-                onChange={(e) => setNewCrop((prev) => ({ ...prev, details: { ...prev.details, reminders: e.target.value } }))}
+                onChange={handleInputChange}
                 className="mt-1 p-2 w-full border rounded"
                 placeholder={language === "en" ? "Enter reminders" : "បញ្ចូលការរំលឹក"}
               />
@@ -344,7 +520,7 @@ const CropTrackerView = ({ language }) => {
               <button
                 className="bg-green-600 text-white py-2 px-4 rounded"
                 onClick={handleCreateCrop}
-                disabled={!newCrop.name || !newCrop.planted || !newCrop.location}
+                disabled={!newCrop.name || !newCrop.planted || !newCrop.location || !newCrop.cropType}
               >
                 {language === "en" ? "Create" : "បង្កើត"}
               </button>
