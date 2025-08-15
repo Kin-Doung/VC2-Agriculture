@@ -39,7 +39,6 @@ const CropTrackerView = ({ language }) => {
     stages: cropStages["Corn"], // Default to Corn stages
     notes: "",
     photoUrl: "/placeholder-photo.jpg",
-    reminders: "",
   };
 
   const [crops, setCrops] = useState([]);
@@ -58,7 +57,7 @@ const CropTrackerView = ({ language }) => {
     details: defaultDetails,
   });
 
-  const currentDateTime = "10:40 AM +07, Friday, August 15, 2025";
+  const currentDateTime = "01:33 PM +07, Friday, August 15, 2025";
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
   const AUTH_TOKEN = localStorage.getItem("token");
 
@@ -176,11 +175,7 @@ const CropTrackerView = ({ language }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === "reminders") {
-      setNewCrop((prev) => ({ ...prev, details: { ...prev.details, reminders: value } }));
-    } else {
-      setNewCrop((prev) => ({ ...prev, [name]: value }));
-    }
+    setNewCrop((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCreateCrop = async () => {
@@ -408,12 +403,6 @@ const CropTrackerView = ({ language }) => {
                   <img src={selectedCrop.details.photoUrl} alt={`${selectedCrop.name} photo`} className="w-full h-32 object-cover rounded mb-2" />
                   <input type="text" className="w-full p-2 border rounded" placeholder="Upload Photo (Coming Soon)" disabled />
                 </div>
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-600 mb-2">Growth Reminders & Tips</p>
-                  <p className="text-sm text-gray-500 mb-2">Automated alerts and care tips.</p>
-                  <p><span role="img" aria-label="alert">⚠️</span> Current Stage: {selectedCrop.details.stages.find((s) => !s.completed)?.stage || "N/A"}</p>
-                  <p>{selectedCrop.details.reminders}</p>
-                </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-gray-600 mb-2">Crop Growth History</p>
                   <p className="text-sm text-gray-500 mb-2">Download a full report of your crop's growth timeline.</p>
@@ -475,17 +464,6 @@ const CropTrackerView = ({ language }) => {
                 onChange={handleInputChange}
                 className="mt-1 p-2 w-full border rounded"
                 placeholder={language === "en" ? "Enter location" : "បញ្ចូលទីតាំង"}
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">Reminders</label>
-              <input
-                type="text"
-                name="reminders"
-                value={newCrop.details.reminders}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded"
-                placeholder={language === "en" ? "Enter reminders" : "បញ្ចូលការរំលឹក"}
               />
             </div>
             <div className="flex justify-end space-x-4">
