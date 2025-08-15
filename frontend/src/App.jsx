@@ -27,6 +27,7 @@ import Support from "./views/Support"
 import Profile from "./views/Profile"
 import Settings from "./views/Settings"
 import HistoryPrice from "./views/MarketPrice/HistoryPrice"
+import ImportingCountries from "./views/MarketPrice/ImportingCountries"
 
 // Public view components
 import PublicHome from "./views/public/PublicHome"
@@ -132,6 +133,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       <Route path="/marketplace" element={<Marketplace language={language} />} />
       <Route path="/prices" element={<MarketPricesView language={language} />} />
       <Route path="/prices/history" element={<HistoryPrice language={language} />} />
+      <Route path="/prices/importing-countries" element={<ImportingCountries language={language} />} />
       <Route path="/scanner" element={<SeedScanner language={language} />} />
       <Route path="/messages" element={<Messages language={language} />} />
       <Route path="/learn" element={<Learning language={language} />} />
