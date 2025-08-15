@@ -7,6 +7,7 @@ use App\Http\Controllers\LandController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CropController;
+use App\Http\Controllers\CropTrackerController;
 use App\Http\Controllers\CropTypeController;
 use App\Http\Controllers\FarmController;
 use App\Http\Controllers\ProductController;
@@ -66,6 +67,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/lands/{id}', [LandController::class, 'destroy']);
 
 
+    // Croptrackers
+    Route::apiResource('croptrackers', CropTrackerController::class);
     /*
     |--------------------------------------------------------------------------
     | Logout Routes
@@ -79,3 +82,4 @@ Route::apiResource("task", TaskController::class);
 Route::apiResource("crops", CropController::class);
 // Route::apiResource("croptypes", CropTypeController::class);
 Route::apiResource("farms", FarmController::class);
+// Route::apiResource('croptrackers', CropTrackerController::class);
