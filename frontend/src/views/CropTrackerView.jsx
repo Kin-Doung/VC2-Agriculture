@@ -55,17 +55,42 @@ const CropTrackerView = ({ language }) => {
     status: "Growing",
     planted: "",
     location: "",
-    cropType: "Corn", // Default crop type
+    cropType: "Corn",
     progress: `0 / ${cropStages["Corn"].length} stages completed`,
     details: defaultDetails,
+    image: null, // New field for image
   });
   const [editCrop, setEditCrop] = useState(null);
   const [menuOpenId, setMenuOpenId] = useState(null);
+  const [availableCrops, setAvailableCrops] = useState([]);
   const menuRef = useRef(null);
 
-  const currentDateTime = "02:48 PM +07, Friday, August 15, 2025";
+  const currentDateTime = "03:03 PM +07, Friday, August 15, 2025";
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
+  const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
+
+  // Fetch available crops
+  useEffect(() => {
+    const fetchAvailableCrops = async () => {
+      try {
+        const response = await fetch(CROPS_API_URL, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch crops: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setAvailableCrops(data.map(crop => crop.name));
+      } catch (err) {
+        console.error("Error fetching available crops:", err);
+      }
+    };
+    fetchAvailableCrops();
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -112,7 +137,7 @@ const CropTrackerView = ({ language }) => {
         ...defaultDetails,
         stages,
         notes: crop.crop?.notes || "",
-        photoUrl: crop.image_path || "/placeholder-photo.jpg",
+        photoUrl: crop.image_path || crop.details?.photoUrl || "/placeholder-photo.jpg",
       },
     };
     if (!Array.isArray(normalized.details.stages)) {
@@ -189,6 +214,7 @@ const CropTrackerView = ({ language }) => {
       cropType: "Corn",
       progress: `0 / ${cropStages["Corn"].length} stages completed`,
       details: defaultDetails,
+      image: null,
     });
   };
 
@@ -232,6 +258,17 @@ const CropTrackerView = ({ language }) => {
     setEditCrop((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewCrop((prev) => ({ ...prev, image: reader.result })); // Store base64 string
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateCrop = async () => {
     try {
       const cropToCreate = {
@@ -242,6 +279,7 @@ const CropTrackerView = ({ language }) => {
           stages: cropStages[newCrop.cropType] || [],
         },
         progress: `0 / ${cropStages[newCrop.cropType]?.length || 0} stages completed`,
+        image_path: newCrop.image || null, // Send base64 image or null
       };
       const response = await fetch(API_URL, {
         method: "POST",
@@ -565,14 +603,17 @@ const CropTrackerView = ({ language }) => {
             </h2>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Crop Name</label>
-              <input
-                type="text"
+              <select
                 name="name"
                 value={newCrop.name}
                 onChange={handleInputChange}
                 className="mt-1 p-2 w-full border rounded"
-                placeholder={language === "en" ? "Enter crop name" : "បញ្ចូលឈ្មោះដំណាំ"}
-              />
+              >
+                <option value="">Select a crop</option>
+                {availableCrops.map((cropName, index) => (
+                  <option key={index} value={cropName}>{cropName}</option>
+                ))}
+              </select>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Status</label>
@@ -607,6 +648,15 @@ const CropTrackerView = ({ language }) => {
                 onChange={handleInputChange}
                 className="mt-1 p-2 w-full border rounded"
                 placeholder={language === "en" ? "Enter location" : "បញ្ចូលទីតាំង"}
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="mt-1 p-2 w-full border rounded"
               />
             </div>
             <div className="flex justify-end space-x-4">
@@ -689,7 +739,7 @@ const CropTrackerView = ({ language }) => {
               </button>
               <button
                 className="bg-blue-600 text-white py-2 px-4 rounded"
-                onClick={handleUpdateCrop}
+                onChange={handleUpdateCrop}
                 disabled={!editCrop.name || !editCrop.planted || !editCrop.location}
               >
                 {language === "en" ? "Update" : "កែសម្រួល"}
