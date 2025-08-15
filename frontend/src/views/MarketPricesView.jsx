@@ -357,35 +357,74 @@ const MarketPricesView = ({ language = "en" }) => {
   const top5Products = getTop5Products(t)
   const [prices, setPrices] = useState([]);
 
-useEffect(() => {
-  async function fetchMarketPrice() {
-    let apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=5000`;
+// useEffect(() => {
+//   async function fetchMarketPrice() {
+//     let apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=5000`;
+
+//     try {
+//       const response = await fetch(apiUrl);
+//       const data = await response.json();
+//       if (data.success) {
+//         let records = data.result.records;
+
+//         // Search filter
+//         if (searchTerm.trim() !== "") {
+//           records = records.filter(record =>
+//             record.commodity?.toLowerCase().includes(searchTerm.toLowerCase())
+//           );
+//         }
+
+//         // Show only first 10 results
+//         setPrices(records.slice(0, 10));
+//       }
+//     } catch (error) {
+//       console.error("Error fetching market prices:", error);
+//     }
+//   }
+
+//   const delayDebounce = setTimeout(fetchMarketPrice, 500);
+//   return () => clearTimeout(delayDebounce);
+// }, [searchTerm]);
+
+ const fetchMarketPrice = async () => {
+    let apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=5000`
 
     try {
-      const response = await fetch(apiUrl);
-      const data = await response.json();
+      const response = await fetch(apiUrl)
+      const data = await response.json()
       if (data.success) {
-        let records = data.result.records;
+        let records = data.result.records
 
-        // Search filter
         if (searchTerm.trim() !== "") {
           records = records.filter(record =>
             record.commodity?.toLowerCase().includes(searchTerm.toLowerCase())
-          );
+          )
         }
 
-        // Show only first 10 results
-        setPrices(records.slice(0, 10));
+        setPrices(records.slice(0, 10))
       }
     } catch (error) {
-      console.error("Error fetching market prices:", error);
+      console.error("Error fetching market prices:", error)
     }
   }
 
-  const delayDebounce = setTimeout(fetchMarketPrice, 500);
-  return () => clearTimeout(delayDebounce);
-}, [searchTerm]);
+  // ✅ Search debounce
+  useEffect(() => {
+    const delayDebounce = setTimeout(fetchMarketPrice, 500)
+    return () => clearTimeout(delayDebounce)
+  }, [searchTerm])
 
+  // ✅ Auto refresh every 1–3 hours
+  useEffect(() => {
+    fetchMarketPrice() // Load on mount
+
+    const randomInterval =
+      Math.floor(Math.random() * (3 - 1 + 1) + 1) * 60 * 60 * 1000
+
+    const intervalId = setInterval(fetchMarketPrice, randomInterval)
+
+    return () => clearInterval(intervalId)
+  }, [])
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-US", {
@@ -466,6 +505,12 @@ useEffect(() => {
           </h1>
           <p className="text-sm sm:text-base text-green-600 leading-relaxed">{t.subtitle}</p>
         </div>
+        <button
+          onClick={fetchMarketPrice}
+          className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+        >
+          🔄 Refresh Now
+        </button>
       </div>
 
       {/* Tabs */}
