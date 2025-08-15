@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { debounce } from 'lodash';
+import { useNavigate } from "react-router-dom"
 
 // Responsive Chart Component
 const SimpleLineChart = ({ data, products, colors }) => {
@@ -356,35 +357,11 @@ const MarketPricesView = ({ language = "en" }) => {
   const allVarieties = [...riceVarieties, ...paddyVarieties]
   const top5Products = getTop5Products(t)
   const [prices, setPrices] = useState([]);
+  const navigate = useNavigate();
 
-// useEffect(() => {
-//   async function fetchMarketPrice() {
-//     let apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=5000`;
-
-//     try {
-//       const response = await fetch(apiUrl);
-//       const data = await response.json();
-//       if (data.success) {
-//         let records = data.result.records;
-
-//         // Search filter
-//         if (searchTerm.trim() !== "") {
-//           records = records.filter(record =>
-//             record.commodity?.toLowerCase().includes(searchTerm.toLowerCase())
-//           );
-//         }
-
-//         // Show only first 10 results
-//         setPrices(records.slice(0, 10));
-//       }
-//     } catch (error) {
-//       console.error("Error fetching market prices:", error);
-//     }
-//   }
-
-//   const delayDebounce = setTimeout(fetchMarketPrice, 500);
-//   return () => clearTimeout(delayDebounce);
-// }, [searchTerm]);
+  const goToHistory = () => {
+    navigate("/prices/history");
+  };
 
  const fetchMarketPrice = async () => {
     let apiUrl = `https://data.opendevelopmentcambodia.net/api/3/action/datastore_search?resource_id=c9cb123c-a82b-4537-810a-11ed06847eeb&limit=5000`
@@ -609,6 +586,129 @@ const MarketPricesView = ({ language = "en" }) => {
               </div>
             </div>
           )}
+        </div>
+      </div>
+      <div className="bg-white rounded-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 shadow-sm border border-green-200">
+        <div className="mb-4 sm:mb-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-green-800 mb-2 flex items-center gap-2">
+            <span>📰</span>
+            <span className="break-words leading-tight">View Products History</span>
+          </h3>
+          <p className="text-sm sm:text-base text-green-600 mb-3 sm:mb-4 leading-relaxed">Historical price movements for Cambodia's history products.</p>
+
+          {/* Top 5 Products Summary Cards - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div
+                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: '#22c55e' }}
+                  ></div>
+                  <h4 className="font-medium text-green-800 text-xs sm:text-sm leading-tight truncate">
+                    Malice Rice
+                  </h4>
+                  <button onClick={goToHistory}
+                  className="ml-auto px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors">
+                    View
+                  </button>
+                </div>
+                  <div className="space-y-1 text-xs text-green-600">
+                  <div className="flex justify-between items-center">
+                    <span className="truncate pr-1">Years: 2023</span>
+                    <span className="font-medium whitespace-nowrap">
+                    </span>
+                  </div>
+                </div>
+              </div>
+                            <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div
+                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: '#22c55e' }}
+                  ></div>
+                  <h4 className="font-medium text-green-800 text-xs sm:text-sm leading-tight truncate">
+                    Malice Rice
+                  </h4>
+                  <button onClick={goToHistory}
+                  className="ml-auto px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors">
+                    View
+                  </button>
+                </div>
+                  <div className="space-y-1 text-xs text-green-600">
+                  <div className="flex justify-between items-center">
+                    <span className="truncate pr-1">Years: 2023</span>
+                    <span className="font-medium whitespace-nowrap">
+                    </span>
+                  </div>
+                </div>
+              </div>
+                            <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div
+                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: '#22c55e' }}
+                  ></div>
+                  <h4 className="font-medium text-green-800 text-xs sm:text-sm leading-tight truncate">
+                    Malice Rice
+                  </h4>
+                  <button onClick={goToHistory}
+                  className="ml-auto px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors">
+                    View
+                  </button>
+                </div>
+                  <div className="space-y-1 text-xs text-green-600">
+                  <div className="flex justify-between items-center">
+                    <span className="truncate pr-1">Years: 2023</span>
+                    <span className="font-medium whitespace-nowrap">
+                    </span>
+                  </div>
+                </div>
+              </div>
+                            <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div
+                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: '#22c55e' }}
+                  ></div>
+                  <h4 className="font-medium text-green-800 text-xs sm:text-sm leading-tight truncate">
+                    Malice Rice
+                  </h4>
+                  <button onClick={goToHistory}
+                  className="ml-auto px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors">
+                    View
+                  </button>
+                </div>
+                  <div className="space-y-1 text-xs text-green-600">
+                  <div className="flex justify-between items-center">
+                    <span className="truncate pr-1">Years: 2023</span>
+                    <span className="font-medium whitespace-nowrap">
+                    </span>
+                  </div>
+                </div>
+              </div>
+                            <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div
+                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: '#22c55e' }}
+                  ></div>
+                  <h4 className="font-medium text-green-800 text-xs sm:text-sm leading-tight truncate">
+                    Malice Rice
+                  </h4>
+                  <button onClick={goToHistory}
+                  className="ml-auto px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors">
+                    View
+                  </button>
+                </div>
+                  <div className="space-y-1 text-xs text-green-600">
+                  <div className="flex justify-between items-center">
+                    <span className="truncate pr-1">Years: 2023</span>
+                    <span className="font-medium whitespace-nowrap">
+                    </span>
+                  </div>
+                </div>
+              </div>
+          </div>
         </div>
       </div>
 
