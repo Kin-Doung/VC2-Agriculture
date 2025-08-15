@@ -36,7 +36,7 @@ const CropTrackerView = ({ language }) => {
   };
 
   const defaultDetails = {
-    stages: [],
+    stages: cropStages["Corn"], // Default to Corn stages
     notes: "",
     photoUrl: "/placeholder-photo.jpg",
     reminders: "",
@@ -53,14 +53,13 @@ const CropTrackerView = ({ language }) => {
     status: "Growing",
     planted: "",
     location: "",
-    cropType: "Corn",
-    progress: "0 / 0 stages completed",
+    cropType: "Corn", // Default crop type
+    progress: `0 / ${cropStages["Corn"].length} stages completed`, // Initialize with Corn stages
     details: defaultDetails,
   });
 
   const currentDateTime = "10:40 AM +07, Friday, August 15, 2025";
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
-  const API_CROPS_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
 
   // Format ISO date to "Month Day, Year"
@@ -109,7 +108,7 @@ const CropTrackerView = ({ language }) => {
   const fetchCrops = async (retries = 3, delay = 1000) => {
     try {
       setLoading(true);
-      const response = await fetch(API_URL, { // Changed to API_URL to fetch croptrackers
+      const response = await fetch(API_URL, {
         headers: {
           "Content-Type": "application/json",
           ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
@@ -169,23 +168,15 @@ const CropTrackerView = ({ language }) => {
       status: "Growing",
       planted: "",
       location: "",
-      cropType: "Corn",
-      progress: "0 / 0 stages completed",
+      cropType: "Corn", // Default crop type
+      progress: `0 / ${cropStages["Corn"].length} stages completed`,
       details: defaultDetails,
     });
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === "cropType") {
-      const stages = cropStages[value] || [];
-      setNewCrop((prev) => ({
-        ...prev,
-        cropType: value,
-        progress: `0 / ${stages.length} stages completed`,
-        details: { ...prev.details, stages },
-      }));
-    } else if (name === "reminders") {
+    if (name === "reminders") {
       setNewCrop((prev) => ({ ...prev, details: { ...prev.details, reminders: value } }));
     } else {
       setNewCrop((prev) => ({ ...prev, [name]: value }));
@@ -196,7 +187,7 @@ const CropTrackerView = ({ language }) => {
     try {
       const cropToCreate = {
         ...newCrop,
-        crop_type: newCrop.cropType,
+        crop_type: newCrop.cropType, // Use default cropType
         details: {
           ...newCrop.details,
           stages: cropStages[newCrop.cropType] || [],
@@ -441,19 +432,6 @@ const CropTrackerView = ({ language }) => {
               {language === "en" ? "Create New Crop Tracker" : "បង្កើតតាមដានដំណាំថ្មី"}
             </h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">Crop Type</label>
-              <select
-                name="cropType"
-                value={newCrop.cropType}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded"
-              >
-                <option value="Corn">Corn</option>
-                <option value="Rice">Rice</option>
-                <option value="Wheat">Wheat</option>
-              </select>
-            </div>
-            <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Crop Name</label>
               <input
                 type="text"
@@ -520,7 +498,7 @@ const CropTrackerView = ({ language }) => {
               <button
                 className="bg-green-600 text-white py-2 px-4 rounded"
                 onClick={handleCreateCrop}
-                disabled={!newCrop.name || !newCrop.planted || !newCrop.location || !newCrop.cropType}
+                disabled={!newCrop.name || !newCrop.planted || !newCrop.location}
               >
                 {language === "en" ? "Create" : "បង្កើត"}
               </button>
