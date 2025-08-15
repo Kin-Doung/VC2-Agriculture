@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const CropTrackerView = ({ language }) => {
   const cropStages = {
@@ -47,19 +47,38 @@ const CropTrackerView = ({ language }) => {
   const [selectedCrop, setSelectedCrop] = useState(null);
   const [notes, setNotes] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [cropToDelete, setCropToDelete] = useState(null);
   const [newCrop, setNewCrop] = useState({
     name: "",
     status: "Growing",
     planted: "",
     location: "",
     cropType: "Corn", // Default crop type
-    progress: `0 / ${cropStages["Corn"].length} stages completed`, // Initialize with Corn stages
+    progress: `0 / ${cropStages["Corn"].length} stages completed`,
     details: defaultDetails,
   });
+  const [editCrop, setEditCrop] = useState(null);
+  const [menuOpenId, setMenuOpenId] = useState(null);
+  const menuRef = useRef(null);
 
-  const currentDateTime = "01:33 PM +07, Friday, August 15, 2025";
+  const currentDateTime = "02:48 PM +07, Friday, August 15, 2025";
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
   const AUTH_TOKEN = localStorage.getItem("token");
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Format ISO date to "Month Day, Year"
   const formatDate = (isoDate) => {
@@ -167,10 +186,40 @@ const CropTrackerView = ({ language }) => {
       status: "Growing",
       planted: "",
       location: "",
-      cropType: "Corn", // Default crop type
+      cropType: "Corn",
       progress: `0 / ${cropStages["Corn"].length} stages completed`,
       details: defaultDetails,
     });
+  };
+
+  const openEditModal = (crop) => {
+    setMenuOpenId(null);
+    setEditCrop({
+      ...crop,
+      planted: crop.planted === "Unknown" ? "" : crop.planted,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditCrop(null);
+  };
+
+  const openDeleteModal = (crop) => {
+    setMenuOpenId(null);
+    setCropToDelete(crop);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setCropToDelete(null);
+  };
+
+  const openMenu = (cropId, e) => {
+    e.stopPropagation(); // Prevent any parent click handlers
+    setMenuOpenId(cropId);
   };
 
   const handleInputChange = (e) => {
@@ -178,11 +227,16 @@ const CropTrackerView = ({ language }) => {
     setNewCrop((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditCrop((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleCreateCrop = async () => {
     try {
       const cropToCreate = {
         ...newCrop,
-        crop_type: newCrop.cropType, // Use default cropType
+        crop_type: newCrop.cropType,
         details: {
           ...newCrop.details,
           stages: cropStages[newCrop.cropType] || [],
@@ -204,6 +258,63 @@ const CropTrackerView = ({ language }) => {
       console.log("Created Crop:", createdCrop);
       setCrops((prevCrops) => [...prevCrops, normalizeCrop(createdCrop)]);
       closeCreateModal();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleUpdateCrop = async () => {
+    try {
+      const updatedCrop = {
+        ...editCrop,
+        crop_type: editCrop.crop_type || "Corn",
+        details: {
+          ...editCrop.details,
+          stages: editCrop.details.stages || cropStages[editCrop.crop_type || "Corn"],
+        },
+        progress: editCrop.progress || `0 / ${cropStages[editCrop.crop_type || "Corn"].length} stages completed`,
+      };
+      const response = await fetch(`${API_URL}/${editCrop.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
+        },
+        body: JSON.stringify({
+          ...updatedCrop,
+          crop_type: updatedCrop.crop_type,
+          image_path: updatedCrop.details.photoUrl !== "/placeholder-photo.jpg" ? updatedCrop.details.photoUrl : null,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to update crop: ${response.statusText}`);
+      }
+      const updatedCropData = await response.json();
+      setCrops((prevCrops) =>
+        prevCrops.map((crop) =>
+          crop.id === updatedCropData.id ? normalizeCrop(updatedCropData) : crop
+        )
+      );
+      closeEditModal();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteCrop = async () => {
+    try {
+      const response = await fetch(`${API_URL}/${cropToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete crop: ${response.statusText}`);
+      }
+      setCrops((prevCrops) => prevCrops.filter((crop) => crop.id !== cropToDelete.id));
+      closeDeleteModal();
     } catch (err) {
       setError(err.message);
     }
@@ -310,12 +421,12 @@ const CropTrackerView = ({ language }) => {
           </div>
           <p className="text-green-600 mb-8">
             {language === "en"
-              ? `Here you can see all your registered crops. Click on a crop to view its detailed growth progress.`
-              : `នៅទីនេះអ្នកអាចមើលដំណាំដែលបានចុះឈ្មោះទាំងអស់។ ចុចលើដំណាំមួយដើម្បីមើលវឌ្ឍនភាពកំណើនលម្អិត។ (ធ្វើបច្ចុប្បន្នភាពចុងក្រោយ: ${currentDateTime})`}
+              ? `Here you can see all your registered crops. Click 'View Details' to see growth progress or use the menu to edit or delete.`
+              : `នៅទីនេះអ្នកអាចមើលដំណាំដែលបានចុះឈ្មោះទាំងអស់។ ចុច 'មើលលម្អិត' ដើម្បីមើលវឌ្ឍនភាពកំណើន ឬប្រើម៉ឺនុយដើម្បីកែសម្រួល ឬលុប។ (ធ្វើបច្ចុប្បន្នភាពចុងក្រោយ: ${currentDateTime})`}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {crops.map((crop) => (
-              <div key={crop.id} className="bg-white p-4 rounded-lg shadow">
+              <div key={crop.id} className="bg-white p-4 rounded-lg shadow relative">
                 <h2 className="text-xl font-semibold mb-2">{crop.name}</h2>
                 <p><strong>Status:</strong> {crop.status}</p>
                 <p><span role="img" aria-label="calendar">📅</span> Planted: {crop.planted}</p>
@@ -325,8 +436,40 @@ const CropTrackerView = ({ language }) => {
                   className="mt-4 w-full bg-black text-white py-2 rounded"
                   onClick={() => openDetails(crop)}
                 >
-                  View Details
+                  {language === "en" ? "View Details" : "មើលលម្អិត"}
                 </button>
+                <div className="absolute top-4 right-4" ref={menuRef}>
+                  <button
+                    className="text-gray-600 hover:text-gray-800"
+                    onClick={(e) => openMenu(crop.id, e)}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                    </svg>
+                  </button>
+                  {menuOpenId === crop.id && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
+                      <button
+                        className="flex items-center w-full text-left px-4 py-2 text-blue-600 hover:bg-gray-100"
+                        onClick={() => openEditModal(crop)}
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        {language === "en" ? "Edit" : "កែសម្រួល"}
+                      </button>
+                      <button
+                        className="flex items-center w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+                        onClick={() => openDeleteModal(crop)}
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M9 7v12m6-12v12"></path>
+                        </svg>
+                        {language === "en" ? "Delete" : "លុប"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -337,7 +480,7 @@ const CropTrackerView = ({ language }) => {
             className="mb-4 bg-gray-200 text-gray-700 py-1 px-3 rounded"
             onClick={closeDetails}
           >
-            Back to Crops
+            {language === "en" ? "Back to Crops" : "ត្រឡប់ទៅដំណាំ"}
           </button>
           <div className="bg-white p-6 rounded-lg shadow">
             <h1 className="text-2xl font-semibold mb-2">{selectedCrop.name}</h1>
@@ -479,6 +622,106 @@ const CropTrackerView = ({ language }) => {
                 disabled={!newCrop.name || !newCrop.planted || !newCrop.location}
               >
                 {language === "en" ? "Create" : "បង្កើត"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditModalOpen && editCrop && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+            <h2 className="text-2xl font-bold text-green-800 mb-4">
+              {language === "en" ? "Edit Crop Tracker" : "កែសម្រួលតាមដានដំណាំ"}
+            </h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Crop Name</label>
+              <input
+                type="text"
+                name="name"
+                value={editCrop.name}
+                onChange={handleEditInputChange}
+                className="mt-1 p-2 w-full border rounded"
+                placeholder={language === "en" ? "Enter crop name" : "បញ្ចូលឈ្មោះដំណាំ"}
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Status</label>
+              <select
+                name="status"
+                value={editCrop.status}
+                onChange={handleEditInputChange}
+                className="mt-1 p-2 w-full border rounded"
+              >
+                <option value="Growing">Growing</option>
+                <option value="Harvested">Harvested</option>
+                <option value="Planned">Planned</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Planted Date</label>
+              <input
+                type="text"
+                name="planted"
+                value={editCrop.planted}
+                onChange={handleEditInputChange}
+                className="mt-1 p-2 w-full border rounded"
+                placeholder={language === "en" ? "e.g., August 14th, 2025" : "ឧ. ថ្ងៃទី ១៤ សីហា ២៦៨២"}
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Location</label>
+              <input
+                type="text"
+                name="location"
+                value={editCrop.location}
+                onChange={handleEditInputChange}
+                className="mt-1 p-2 w-full border rounded"
+                placeholder={language === "en" ? "Enter location" : "បញ្ចូលទីតាំង"}
+              />
+            </div>
+            <div className="flex justify-end space-x-4">
+              <button
+                className="bg-gray-500 text-white py-2 px-4 rounded"
+                onClick={closeEditModal}
+              >
+                {language === "en" ? "Cancel" : "បោះបង់"}
+              </button>
+              <button
+                className="bg-blue-600 text-white py-2 px-4 rounded"
+                onClick={handleUpdateCrop}
+                disabled={!editCrop.name || !editCrop.planted || !editCrop.location}
+              >
+                {language === "en" ? "Update" : "កែសម្រួល"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteModalOpen && cropToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+            <h2 className="text-2xl font-bold text-red-800 mb-4">
+              {language === "en" ? "Delete Crop Tracker" : "លុបតាមដានដំណាំ"}
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {language === "en"
+                ? `Are you sure you want to delete "${cropToDelete.name}"? This action cannot be undone.`
+                : `តើអ្នកប្រាកដទេថាចង់លុប "${cropToDelete.name}"? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។`}
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                className="bg-gray-500 text-white py-2 px-4 rounded"
+                onClick={closeDeleteModal}
+              >
+                {language === "en" ? "Cancel" : "បោះបង់"}
+              </button>
+              <button
+                className="bg-red-600 text-white py-2 px-4 rounded"
+                onClick={handleDeleteCrop}
+              >
+                {language === "en" ? "Delete" : "លុប"}
               </button>
             </div>
           </div>
