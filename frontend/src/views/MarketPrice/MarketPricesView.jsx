@@ -346,7 +346,10 @@ const getPaddyVarieties = (t) => [
 
 const MarketPricesView = ({ language = "en" }) => {
   const [activeTab, setActiveTab] = useState("local")
-  const [alerts, setAlerts] = useState([])
+  const [alerts, setAlerts] = useState(() => {
+    const saved = localStorage.getItem("priceAlerts")
+    return saved ? JSON.parse(saved) : []
+  })
   const [alertPrice, setAlertPrice] = useState("")
   const [selectedVariety, setSelectedVariety] = useState("")
   const [searchTerm, setSearchTerm] = useState("");
@@ -415,26 +418,33 @@ const MarketPricesView = ({ language = "en" }) => {
     }).format(price)
   }
 
-  const addPriceAlert = () => {
-    if (selectedVariety && alertPrice) {
-      const variety = allVarieties.find((v) => v.id.toString() === selectedVariety)
-      setAlerts([
-        ...alerts,
-        {
-          id: Date.now(),
-          variety: variety.name,
-          price: Number.parseFloat(alertPrice),
-          type: "above",
-        },
-      ])
-      setAlertPrice("")
-      setSelectedVariety("")
-    }
-  }
+// ✅ Save alerts to localStorage whenever they change
+useEffect(() => {
+  localStorage.setItem("priceAlerts", JSON.stringify(alerts))
+}, [alerts])
 
-  const removeAlert = (alertId) => {
-    setAlerts(alerts.filter((a) => a.id !== alertId))
+// ✅ Add new alert
+const addPriceAlert = () => {
+  if (selectedVariety && alertPrice) {
+    const variety = allVarieties.find(
+      (v) => v.id.toString() === selectedVariety
+    )
+    const newAlert = {
+      id: Date.now(),
+      variety: variety.name,
+      price: Number.parseFloat(alertPrice),
+      type: "above", // You can extend to allow "below" too
+    }
+    setAlerts((prev) => [...prev, newAlert]) // use functional update
+    setAlertPrice("")
+    setSelectedVariety("")
   }
+}
+
+// ✅ Remove alert
+const removeAlert = (alertId) => {
+  setAlerts((prev) => prev.filter((a) => a.id !== alertId))
+}
 
   const PriceCard = ({ variety, showExport = false }) => (
     <div className="bg-white rounded-lg p-3 sm:p-4 lg:p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
