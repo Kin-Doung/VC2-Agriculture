@@ -25,36 +25,26 @@ CORS(app, resources={r"/api/*": {"origins": [
 ]}})
 
 # Logging with timestamp and request ID
-import logging
-import uuid
-
-# Create a filter that adds request_id to all log records if not present
 class RequestIdFilter(logging.Filter):
     def filter(self, record):
         if not hasattr(record, 'request_id'):
             record.request_id = 'global'
         return True
 
-# Basic logging config
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - [RequestID: %(request_id)s] - %(message)s'
 )
 
-# Attach the filter
 logger = logging.getLogger()
 logger.addFilter(RequestIdFilter())
-# Store first scan quantities
 QUANTITY_CACHE = {}
-
-# Generic rice parameters
 RICE_PARAMS = {
     "min_area": 120,
     "max_area": 500,
     "shape_factor": 0.65
 }
 
-# Initialize SQLite database for paddy varieties
 def init_variety_database():
     conn = sqlite3.connect('paddy_varieties.db')
     cursor = conn.cursor()
@@ -70,27 +60,27 @@ def init_variety_database():
             length_width_ratio REAL
         )
     ''')
-    # Expanded variety database with refined Phka Malis parameters
+    # Updated parameters for affected varieties with accurate dimensions and recalculated shape_factors
     initial_varieties = [
-        ("Phka Rumduol", "[5, 60, 60]", "[25, 255, 255]", 0.72, "[85, 205]", 6.0, 2.2, 2.73),
+        ("Phka Rumduol", "[5, 60, 60]", "[25, 255, 255]", 0.69, "[85, 205]", 7.0, 2.0, 3.5),  # Updated to long grain specs
         ("Phka Romeat", "[5, 58, 58]", "[25, 255, 255]", 0.71, "[84, 204]", 6.1, 2.2, 2.77),
         ("Phka Rumdeng", "[5, 55, 55]", "[25, 250, 255]", 0.71, "[82, 202]", 5.8, 2.3, 2.52),
-        ("Phka Malis", "[5, 50, 50]", "[25, 255, 255]", 0.7, "[80, 200]", 6.5, 2.0, 3.25),
-        ("Somali", "[5, 50, 50]", "[25, 255, 255]", 0.7, "[80, 200]", 6.5, 2.0, 3.25),
-        ("Neang Malis", "[5, 50, 50]", "[25, 255, 255]", 0.7, "[80, 200]", 6.5, 2.0, 3.25),
-        ("Basmati", "[10, 30, 60]", "[30, 200, 255]", 0.8, "[90, 210]", 7.0, 1.8, 3.89),
-        ("Sen Kra'ob", "[8, 60, 70]", "[28, 255, 255]", 0.68, "[80, 200]", 5.5, 2.4, 2.29),
+        ("Phka Malis", "[8, 48, 52]", "[28, 255, 255]", 0.72, "[80, 200]", 6.5, 2.0, 3.25),
+        ("Somali", "[6, 50, 50]", "[26, 255, 255]", 0.69, "[80, 200]", 6.4, 2.1, 3.05),
+        ("Neang Malis", "[7, 50, 50]", "[27, 255, 255]", 0.69, "[80, 200]", 6.4, 2.1, 3.05),
+        ("Basmati", "[10, 30, 60]", "[30, 200, 255]", 0.65, "[90, 210]", 7.0, 1.8, 3.89),
+        ("Sen Kra'ob", "[8, 60, 70]", "[28, 255, 255]", 0.68, "[80, 200]", 7.2, 2.0, 3.6),  # Updated dimensions and shape_factor
         ("Sen Pidao", "[10, 40, 50]", "[30, 200, 255]", 0.75, "[90, 210]", 6.2, 2.1, 2.95),
         ("Phka Knhei", "[5, 52, 52]", "[25, 255, 255]", 0.71, "[82, 202]", 6.3, 2.1, 3.0),
-        ("IR64", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IRRI-6", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IRRI-9", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.0, 2.5, 2.0),
+        ("IR64", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),  # Updated shape_factor approx
+        ("IRRI-6", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
+        ("IRRI-9", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
         ("Chul'sa", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
         ("Riang Chey", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
         ("Damnoeb Srov Krahorm", "[10, 50, 60]", "[30, 220, 255]", 0.70, "[90, 210]", 5.5, 2.4, 2.29),
         ("Neang Khon", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
         ("Phka Sla", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("OM5451", "[12, 35, 60]", "[32, 190, 255]", 0.73, "[88, 208]", 5.7, 2.3, 2.48),
+        ("OM5451", "[12, 35, 60]", "[32, 190, 255]", 0.69, "[88, 208]", 7.1, 2.0, 3.55),  # Updated dimensions and shape_factor
         ("CARDI-1", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
         ("Phka Chan Sen", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
         ("Neang Minh", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
@@ -102,23 +92,23 @@ def init_variety_database():
         ("Phka Srov", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
         ("Neang Chey", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
         ("Kampong Speu", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Sticky Rice", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Black Sticky Rice", "[0, 20, 50]", "[20, 100, 200]", 0.6, "[60, 180]", 4.5, 2.5, 1.8),
-        ("White Sticky Rice", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Phka Sla Thom", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Srov Leu", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Khao Niew", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Phka Sticky", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Neang Khmau", "[0, 20, 50]", "[20, 100, 200]", 0.6, "[60, 180]", 4.5, 2.5, 1.8),
-        ("Srov Kmao", "[0, 20, 50]", "[20, 100, 200]", 0.6, "[60, 180]", 4.5, 2.5, 1.8),
-        ("Phka Romchang", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Sticky Rice", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),  # Updated shape_factor
+        ("Black Sticky Rice", "[0, 20, 50]", "[20, 100, 200]", 0.72, "[60, 180]", 4.5, 2.5, 1.8),
+        ("White Sticky Rice", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Phka Sla Thom", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Srov Leu", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Khao Niew", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Phka Sticky", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Neang Khmau", "[0, 20, 50]", "[20, 100, 200]", 0.72, "[60, 180]", 4.5, 2.5, 1.8),
+        ("Srov Kmao", "[0, 20, 50]", "[20, 100, 200]", 0.72, "[60, 180]", 4.5, 2.5, 1.8),
+        ("Phka Romchang", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
         ("Sen Pidor", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
         ("Phka Meun", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
         ("Phka Rumdoul", "[5, 60, 60]", "[25, 255, 255]", 0.72, "[85, 205]", 6.0, 2.2, 2.73),
-        ("IR504", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IR66", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IR68", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IR72", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.0, 2.5, 2.0),
+        ("IR504", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
+        ("IR66", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
+        ("IR68", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
+        ("IR72", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
         ("CARDI-2", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
         ("CARDI-3", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
         ("Chhlat", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
@@ -162,16 +152,17 @@ def init_variety_database():
         ("Local Traditional 18", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
         ("Local Traditional 19", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
         ("Local Traditional 20", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Heirloom 1", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 2", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 3", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 4", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 5", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 6", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 7", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 8", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 9", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 10", "[0, 20, 100]", "[20, 100, 255]", 0.6, "[70, 190]", 4.5, 2.5, 1.8)
+        ("Heirloom 1", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 2", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 3", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 4", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 5", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 6", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 7", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 8", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 9", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Heirloom 10", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
+        ("Jasmine", "[10, 30, 60]", "[30, 200, 255]", 0.65, "[90, 210]", 7.0, 1.8, 3.89)  # Added Jasmine entry with Basmati-like parameters
     ]
     cursor.executemany('''
         INSERT OR REPLACE INTO varieties (name, hsv_lower, hsv_upper, shape_factor, intensity_range, length_mm, width_mm, length_width_ratio)
@@ -180,10 +171,8 @@ def init_variety_database():
     conn.commit()
     conn.close()
 
-# Initialize database
 init_variety_database()
 
-# Load CNN model (assumes pre-trained model exists)
 try:
     CNN_MODEL = load_model("paddy_variety_classifier.h5")
 except Exception as e:
@@ -246,7 +235,6 @@ def detect_husk_status(image):
 
 def detect_paddy_variety(image, is_husked):
     try:
-        # Fetch varieties from database
         conn = sqlite3.connect('paddy_varieties.db')
         cursor = conn.cursor()
         cursor.execute("SELECT name, hsv_lower, hsv_upper, shape_factor, intensity_range, length_mm, width_mm, length_width_ratio FROM varieties")
@@ -258,7 +246,6 @@ def detect_paddy_variety(image, is_husked):
         hsv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2HSV)
         gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
         
-        # Segment grains
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
         thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 3)
         
@@ -290,14 +277,17 @@ def detect_paddy_variety(image, is_husked):
                     shape_score = 1 - abs(circularity - v_shape_factor) / v_shape_factor if v_shape_factor > 0 else 0
                     ratio_score = 1 - abs(l_w_ratio - v_l_w_ratio) / v_l_w_ratio if v_l_w_ratio > 0 else 0
                     intensity_score = 1 if intensity_range[0] <= intensity <= intensity_range[1] else 0
-                    combined_score = 0.5 * hsv_score + 0.2 * shape_score + 0.2 * ratio_score + 0.1 * intensity_score
+                    # Higher weight for ratio_score on long-grain varieties (ratio > 2.5)
+                    if v_l_w_ratio > 2.5:
+                        combined_score = 0.4 * hsv_score + 0.2 * shape_score + 0.3 * ratio_score + 0.1 * intensity_score
+                    else:
+                        combined_score = 0.5 * hsv_score + 0.2 * shape_score + 0.2 * ratio_score + 0.1 * intensity_score
                     if combined_score > max_score:
                         max_score = combined_score
                         assigned_variety = name
                 if assigned_variety and max_score > 0.5:
                     variety_counts[assigned_variety] += 1
                 else:
-                    # Assign to 'Unknown' or ignore
                     pass
         
         if total_grains == 0:
@@ -307,7 +297,6 @@ def detect_paddy_variety(image, is_husked):
         pure_paddy_percent = variety_counts[dominant_variety] / total_grains
         mixed_percentage = 1 - pure_paddy_percent
         
-        # CNN-based classification (if model is available)
         cnn_variety = None
         cnn_confidence = 0.0
         if CNN_MODEL:
@@ -318,38 +307,32 @@ def detect_paddy_variety(image, is_husked):
             cnn_confidence = float(np.max(prediction))
             logger.info(f"CNN prediction: {cnn_variety} with confidence {cnn_confidence}")
 
-        # Modified logic to always show variety name, with purity indicator
-        type = "Pure" if pure_paddy_percent > 0.5 else "Mixed"  # Lowered threshold to 50%
-        
-        # Special case for Phka Malis - keep stricter standard
-        if dominant_variety == "Phka Malis":
-            if pure_paddy_percent > 0.7:
-                type = "Pure"
-            else:
-                type = "Mixed"
+        # Unified purity threshold for consistency
+        type = "Pure" if pure_paddy_percent >= 0.5 else "Mixed"
         
         hsv_confidence = pure_paddy_percent
         
-        # Shape and size analysis for confidence
         shape_confidence = 0.0
         ratio_confidence = 0.0
         valid_grains = [c for c in contours if RICE_PARAMS["min_area"] <= cv2.contourArea(c) <= RICE_PARAMS["max_area"]]
         if valid_grains:
             for variety in varieties:
                 if variety[0] == dominant_variety:
-                    shape_confidence = sum(1 for c in valid_grains if abs(4 * np.pi * cv2.contourArea(c) / (cv2.arcLength(c, True) ** 2) if cv2.arcLength(c, True) > 0 else 0 - variety[3]) < 0.15) / len(valid_grains)
+                    shape_confidence = sum(1 for c in valid_grains if abs((4 * np.pi * cv2.contourArea(c) / (cv2.arcLength(c, True) ** 2) if cv2.arcLength(c, True) > 0 else 0) - variety[3]) < 0.15) / len(valid_grains)
                     ratios = [cv2.boundingRect(c)[2] / cv2.boundingRect(c)[3] if cv2.boundingRect(c)[3] > 0 else 0 for c in valid_grains]
                     avg_ratio = sum(ratios) / len(ratios) if ratios else 0
                     ratio_confidence = 1 - abs(avg_ratio - variety[7]) / variety[7] if variety[7] > 0 else 0
         
-        # Combine CNN and rule-based confidence with higher weight for CNN
+        # Adjusted CNN weighting for Phka Malis (retained from previous)
         if CNN_MODEL and cnn_variety == dominant_variety:
-            confidence = (0.6 * cnn_confidence + 0.3 * hsv_confidence + 0.05 * shape_confidence + 0.05 * ratio_confidence)
+            if dominant_variety == "Phka Malis" and cnn_confidence > 0.8:
+                confidence = (0.7 * cnn_confidence + 0.2 * hsv_confidence + 0.05 * shape_confidence + 0.05 * ratio_confidence)
+            else:
+                confidence = (0.6 * cnn_confidence + 0.3 * hsv_confidence + 0.05 * shape_confidence + 0.05 * ratio_confidence)
         else:
             confidence = (0.5 * hsv_confidence + 0.25 * shape_confidence + 0.25 * ratio_confidence)
         final_variety = cnn_variety if CNN_MODEL and cnn_confidence > hsv_confidence and cnn_variety == dominant_variety else dominant_variety
         
-        # Format the return to always show variety name
         if type == "Mixed":
             display_name = f"{final_variety} (Mixed)"
         else:
@@ -494,7 +477,6 @@ def analyze_rice_quantity_quality(image, is_husked=True):
 
 def verify_variety(variety, image_features):
     try:
-        # Mock external API call (replace with actual IRRI or similar API)
         response = requests.post("https://mock-api.irri.org/verify", json=image_features, timeout=5)
         return response.json().get("verified_variety", variety)
     except Exception as e:
@@ -503,7 +485,6 @@ def verify_variety(variety, image_features):
 
 @app.route("/api/health", methods=["GET"])
 def health():
-    """Health check endpoint to verify server availability."""
     return jsonify({"status": "ok"}), 200
 
 @app.route("/api/scan-rice", methods=["POST"])
@@ -567,7 +548,7 @@ def scan_rice():
 
         quantity_quality = analyze_rice_quantity_quality(image, is_husked)
 
-        bad_weight = 0.5  # Higher weight for defects
+        bad_weight = 0.5
         quantity_weight = 0.3
         shape_weight = 0.2
         good_paddy_score = (
