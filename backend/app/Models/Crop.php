@@ -29,4 +29,8 @@ class Crop extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function cropTrackers()
+    {
+        return $this->hasMany(CropTracker::class, 'crop_id');
+    }
 }
