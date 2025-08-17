@@ -18,7 +18,7 @@ pip install flask
 pip install pillow
 pip install numpy
 pip install opencv-python
-
+pip install tensorflow
 php artisan storage:link
 ```
 ### Frontend (React)
