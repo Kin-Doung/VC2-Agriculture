@@ -39,16 +39,16 @@ export const getLandById = async (id) => {
 export const insertMeasurement = async (measurement) => {
   try {
     const response = await api.post('/lands', {
-      name: measurement.name,
-      data_area_ha: measurement.data_area_ha,
-      data_area_acres: measurement.data_area_acres,
-      boundary_points: measurement.points,
-      land_type: measurement.landType,
-      seed_amount_min: measurement.seedAmountMin,
-      seed_amount_max: measurement.seedAmountMax,
-      fertilizer_total: measurement.fertilizerTotal,
-      date: measurement.date,
-    });
+  name: measurement.name,
+  data_area_ha: measurement.data_area_ha,
+  data_area_acres: measurement.data_area_acres,
+  boundary_points: measurement.points,
+  land_type: measurement.landType, 
+  seed_amount_min: measurement.seedAmountMin,
+  seed_amount_max: measurement.seedAmountMax,
+  fertilizer_total: measurement.fertilizerTotal,
+  date: measurement.date,
+});
     return response.data;
   } catch (error) {
     throw error;
