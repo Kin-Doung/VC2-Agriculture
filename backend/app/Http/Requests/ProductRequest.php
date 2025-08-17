@@ -22,7 +22,7 @@ class ProductRequest extends FormRequest
             'category_id' => 'required|integer|exists:categories,id',
             'crop_id' => 'required|integer|exists:crops,id',
             'image' => 'nullable|image|mimes:jpg,jpeg,png',
-            'available_from' => 'nullable|date',
+            'expiration_date' => 'nullable|date',
         ];
     }
 }

@@ -136,7 +136,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       <Route path="/prices/importing-countries" element={<ImportingCountries language={language} />} />
       <Route path="/scanner" element={<SeedScanner language={language} />} />
       <Route path="/messages" element={<Messages language={language} />} />
-      <Route path="/learn" element={<Learning language={language} />} />
+      <Route path="/learning" element={<Learning language={language} />} />
       <Route path="/finances" element={<Finances language={language} />} />
       <Route path="/support" element={<Support language={language} />} />
       <Route path="/profile" element={<Profile language={language} />} />

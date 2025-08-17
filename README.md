@@ -14,6 +14,12 @@ cp .env.example .env
 php artisan key:generate
 php artisan migrate
 php artisan serve
+pip install flask
+pip install pillow
+pip install numpy
+pip install opencv-python
+
+php artisan storage:link
 ```
 ### Frontend (React)
 ```bash

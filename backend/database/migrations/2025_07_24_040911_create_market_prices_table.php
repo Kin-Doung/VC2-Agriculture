@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('market_prices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('crop_type_id')->constrained('crop_types')->onDelete('cascade');
             $table->decimal('price', 10, 2);
             $table->date('date_recorded');
             $table->string('region')->nullable();

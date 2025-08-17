@@ -76,7 +76,10 @@ const PublicProducts = ({ language = "en" }) => {
         price: "Price",
         perKg: "/kg",
         seller: "Seller",
+        sellerPhone: "Seller Phone",
         description: "Description",
+        expirationDate: "Expiration Date",
+        order: "Order Product",
         error: "Failed to load data. Please try again later.",
         page: "Page",
         of: "of",
@@ -142,7 +145,10 @@ const PublicProducts = ({ language = "en" }) => {
         price: "តម្លៃ",
         perKg: "/គ.ក",
         seller: "អ្នកលក់",
+        sellerPhone: "លេខទូរស័ព្ទអ្នកលក់",
         description: "ការពិពណ៌នា",
+        expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
+        order: "បញ្ជាទិញផលិតផល",
         error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
         page: "ទំព័រ",
         of: "នៃ",
@@ -152,35 +158,46 @@ const PublicProducts = ({ language = "en" }) => {
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/products";
-
   // Fetch products
   useEffect(() => {
     const fetchData = async () => {
       setError(null);
       try {
+        const token = localStorage.getItem("token"); // Retrieve token from localStorage
+        if (!token) {
+          throw new Error("No authentication token found. Please log in.");
+        }
+
         const response = await axios.get(API_URL, {
           headers: {
             "Content-Type": "application/json",
-            // Add Authorization header if needed (e.g., from context or environment variable)
-            // "Authorization": `Bearer ${process.env.REACT_APP_API_TOKEN}`,
+            Authorization: `Bearer ${token}`, // Include bearer token
           },
         });
         const productData = response.data;
         if (!Array.isArray(productData)) {
           throw new Error("Products API response is not an array");
         }
-        const transformedProducts = productData.map((item) => ({
-          id: item.id,
-          name: item[`name_${language}`] || item.name || "Unnamed Product",
-          price: item.price ? `${Number(item.price).toFixed(2)} KHR` : "0.00 KHR",
-          image: item.image_path
-            ? `http://127.0.0.1:8000/storage/${item.image_path}`
-            : "/placeholder.svg?height=400&width=400&text=Product+Image",
-          seller: item.user?.name || "",
-          stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
-          description: item[`description_${language}`] || item.description || "No description available",
-          category: item.category?.[`name_${language}`] || item.category?.name || "",
-        }));
+        const transformedProducts = productData.map((item) => {
+          const today = new Date();
+          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+          const isExpired = expirationDate && expirationDate < today;
+
+          return {
+            id: item.id,
+            name: item[`name_${language}`] || item.name || "Unnamed Product",
+            price: item.price ? `${Number(item.price).toFixed(2)} KHR` : "0.00 KHR",
+            image: item.image_path
+              ? `http://127.0.0.1:8000/storage/${item.image_path}`
+              : "/placeholder.svg?height=400&width=400&text=Product+Image",
+            seller: item.user?.name || "",
+            sellerPhone: item.user?.phone || "N/A",
+            stock: isExpired || item.quantity === 0 ? t.modal.outOfStock : t.modal.inStock,
+            description: item[`description_${language}`] || item.description || "No description available",
+            category: item.category?.[`name_${language}`] || item.category?.name || "",
+            expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
+          };
+        });
         setProducts(transformedProducts);
       } catch (err) {
         console.error("Fetch data error:", err);
@@ -188,7 +205,7 @@ const PublicProducts = ({ language = "en" }) => {
       }
     };
     fetchData();
-  }, [language, t.modal.error]);
+  }, [language, t.modal.error, t.modal.inStock, t.modal.outOfStock]);
 
   // Pagination logic
   const totalPages = Math.ceil(products.length / itemsPerPage);
@@ -248,7 +265,6 @@ const PublicProducts = ({ language = "en" }) => {
                   <div
                     key={product.id}
                     className="bg-white rounded-lg shadow-lg overflow-hidden relative group hover:shadow-xl transition-all duration-300 h-96 cursor-pointer"
-                    onClick={() => openModal(product)}
                     role="article"
                     aria-labelledby={`product-title-${product.id}`}
                   >
@@ -256,7 +272,7 @@ const PublicProducts = ({ language = "en" }) => {
                     <div className="absolute top-2 right-2 z-10">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                          product.stock === "In Stock" ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
+                          product.stock === t.modal.inStock ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
                         }`}
                       >
                         {product.stock}
@@ -308,13 +324,31 @@ const PublicProducts = ({ language = "en" }) => {
                             <span className="text-xs text-gray-300">{t.modal.perKg}</span>
                           </div>
                         </div>
-                        <button
-                          onClick={() => openModal(product)}
-                          className="w-full px-3 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                          aria-label={`${t.modal.viewDetails} for ${product.name}`}
-                        >
-                          {t.modal.viewDetails}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openModal(product)}
+                            className="flex-1 px-3 py-2 bg-green-600/90 backdrop-blur-sm text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                            aria-label={`${t.modal.viewDetails} for ${product.name}`}
+                          >
+                            {t.modal.viewDetails}
+                          </button>
+                          <Link
+                            to="/register"
+                            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              product.stock === t.modal.inStock
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            }`}
+                            aria-label={`${t.modal.order} ${product.name}`}
+                            onClick={(e) => {
+                              if (product.stock === t.modal.outOfStock) {
+                                e.preventDefault();
+                              }
+                            }}
+                          >
+                            {t.modal.order}
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -419,11 +453,17 @@ const PublicProducts = ({ language = "en" }) => {
                       <p className="text-xl text-gray-900">{selectedProduct.seller}</p>
                     </div>
                   )}
+                  {selectedProduct.sellerPhone && selectedProduct.sellerPhone !== "N/A" && (
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.sellerPhone}</label>
+                      <p className="text-xl text-gray-900">{selectedProduct.sellerPhone}</p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.stock}</label>
                     <span
                       className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
-                        selectedProduct.stock === "In Stock"
+                        selectedProduct.stock === t.modal.inStock
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
@@ -431,6 +471,12 @@ const PublicProducts = ({ language = "en" }) => {
                       {selectedProduct.stock}
                     </span>
                   </div>
+                  {selectedProduct.expiration_date && (
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.expirationDate}</label>
+                      <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.description}</label>
                     <p className="text-lg text-gray-900 leading-relaxed">{selectedProduct.description}</p>

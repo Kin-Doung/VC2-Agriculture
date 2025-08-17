@@ -16,7 +16,7 @@ class Product extends Model
         'user_id',
         'category_id',
         'crop_id',
-        'available_from',
+        'expiration_date',
         'image_path',
     ];
     public function user()
