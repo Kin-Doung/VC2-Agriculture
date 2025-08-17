@@ -78,11 +78,12 @@ const CropTrackerView = ({ language = "en" }) => {
     ],
   };
 
-  const defaultDetails = {
-    stages: cropStages["Corn"],
+  const defaultDetails = (cropType) => ({
+    status: "Growing",
+    stages: cropStages[cropType] || cropStages["Corn"],
     notes: "",
     photoUrl: "/placeholder-photo.jpg",
-  };
+  });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -98,8 +99,7 @@ const CropTrackerView = ({ language = "en" }) => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newCrop, setNewCrop] = useState({
-    name: "",
-    status: "Growing",
+    crop_id: "",
     planted: "",
     location: "",
     image: null,
@@ -107,6 +107,7 @@ const CropTrackerView = ({ language = "en" }) => {
   const [editCrop, setEditCrop] = useState(null);
   const [notes, setNotes] = useState("");
   const [availableCrops, setAvailableCrops] = useState([]);
+  const [clientDetails, setClientDetails] = useState({});
 
   const translations = {
     en: {
@@ -119,14 +120,14 @@ const CropTrackerView = ({ language = "en" }) => {
       view: "View",
       addNewCrop: "Add New Crop Tracker",
       editCrop: "Edit Crop Tracker",
-      viewCrop: "Crop tracker Details",
+      viewCrop: "Crop Tracker Details",
       cropName: "Crop Name",
       status: "Status",
       planted: "Planted Date",
       location: "Location",
       progress: "Progress",
       cancel: "Cancel",
-      save: "Save Crop tracker",
+      save: "Save Crop Tracker",
       update: "Update Crop Tracker",
       close: "Close",
       enterCropName: "Select crop name...",
@@ -135,20 +136,18 @@ const CropTrackerView = ({ language = "en" }) => {
       noCropsAvailable: "No crops available. Add a new crop to get started.",
       noCropsFound: "No crops found matching your search.",
       confirmDelete: "Are you sure you want to delete this crop tracker?",
-      loading: "Loading crop tracker...",
+      loading: "Loading crop trackers...",
       error: "Failed to load data. Please try again later.",
-      updateError: "Failed to update crop tracker: ",
       deleteSuccess: "Crop deleted successfully.",
       deleteError: "Failed to delete crop tracker: ",
       updateSuccess: "Crop tracker updated successfully.",
       addError: "Failed to add crop tracker: ",
       saving: "Saving...",
       updating: "Updating...",
-      deleting: "Deleting...",
       notes: "Notes",
       saveNotes: "Save Notes",
       photos: "Photos",
-      uploadPhoto: "Upload Photo (Coming Soon)",
+      uploadPhoto: "Upload Photo",
       cropGrowthHistory: "Crop Growth History",
       downloadReport: "Download Report",
       growthProgress: "Growth Progress",
@@ -184,18 +183,16 @@ const CropTrackerView = ({ language = "en" }) => {
       confirmDelete: "តើអ្នកប្រាកដទេថាចង់លុបដំណាំនេះ?",
       loading: "កំពុងផ្ទុកដំណាំ...",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
-      updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពដំណាំ៖ ",
       deleteSuccess: "ដំណាំត្រូវបានលុបដោយជោគជ័យ។",
       deleteError: "បរាជ័យក្នុងការលុបដំណាំ៖ ",
       updateSuccess: "ដំណាំត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
       addError: "បរាជ័យក្នុងការបន្ថែមដំណាំ៖ ",
       saving: "កំពុងរក្សាទុក...",
       updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
-      deleting: "កំពុងលុប...",
       notes: "កំណត់ចំណាំ",
       saveNotes: "រក្សាទុកកំណត់ចំណាំ",
       photos: "រូបថត",
-      uploadPhoto: "ផ្ទុកឡើងរូបថត (មកដល់ឆាប់ៗនេះ)",
+      uploadPhoto: "ផ្ទុកឡើងរូបថត",
       cropGrowthHistory: "ប្រវត្តិកំណើនដំណាំ",
       downloadReport: "ទាញយករបាយការណ៍",
       growthProgress: "វឌ្ឍនភាពកំណើន",
@@ -209,7 +206,7 @@ const CropTrackerView = ({ language = "en" }) => {
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
   const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
-  const currentDateTime = "03:10 PM +07, Saturday, August 16, 2025";
+  const currentDateTime = "02:23 PM +07, Sunday, August 17, 2025";
 
   const debouncedSetSearchTerm = useCallback(
     debounce((value) => setSearchTerm(value), 300),
@@ -229,7 +226,7 @@ const CropTrackerView = ({ language = "en" }) => {
         });
         if (!response.ok) throw new Error("Failed to fetch available crops");
         const data = await response.json();
-        setAvailableCrops(data.map((crop) => crop.name));
+        setAvailableCrops(data); // Expect [{id, name, crop_type}]
       } catch (err) {
         console.error(err);
       }
@@ -252,23 +249,23 @@ const CropTrackerView = ({ language = "en" }) => {
   };
 
   const normalizeCrop = (crop) => {
-    const cropType = crop.crop_type || crop.crop?.crop_type || "Corn";
-    const stages = cropStages[cropType] || cropStages["Corn"];
+    const cropType = crop.crop?.crop_type || "Corn";
+    const clientData = clientDetails[crop.id] || defaultDetails(cropType);
     return {
       ...crop,
-      id: crop.id || crop.crop_id || Date.now(),
-      name: crop.name || crop.crop?.name || `Crop ${crop.id || "Unknown"}`,
-      status: crop.status || crop.crop?.growth_stage || "Growing",
-      planted: formatDate(crop.planted || crop.crop?.planting_date || "Unknown"),
+      id: crop.id,
+      name: crop.crop?.name || `Crop ${crop.id || "Unknown"}`,
+      status: clientData.status || "Growing",
+      planted: formatDate(crop.planted || "Unknown"),
       location: crop.location || "Unknown",
       crop_type: cropType,
-      progress: crop.progress || `0 / ${stages.length} stages completed`,
-      details: crop.details && typeof crop.details === "object" ? { ...defaultDetails, ...crop.details, stages } : {
-        ...defaultDetails,
-        stages,
-        notes: crop.crop?.notes || "",
-        photoUrl: crop.image_path || "/placeholder-photo.jpg",
+      image_path: crop.image_path || "/placeholder-photo.jpg",
+      details: {
+        ...clientData,
+        stages: clientData.stages.map((stage) => ({ ...stage })),
+        photoUrl: crop.image_path || clientData.photoUrl,
       },
+      progress: `${clientData.stages.filter((s) => s.completed).length} / ${clientData.stages.length} stages completed`,
     };
   };
 
@@ -313,6 +310,8 @@ const CropTrackerView = ({ language = "en" }) => {
   const handleEditCrop = (crop) => {
     setEditCrop({
       ...crop,
+      crop_id: crop.crop?.id || "",
+      status: crop.status,
       planted: crop.planted === "Unknown" ? "" : crop.planted,
       image: null,
     });
@@ -336,6 +335,11 @@ const CropTrackerView = ({ language = "en" }) => {
       });
       if (!response.ok) throw new Error(t.deleteError);
       setCrops(crops.filter((c) => c.id !== cropToDelete.id));
+      setClientDetails((prev) => {
+        const newDetails = { ...prev };
+        delete newDetails[cropToDelete.id];
+        return newDetails;
+      });
       setShowDeleteModal(false);
       alert(t.deleteSuccess);
     } catch (err) {
@@ -371,7 +375,8 @@ const CropTrackerView = ({ language = "en" }) => {
 
   const validateForm = (crop) => {
     const errors = {};
-    if (!crop.name.trim()) errors.name = t.enterCropName;
+    if (!crop.crop_id) errors.crop_id = t.enterCropName;
+    if (!crop.status) errors.status = t.status;
     if (!crop.planted.trim()) errors.planted = t.enterPlanted;
     if (!crop.location.trim()) errors.location = t.enterLocation;
     return errors;
@@ -386,16 +391,9 @@ const CropTrackerView = ({ language = "en" }) => {
     }
     setIsSubmitting(true);
     const formData = new FormData();
-    formData.append("name", newCrop.name);
-    formData.append("status", newCrop.status);
+    formData.append("crop_id", newCrop.crop_id);
     formData.append("planted", newCrop.planted);
     formData.append("location", newCrop.location);
-    formData.append("progress", `0 / ${cropStages["Corn"].length} stages completed`);
-    formData.append("details", JSON.stringify({
-      stages: cropStages["Corn"],
-      notes: "",
-      photoUrl: "/placeholder-photo.jpg",
-    }));
     if (newCrop.image) formData.append("image", newCrop.image);
 
     try {
@@ -409,9 +407,14 @@ const CropTrackerView = ({ language = "en" }) => {
       });
       if (!response.ok) throw new Error(t.addError);
       const savedCrop = await response.json();
+      const cropType = availableCrops.find((c) => c.id === parseInt(newCrop.crop_id))?.crop_type || "Corn";
+      setClientDetails((prev) => ({
+        ...prev,
+        [savedCrop.id]: { ...defaultDetails(cropType), status: newCrop.status },
+      }));
       setCrops((prev) => [normalizeCrop(savedCrop), ...prev]);
       setNewCrop({
-        name: "",
+        crop_id: "",
         status: "Growing",
         planted: "",
         location: "",
@@ -435,12 +438,9 @@ const CropTrackerView = ({ language = "en" }) => {
     }
     setIsSubmitting(true);
     const formData = new FormData();
-    formData.append("name", editCrop.name);
-    formData.append("status", editCrop.status);
+    formData.append("crop_id", editCrop.crop_id);
     formData.append("planted", editCrop.planted);
     formData.append("location", editCrop.location);
-    formData.append("progress", editCrop.progress);
-    formData.append("details", JSON.stringify(editCrop.details));
     if (editCrop.image) formData.append("image", editCrop.image);
     formData.append("_method", "PUT");
 
@@ -455,6 +455,13 @@ const CropTrackerView = ({ language = "en" }) => {
       });
       if (!response.ok) throw new Error(t.updateError);
       const updatedCropData = await response.json();
+      setClientDetails((prev) => ({
+        ...prev,
+        [updatedCropData.id]: {
+          ...prev[updatedCropData.id],
+          status: editCrop.status,
+        },
+      }));
       setCrops(crops.map((c) => (c.id === updatedCropData.id ? normalizeCrop(updatedCropData) : c)));
       setShowEditModal(false);
       alert(t.updateSuccess);
@@ -465,66 +472,39 @@ const CropTrackerView = ({ language = "en" }) => {
     }
   };
 
-  const markComplete = async (stageIndex) => {
-    const updatedCrop = { ...selectedCrop };
-    updatedCrop.details.stages[stageIndex].completed = true;
-    updatedCrop.details.stages[stageIndex].date = currentDateTime;
-    const completedCount = updatedCrop.details.stages.filter((s) => s.completed).length;
-    updatedCrop.progress = `${completedCount} / ${updatedCrop.details.stages.length} stages completed`;
-
-    try {
-      const formData = new FormData();
-      formData.append("name", updatedCrop.name);
-      formData.append("status", updatedCrop.status);
-      formData.append("planted", updatedCrop.planted);
-      formData.append("location", updatedCrop.location);
-      formData.append("progress", updatedCrop.progress);
-      formData.append("details", JSON.stringify(updatedCrop.details));
-      formData.append("_method", "PUT");
-
-      const response = await fetch(`${API_URL}/${updatedCrop.id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
-        body: formData,
-      });
-      if (!response.ok) throw new Error(t.updateError);
-      setSelectedCrop(updatedCrop);
-      setCrops((prev) => prev.map((c) => (c.id === updatedCrop.id ? updatedCrop : c)));
-    } catch (err) {
-      alert(err.message);
-    }
+  const markComplete = (stageIndex) => {
+    setSelectedCrop((prev) => {
+      const updatedCrop = { ...prev };
+      updatedCrop.details.stages[stageIndex].completed = true;
+      updatedCrop.details.stages[stageIndex].date = currentDateTime;
+      const completedCount = updatedCrop.details.stages.filter((s) => s.completed).length;
+      updatedCrop.progress = `${completedCount} / ${updatedCrop.details.stages.length} stages completed`;
+      setClientDetails((prevDetails) => ({
+        ...prevDetails,
+        [updatedCrop.id]: updatedCrop.details,
+      }));
+      setCrops((prev) =>
+        prev.map((c) => (c.id === updatedCrop.id ? updatedCrop : c))
+      );
+      return updatedCrop;
+    });
   };
 
-  const saveNotes = async () => {
-    const updatedCrop = { ...selectedCrop, details: { ...selectedCrop.details, notes } };
-
-    try {
-      const formData = new FormData();
-      formData.append("name", updatedCrop.name);
-      formData.append("status", updatedCrop.status);
-      formData.append("planted", updatedCrop.planted);
-      formData.append("location", updatedCrop.location);
-      formData.append("progress", updatedCrop.progress);
-      formData.append("details", JSON.stringify(updatedCrop.details));
-      formData.append("_method", "PUT");
-
-      const response = await fetch(`${API_URL}/${updatedCrop.id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
-        body: formData,
-      });
-      if (!response.ok) throw new Error(t.updateError);
-      setSelectedCrop(updatedCrop);
-      setCrops((prev) => prev.map((c) => (c.id === updatedCrop.id ? updatedCrop : c)));
-    } catch (err) {
-      alert(err.message);
-    }
+  const saveNotes = () => {
+    setSelectedCrop((prev) => {
+      const updatedCrop = {
+        ...prev,
+        details: { ...prev.details, notes },
+      };
+      setClientDetails((prevDetails) => ({
+        ...prevDetails,
+        [updatedCrop.id]: updatedCrop.details,
+      }));
+      setCrops((prev) =>
+        prev.map((c) => (c.id === updatedCrop.id ? updatedCrop : c))
+      );
+      return updatedCrop;
+    });
   };
 
   return (
@@ -589,7 +569,7 @@ const CropTrackerView = ({ language = "en" }) => {
                     </div>
                     <button
                       onClick={() => handleViewCrop(crop)}
-                      className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg w-full shadow-lg hover:bg-green-700 hover:scale-105 transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex justify-center items-center"
+                      className="mt-6 px-4 py-2 bg-green-600 text-white rounded-lg w-full shadow-lg hover:bg-green-700 hover:scale-105 transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex justify-center items-center"
                       disabled={isSubmitting}
                       aria-label={`View details for ${crop.name}`}
                       tabIndex="0"
@@ -660,36 +640,39 @@ const CropTrackerView = ({ language = "en" }) => {
                     {t.cropName} *
                   </label>
                   <select
-                    name="name"
-                    value={newCrop.name}
+                    name="crop_id"
+                    value={newCrop.crop_id}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.name ? "border-red-500" : "border-gray-300"
+                    className={`w-full px-3 py-2 border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"
                       } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                     disabled={isSubmitting}
                   >
                     <option value="" disabled>{t.enterCropName}</option>
-                    {availableCrops.map((cropName, index) => (
-                      <option key={index} value={cropName}>
-                        {cropName}
+                    {availableCrops.map((crop) => (
+                      <option key={crop.id} value={crop.id}>
+                        {crop.name}
                       </option>
                     ))}
                   </select>
-                  {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
+                  {formErrors.crop_id && <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.status}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.status} *</label>
                   <select
                     name="status"
                     value={newCrop.status}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required
                     disabled={isSubmitting}
                   >
                     <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
                     <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
                     <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
                   </select>
+                  {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -726,7 +709,7 @@ const CropTrackerView = ({ language = "en" }) => {
                   {formErrors.location && <p className="text-red-500 text-sm mt-1">{formErrors.location}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.photos}</label>
                   <input
                     type="file"
                     accept="image/*"
@@ -776,36 +759,39 @@ const CropTrackerView = ({ language = "en" }) => {
                     {t.cropName} *
                   </label>
                   <select
-                    name="name"
-                    value={editCrop.name}
+                    name="crop_id"
+                    value={editCrop.crop_id}
                     onChange={handleEditInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.name ? "border-red-500" : "border-gray-300"
+                    className={`w-full px-3 py-2 border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"
                       } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                     disabled={isSubmitting}
                   >
                     <option value="" disabled>{t.enterCropName}</option>
-                    {availableCrops.map((cropName, index) => (
-                      <option key={index} value={cropName}>
-                        {cropName}
+                    {availableCrops.map((crop) => (
+                      <option key={crop.id} value={crop.id}>
+                        {crop.name}
                       </option>
                     ))}
                   </select>
-                  {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
+                  {formErrors.crop_id && <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.status}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.status} *</label>
                   <select
                     name="status"
                     value={editCrop.status}
                     onChange={handleEditInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required
                     disabled={isSubmitting}
                   >
                     <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
                     <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
                     <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
                   </select>
+                  {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -842,7 +828,7 @@ const CropTrackerView = ({ language = "en" }) => {
                   {formErrors.location && <p className="text-red-500 text-sm mt-1">{formErrors.location}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.photos}</label>
                   <input
                     type="file"
                     accept="image/*"
@@ -850,7 +836,7 @@ const CropTrackerView = ({ language = "en" }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     disabled={isSubmitting}
                   />
-                  <img src={editCrop.details.photoUrl} alt="Current photo" className="mt-2 w-full h-32 object-cover rounded" />
+                  <img src={editCrop.image_path} alt="Current photo" className="mt-2 w-full h-32 object-cover rounded" />
                 </div>
                 <div className="flex gap-3 pt-4">
                   <button
@@ -891,6 +877,7 @@ const CropTrackerView = ({ language = "en" }) => {
                 <div className="col-span-2">
                   <div className="mb-6">
                     <p className="text-gray-600 mb-2">{t.growthProgress}</p>
+                    <p><span role="img" aria-label="status">📊</span> {t.status}: {selectedCrop.status}</p>
                     <p><span role="img" aria-label="calendar">📅</span> {t.planted}: {selectedCrop.planted}</p>
                     <p><span role="img" aria-label="location">📍</span> {t.location}: {selectedCrop.location}</p>
                     <div className="flex items-center mt-2">
@@ -942,7 +929,7 @@ const CropTrackerView = ({ language = "en" }) => {
                   </div>
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <p className="text-gray-600 mb-2">{t.photos}</p>
-                    <img src={selectedCrop.details.photoUrl} alt={`${selectedCrop.name} photo`} className="w-full h-32 object-cover rounded mb-2" />
+                    <img src={selectedCrop.image_path} alt={`${selectedCrop.name} photo`} className="w-full h-32 object-cover rounded mb-2" />
                     <input type="text" className="w-full p-2 border rounded" placeholder={t.uploadPhoto} disabled />
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
