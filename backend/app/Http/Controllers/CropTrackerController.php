@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CropTracker;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class CropTrackerController extends Controller
 {
@@ -11,66 +12,76 @@ class CropTrackerController extends Controller
     {
         $this->middleware('auth:sanctum');
     }
-    
-   public function index()
+
+    public function index()
     {
         $cropTrackers = CropTracker::with('crop')->get();
-        return response()->json($cropTrackers);
+        return response()->json($cropTrackers, 200);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
+        $validator = Validator::make($request->all(), [
             'crop_id' => 'required|exists:crops,id',
-            'planted' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png',
+            'planted' => 'required|string',
+            'location' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif', // Image validation: max 2MB
         ]);
 
-        $cropTracker = CropTracker::create($validatedData);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
 
-        return response()->json($cropTracker, 201);
+        $data = $request->only(['crop_id', 'planted', 'location']);
+        
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('images', 'public');
+            $data['image_path'] = $imagePath;
+        }
+
+        $cropTracker = CropTracker::create($data);
+        return response()->json($cropTracker->load('crop'), 201);
     }
-
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
-        $cropTracker = CropTracker::with('crop')->findOrFail($id);
-        return response()->json($cropTracker);
+        $cropTracker = CropTracker::with('crop')->find($id);
+        if (!$cropTracker) {
+            return response()->json(['message' => 'Crop Tracker not found'], 404);
+        }
+        return response()->json( $cropTracker, 200);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
-        $cropTracker = CropTracker::findOrFail($id);
+        $cropTracker = CropTracker::find($id);
+        if (!$cropTracker) {
+            return response()->json(['message' => 'Crop Tracker not found'], 404);
+        }
 
-        $validatedData = $request->validate([
+        $validator = Validator::make($request->all(), [
             'crop_id' => 'sometimes|exists:crops,id',
-            'planted' => 'sometimes|string|max:255',
-            'location' => 'sometimes|string|max:255',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png',
+            'planted' => 'sometimes|string',
+            'location' => 'sometimes|string',
+            'image_path' => 'nullable|string',
         ]);
 
-        $cropTracker->update($validatedData);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
 
-        return response()->json($cropTracker);
+        $cropTracker->update($request->only(['crop_id', 'planted', 'location', 'image_path']));
+        return response()->json( $cropTracker->load('crop'), 200);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
-        $cropTracker = CropTracker::findOrFail($id);
-        $cropTracker->delete();
+        $cropTracker = CropTracker::find($id);
+        if (!$cropTracker) {
+            return response()->json(['message' => 'Crop Tracker not found'], 404);
+        }
 
-        return response()->json(null, 204);
+        $cropTracker->delete();
+        return response()->json(['message' => 'Crop Tracker deleted'], 200);
     }
 }
