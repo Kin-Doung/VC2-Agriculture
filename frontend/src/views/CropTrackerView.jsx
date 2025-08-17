@@ -575,9 +575,9 @@ const CropTrackerView = ({ language = "en" }) => {
         ) : filteredCrops.length === 0 ? (
           <div className="text-center py-12">{t.noCropsFound}</div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md p-6 w-full md:max-w-lg">
+          <div className="grid grid-cols-3 gap-6 bg-white rounded-lg shadow-md p-6">
             {filteredCrops.map((crop) => (
-              <div key={crop.id} className="border-b border-gray-200 py-4 last:border-b-0">
+              <div key={crop.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 w-full">
                     <h3 className="text-lg font-medium text-gray-900">{crop.name}</h3>
@@ -613,7 +613,7 @@ const CropTrackerView = ({ language = "en" }) => {
                       <MoreVertical className="h-5 w-5 text-gray-600" />
                     </button>
                     {activeMenu === crop.id && (
-                      <div className="absolute left-0 mt-2 w-48 md:w-56 bg-white rounded-lg shadow-sm border border-gray-200 py-2 z-30 transition-opacity duration-200">
+                      <div className="absolute right-0 mt-2 w-30 bg-white rounded-lg shadow-sm border border-gray-200 py-2 z-30 transition-opacity duration-200">
                         <button
                           onClick={() => handleEditCrop(crop)}
                           className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
