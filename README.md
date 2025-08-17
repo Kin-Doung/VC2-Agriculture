@@ -28,3 +28,5 @@ Edit
 cd frontend
 npm install
 npm run dev
+npm install recharts
+npm install react-router-dom

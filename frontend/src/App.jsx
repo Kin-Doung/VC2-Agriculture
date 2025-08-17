@@ -18,7 +18,7 @@ import Marketplace from "./views/Marketplace"
 import CropManagement from "./views/CropManagement" 
 import Product from "./views/Product"
 import Category from "./views/Category"
-import MarketPricesView from "./views/MarketPricesView"
+import MarketPricesView from "./views/MarketPrice/MarketPricesView"
 import SeedScanner from "./views/SeedScanner"
 import Messages from "./views/Messages"
 import Learning from "./views/Learning"
@@ -26,6 +26,8 @@ import Finances from "./views/Finances"
 import Support from "./views/Support"
 import Profile from "./views/Profile"
 import Settings from "./views/Settings"
+import HistoryPrice from "./views/MarketPrice/HistoryPrice"
+import ImportingCountries from "./views/MarketPrice/ImportingCountries"
 
 // Public view components
 import PublicHome from "./views/public/PublicHome"
@@ -130,6 +132,8 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       <Route path="/product" element={<Product language={language} />} />
       <Route path="/marketplace" element={<Marketplace language={language} />} />
       <Route path="/prices" element={<MarketPricesView language={language} />} />
+      <Route path="/prices/history" element={<HistoryPrice language={language} />} />
+      <Route path="/prices/importing-countries" element={<ImportingCountries language={language} />} />
       <Route path="/scanner" element={<SeedScanner language={language} />} />
       <Route path="/messages" element={<Messages language={language} />} />
       <Route path="/learning" element={<Learning language={language} />} />
