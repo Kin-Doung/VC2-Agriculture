@@ -38,7 +38,7 @@ class LandRequest extends FormRequest
             'seed_amount_max' => 'required|numeric|min:0',
             'fertilizer_total' => 'required|array',
             'date' => 'required|date|date_format:Y-m-d',
-            'land_type' => 'required|string|max:255',
+            'land_type' => 'required|string',
             'boundary_points' => 'required|array|min:3',
             'boundary_points.*.lat' => 'required|numeric|between:-90,90',
             'boundary_points.*.lng' => 'required|numeric|between:-180,180',

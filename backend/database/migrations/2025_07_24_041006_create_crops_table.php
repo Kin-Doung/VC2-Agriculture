@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('crops', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
             $table->foreignId('farm_id')->constrained('farms')->onDelete('cascade');
-            $table->foreignId('crop_type_id')->constrained('crop_types')->onDelete('cascade');
             $table->date('planting_date');
             $table->string('growth_stage')->nullable();
             $table->text('notes');

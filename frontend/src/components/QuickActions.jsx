@@ -1,4 +1,4 @@
-import { Camera, MapPin, Plus, Scan, MessageCircle, TrendingUp } from "lucide-react"
+import { Store, MapPin, ShoppingBag, Scan, TrendingUp,  GraduationCap } from "lucide-react"
 import { Link } from "react-router-dom"
 
 const QuickActions = ({ language }) => {
@@ -7,19 +7,19 @@ const QuickActions = ({ language }) => {
       title: "Quick Actions",
       measureLand: "Measure Land",
       scanSeeds: "Scan Seeds",
-      addCrop: "Add Crop",
-      takePicture: "Take Picture",
+      product: "product",
+      marketplace: "marketplace",
       checkPrices: "Check Prices",
-      messages: "Messages",
+      learning: "learning",
     },
     km: {
       title: "សកម្មភាពរហ័ស",
       measureLand: "វាស់ដី",
       scanSeeds: "ស្កេនគ្រាប់ពូជ",
-      addCrop: "បន្ថែមដំណាំ",
-      takePicture: "ថតរូប",
+      product: "ផលិត្តផល",
+      marketplace: "ទីផ្សារ",
       checkPrices: "ពិនិត្យតម្លៃ",
-      messages: "សារ",
+      learning: "សិក្សា",
     },
   }
 
@@ -28,10 +28,10 @@ const QuickActions = ({ language }) => {
   const actions = [
     { icon: MapPin, label: t.measureLand, color: "bg-green-500", path: "/measure" },
     { icon: Scan, label: t.scanSeeds, color: "bg-blue-500", path: "/scanner" },
-    { icon: Plus, label: t.addCrop, color: "bg-purple-500", path: "/crops" },
-    { icon: Camera, label: t.takePicture, color: "bg-orange-500", path: "/scanner" },
+    { icon: ShoppingBag, label: t.product, color: "bg-purple-500", path: "/product" },
+    { icon: Store, label: t.marketplace, color: "bg-orange-500", path: "/marketplace" },
     { icon: TrendingUp, label: t.checkPrices, color: "bg-red-500", path: "/prices" },
-    { icon: MessageCircle, label: t.messages, color: "bg-indigo-500", path: "/messages" },
+    { icon: GraduationCap, label: t.learning, color: "bg-indigo-500", path: "/learning" },
   ]
 
   return (

@@ -15,9 +15,10 @@ import MeasurementHistory from "./views/MeasurementHistory"
 import CropTrackerView from "./views/CropTrackerView"
 import TasksView from "./views/TasksView"
 import Marketplace from "./views/Marketplace"
+import CropManagement from "./views/CropManagement" 
 import Product from "./views/Product"
 import Category from "./views/Category"
-import MarketPricesView from "./views/MarketPricesView"
+import MarketPricesView from "./views/MarketPrice/MarketPricesView"
 import SeedScanner from "./views/SeedScanner"
 import Messages from "./views/Messages"
 import Learning from "./views/Learning"
@@ -25,6 +26,8 @@ import Finances from "./views/Finances"
 import Support from "./views/Support"
 import Profile from "./views/Profile"
 import Settings from "./views/Settings"
+import HistoryPrice from "./views/MarketPrice/HistoryPrice"
+import ImportingCountries from "./views/MarketPrice/ImportingCountries"
 
 // Public view components
 import PublicHome from "./views/public/PublicHome"
@@ -36,8 +39,9 @@ import Register from "./views/auth/Register"
 
 // Admin
 import UserList from "./views/admin/UserList"
-
+import { setAuthToken } from './api';
 import "./App.css"
+import { Crop } from "lucide-react"
 
 // Mock measurement data
 const initialMeasurements = [
@@ -123,13 +127,16 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       />
       <Route path="/crops" element={<CropTrackerView language={language} />} />
       <Route path="/tasks" element={<TasksView language={language} />} />
+      <Route path="/cropmanagement" element={<CropManagement language={language} />} />
       <Route path="/category" element={<Category language={language} />} />
       <Route path="/product" element={<Product language={language} />} />
       <Route path="/marketplace" element={<Marketplace language={language} />} />
       <Route path="/prices" element={<MarketPricesView language={language} />} />
+      <Route path="/prices/history" element={<HistoryPrice language={language} />} />
+      <Route path="/prices/importing-countries" element={<ImportingCountries language={language} />} />
       <Route path="/scanner" element={<SeedScanner language={language} />} />
       <Route path="/messages" element={<Messages language={language} />} />
-      <Route path="/learn" element={<Learning language={language} />} />
+      <Route path="/learning" element={<Learning language={language} />} />
       <Route path="/finances" element={<Finances language={language} />} />
       <Route path="/support" element={<Support language={language} />} />
       <Route path="/profile" element={<Profile language={language} />} />
@@ -170,6 +177,13 @@ function App() {
     }
 
     setIsLoadingAuth(false); // Done loading auth
+  }, []);
+
+  useEffect(() => {
+  const token = localStorage.getItem('token');
+  if (token && token !== "token") {
+    setAuthToken(token); // Set Authorization header globally
+  }
   }, []);
 
   const handleLogin = (userData) => {

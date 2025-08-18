@@ -14,6 +14,12 @@ cp .env.example .env
 php artisan key:generate
 php artisan migrate
 php artisan serve
+pip install flask
+pip install pillow
+pip install numpy
+pip install opencv-python
+pip install tensorflow
+php artisan storage:link
 ```
 ### Frontend (React)
 ```bash
@@ -22,3 +28,5 @@ Edit
 cd frontend
 npm install
 npm run dev
+npm install recharts
+npm install react-router-dom

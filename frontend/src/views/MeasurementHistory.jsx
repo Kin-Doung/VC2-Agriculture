@@ -159,10 +159,7 @@ const translations = {
     points: "{count} ចំណុច",
     acres: "{acres} អា",
     notSpecified: "មិនបានបញ្ជាក់",
-    landTypes: [
-      { value: "Lowland Rainfed", label: "ដីទំនាបពឹងផ្អែកលើទឹកភ្លៀង" },
-      { value: "Agricultural", label: "កសិកម្ម" },
-    ],
+   
     recommendations: {
       tonle_sap_basin: {
         rice: "ពូជទិន្នផលខ្ពស់ដូចជា IR36, IR42, ឬ Phka Romdoul (ក្រអូប, គុណភាពនាំចេញ)។ ទិន្នផល >១ តោន/ហិកតា។",
@@ -751,7 +748,7 @@ export default function MeasurementHistoryTranslate({ onBack, onDelete, language
                                 <div className="flex items-center">
                                   {getLandTypeIcon(measurement.land_type)}
                                   <span className="ml-1">
-                                    {translations[language].landTypes.find(lt => lt.value === measurement.land_type)?.label || translations[language].notSpecified}
+                                      {measurement.land_type || translations[language].notSpecified}
                                   </span>
                                 </div>
                               </td>
