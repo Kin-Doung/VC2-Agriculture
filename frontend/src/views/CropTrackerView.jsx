@@ -202,8 +202,11 @@ const CropTrackerView = ({ language = "en" }) => {
   const normalizeCrop = (crop) => {
     const cropType = crop.crop?.crop_type || "Corn";
     const clientData = clientDetails[crop.id] || defaultDetails(cropType);
+    console.log(`clientData for crop ${crop.id}:`, clientData); // Debug log
     const dap = calculateDAP(crop.planted);
-    const stages = clientData.stages.map((stage) => {
+
+    // Ensure stages is always an array
+    const stages = (clientData.stages || generalTimeline.map((stage) => ({ ...stage }))).map((stage) => {
       const [start, end] = stage.dapRange.match(/\d+/g).map(Number);
       const isCompleted = dap !== null && dap >= start;
       return {
@@ -212,6 +215,7 @@ const CropTrackerView = ({ language = "en" }) => {
         date: isCompleted ? calculateExpectedDate(crop.planted, stage.dapRange, true) : calculateExpectedDate(crop.planted, stage.dapRange),
       };
     });
+
     return {
       ...crop,
       id: crop.id,
@@ -280,6 +284,14 @@ const CropTrackerView = ({ language = "en" }) => {
       if (!response.ok) throw new Error("Failed to fetch crops");
       const data = await response.json();
       if (!Array.isArray(data)) throw new Error("API response is not an array");
+
+      // Initialize clientDetails for each crop
+      const newClientDetails = {};
+      data.forEach((crop) => {
+        const cropType = crop.crop?.crop_type || "Corn";
+        newClientDetails[crop.id] = clientDetails[crop.id] || defaultDetails(cropType);
+      });
+      setClientDetails(newClientDetails);
       setCrops(data.map(normalizeCrop));
     } catch (err) {
       setError(`${t.error}: ${err.message}`);
@@ -409,9 +421,10 @@ const CropTrackerView = ({ language = "en" }) => {
       if (!response.ok) throw new Error(t.addError);
       const savedCrop = await response.json();
       const cropType = availableCrops.find((c) => c.id === parseInt(newCrop.crop_id))?.crop_type || "Corn";
+      const newDetails = { ...defaultDetails(cropType), status: newCrop.status };
       setClientDetails((prev) => ({
         ...prev,
-        [savedCrop.id]: { ...defaultDetails(cropType), status: newCrop.status },
+        [savedCrop.id]: newDetails,
       }));
       setCrops((prev) => [normalizeCrop(savedCrop), ...prev]);
       setNewCrop({
@@ -456,9 +469,11 @@ const CropTrackerView = ({ language = "en" }) => {
       });
       if (!response.ok) throw new Error(t.updateError);
       const updatedCropData = await response.json();
+      const cropType = availableCrops.find((c) => c.id === parseInt(editCrop.crop_id))?.crop_type || "Corn";
       setClientDetails((prev) => ({
         ...prev,
         [updatedCropData.id]: {
+          ...defaultDetails(cropType), // Ensure full initialization
           ...prev[updatedCropData.id],
           status: editCrop.status,
         },
