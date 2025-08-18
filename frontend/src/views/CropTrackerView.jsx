@@ -5,82 +5,20 @@ import { useState, useEffect, useCallback } from "react";
 import debounce from "lodash/debounce";
 
 const CropTrackerView = ({ language = "en" }) => {
-  const cropStages = {
-    Corn: [
-      { stage: "Germination", completed: false, date: "Pending" },
-      { stage: "Vegetative Growth (V6-VT)", completed: false, date: "Pending" },
-      { stage: "Rapid Growth (V6-VT)", completed: false, date: "Pending" },
-      { stage: "Tasseling (VT)", completed: false, date: "Pending" },
-      { stage: "Silking (R1)", completed: false, date: "Pending" },
-      { stage: "Blister (R2)", completed: false, date: "Pending" },
-      { stage: "Milk (R3)", completed: false, date: "Pending" },
-      { stage: "Dough (R4)", completed: false, date: "Pending" },
-      { stage: "Dent (R5)", completed: false, date: "Pending" },
-      { stage: "Physiological Maturity (R6)", completed: false, date: "Pending" },
-      { stage: "Harvest Ready", completed: false, date: "Pending" },
-    ],
-    Rice: [
-      { stage: "Germination", completed: false, date: "Pending" },
-      { stage: "Tillering", completed: false, date: "Pending" },
-      { stage: "Stem Elongation", completed: false, date: "Pending" },
-      { stage: "Panicle Initiation", completed: false, date: "Pending" },
-      { stage: "Flowering", completed: false, date: "Pending" },
-      { stage: "Grain Filling", completed: false, date: "Pending" },
-    ],
-    Wheat: [
-      { stage: "Germination", completed: false, date: "Pending" },
-      { stage: "Tillering", completed: false, date: "Pending" },
-      { stage: "Stem Extension", completed: false, date: "Pending" },
-      { stage: "Heading", completed: false, date: "Pending" },
-      { stage: "Grain Filling", completed: false, date: "Pending" },
-      { stage: "Harvest", completed: false, date: "Pending" },
-    ],
-    Soybean: [
-      { stage: "Emergence (VE)", completed: false, date: "Pending" },
-      { stage: "Cotyledon (VC)", completed: false, date: "Pending" },
-      { stage: "First Trifoliolate (V1)", completed: false, date: "Pending" },
-      { stage: "Vegetative Growth (V2-Vn)", completed: false, date: "Pending" },
-      { stage: "Beginning Bloom (R1)", completed: false, date: "Pending" },
-      { stage: "Full Bloom (R2)", completed: false, date: "Pending" },
-      { stage: "Beginning Pod (R3)", completed: false, date: "Pending" },
-      { stage: "Full Pod (R4)", completed: false, date: "Pending" },
-      { stage: "Beginning Seed (R5)", completed: false, date: "Pending" },
-      { stage: "Full Seed (R6)", completed: false, date: "Pending" },
-      { stage: "Beginning Maturity (R7)", completed: false, date: "Pending" },
-      { stage: "Full Maturity (R8)", completed: false, date: "Pending" },
-      { stage: "Harvest Ready", completed: false, date: "Pending" },
-    ],
-    Potato: [
-      { stage: "Sprout Development", completed: false, date: "Pending" },
-      { stage: "Vegetative Growth", completed: false, date: "Pending" },
-      { stage: "Tuber Initiation", completed: false, date: "Pending" },
-      { stage: "Tuber Bulking", completed: false, date: "Pending" },
-      { stage: "Maturation", completed: false, date: "Pending" },
-      { stage: "Harvest", completed: false, date: "Pending" },
-    ],
-    Cotton: [
-      { stage: "Germination and Emergence", completed: false, date: "Pending" },
-      { stage: "Seedling Establishment", completed: false, date: "Pending" },
-      { stage: "Squaring (Leaf Area Development)", completed: false, date: "Pending" },
-      { stage: "Flowering and Boll Development", completed: false, date: "Pending" },
-      { stage: "Boll Maturation", completed: false, date: "Pending" },
-      { stage: "Harvest Ready", completed: false, date: "Pending" },
-    ],
-    Tomato: [
-      { stage: "Germination", completed: false, date: "Pending" },
-      { stage: "Seedling", completed: false, date: "Pending" },
-      { stage: "Vegetative Growth", completed: false, date: "Pending" },
-      { stage: "Flowering", completed: false, date: "Pending" },
-      { stage: "Fruit Set", completed: false, date: "Pending" },
-      { stage: "Fruit Development", completed: false, date: "Pending" },
-      { stage: "Ripening", completed: false, date: "Pending" },
-      { stage: "Harvest", completed: false, date: "Pending" },
-    ],
-  };
+  const generalTimeline = [
+    { stage: "Germination & Emergence", dapRange: "0–10 DAP", completed: false, date: "Pending" },
+    { stage: "Vegetative Growth", dapRange: "10–40 DAP", completed: false, date: "Pending" },
+    { stage: "Rapid Growth", dapRange: "40–60 DAP", completed: false, date: "Pending" },
+    { stage: "Reproductive Stage", dapRange: "60–90 DAP", completed: false, date: "Pending" },
+    { stage: "Early Grain/Pod/Head Filling", dapRange: "90–110 DAP", completed: false, date: "Pending" },
+    { stage: "Grain/Seed Development", dapRange: "110–130 DAP", completed: false, date: "Pending" },
+    { stage: "Maturity", dapRange: "130–150+ DAP", completed: false, date: "Pending" },
+    { stage: "Harvest Ready", dapRange: "150–180+ DAP", completed: false, date: "Pending" },
+  ];
 
   const defaultDetails = (cropType) => ({
     status: "Growing",
-    stages: cropStages[cropType] || cropStages["Corn"],
+    stages: generalTimeline.map((stage) => ({ ...stage })), // Use general timeline for all crops
     notes: "",
     photoUrl: "/placeholder-photo.jpg",
   });
@@ -154,6 +92,9 @@ const CropTrackerView = ({ language = "en" }) => {
       growthStagesTimeline: "Growth Stages Timeline",
       markComplete: "Mark Complete",
       overallProgress: "Overall Progress",
+      generalTimeline: "General Crop Growth Timeline",
+      daysSincePlanting: "Days Since Planting",
+      expected: "Expected",
     },
     km: {
       title: "តាមដានដំណាំ",
@@ -199,6 +140,9 @@ const CropTrackerView = ({ language = "en" }) => {
       growthStagesTimeline: "ពេលវេលាដំណាក់កាលកំណើន",
       markComplete: "សម្គាល់បញ្ចប់",
       overallProgress: "វឌ្ឍនភាពទាំងមូល",
+      generalTimeline: "ពេលវេលាកំណើនដំណាំទូទៅ",
+      daysSincePlanting: "ថ្ងៃចាប់តាំងពីដាំ",
+      expected: "រំពឹងទុក",
     },
   };
 
@@ -206,7 +150,85 @@ const CropTrackerView = ({ language = "en" }) => {
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
   const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
-  const currentDateTime = "02:23 PM +07, Sunday, August 17, 2025";
+  const currentDateTime = new Date().toLocaleString("en-US", {
+    hour: "numeric",
+    minute: "numeric",
+    hour12: true,
+    timeZone: "Asia/Bangkok",
+  }) + ", " + new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
+  const calculateDAP = (plantedDate) => {
+    if (!plantedDate || plantedDate === "Unknown") return null;
+    try {
+      const planted = new Date(plantedDate);
+      const current = new Date();
+      const diffTime = current - planted;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 ? diffDays : 0;
+    } catch {
+      return null;
+    }
+  };
+
+  const getCurrentStage = (dap) => {
+    if (dap === null) return "Unknown";
+    for (let stage of generalTimeline) {
+      const [start, end] = stage.dapRange.match(/\d+/g).map(Number);
+      if (dap >= start && (end === undefined || dap <= end)) {
+        return stage.stage;
+      }
+    }
+    return "Beyond Harvest";
+  };
+
+  const calculateExpectedDate = (plantedDate, dapRange, isCompleted = false) => {
+    if (!plantedDate || plantedDate === "Unknown") return "Unknown";
+    try {
+      const planted = new Date(plantedDate);
+      const [start] = dapRange.match(/\d+/g).map(Number);
+      const targetDate = new Date(planted);
+      targetDate.setDate(planted.getDate() + start);
+      return targetDate.toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+        timeZone: "Asia/Bangkok",
+      }) + ", " + targetDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    } catch {
+      return "Unknown";
+    }
+  };
+
+  const normalizeCrop = (crop) => {
+    const cropType = crop.crop?.crop_type || "Corn";
+    const clientData = clientDetails[crop.id] || defaultDetails(cropType);
+    const dap = calculateDAP(crop.planted);
+    const stages = clientData.stages.map((stage) => {
+      const [start, end] = stage.dapRange.match(/\d+/g).map(Number);
+      const isCompleted = dap !== null && dap >= start;
+      return {
+        ...stage,
+        completed: isCompleted,
+        date: isCompleted ? calculateExpectedDate(crop.planted, stage.dapRange, true) : calculateExpectedDate(crop.planted, stage.dapRange),
+      };
+    });
+    return {
+      ...crop,
+      id: crop.id,
+      name: crop.crop?.name || `Crop ${crop.id || "Unknown"}`,
+      status: clientData.status || "Growing",
+      planted: formatDate(crop.planted || "Unknown"),
+      location: crop.location || "Unknown",
+      crop_type: cropType,
+      image_path: crop.image_path || "/placeholder-photo.jpg",
+      details: {
+        ...clientData,
+        stages,
+        photoUrl: crop.image_path || clientData.photoUrl,
+      },
+      progress: `${stages.filter((s) => s.completed).length} / ${stages.length} stages completed`,
+    };
+  };
 
   const debouncedSetSearchTerm = useCallback(
     debounce((value) => setSearchTerm(value), 300),
@@ -226,7 +248,7 @@ const CropTrackerView = ({ language = "en" }) => {
         });
         if (!response.ok) throw new Error("Failed to fetch available crops");
         const data = await response.json();
-        setAvailableCrops(data); // Expect [{id, name, crop_type}]
+        setAvailableCrops(data);
       } catch (err) {
         console.error(err);
       }
@@ -246,27 +268,6 @@ const CropTrackerView = ({ language = "en" }) => {
     } catch {
       return isoDate;
     }
-  };
-
-  const normalizeCrop = (crop) => {
-    const cropType = crop.crop?.crop_type || "Corn";
-    const clientData = clientDetails[crop.id] || defaultDetails(cropType);
-    return {
-      ...crop,
-      id: crop.id,
-      name: crop.crop?.name || `Crop ${crop.id || "Unknown"}`,
-      status: clientData.status || "Growing",
-      planted: formatDate(crop.planted || "Unknown"),
-      location: crop.location || "Unknown",
-      crop_type: cropType,
-      image_path: crop.image_path || "/placeholder-photo.jpg",
-      details: {
-        ...clientData,
-        stages: clientData.stages.map((stage) => ({ ...stage })),
-        photoUrl: crop.image_path || clientData.photoUrl,
-      },
-      progress: `${clientData.stages.filter((s) => s.completed).length} / ${clientData.stages.length} stages completed`,
-    };
   };
 
   const fetchCrops = async () => {
@@ -470,24 +471,6 @@ const CropTrackerView = ({ language = "en" }) => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const markComplete = (stageIndex) => {
-    setSelectedCrop((prev) => {
-      const updatedCrop = { ...prev };
-      updatedCrop.details.stages[stageIndex].completed = true;
-      updatedCrop.details.stages[stageIndex].date = currentDateTime;
-      const completedCount = updatedCrop.details.stages.filter((s) => s.completed).length;
-      updatedCrop.progress = `${completedCount} / ${updatedCrop.details.stages.length} stages completed`;
-      setClientDetails((prevDetails) => ({
-        ...prevDetails,
-        [updatedCrop.id]: updatedCrop.details,
-      }));
-      setCrops((prev) =>
-        prev.map((c) => (c.id === updatedCrop.id ? updatedCrop : c))
-      );
-      return updatedCrop;
-    });
   };
 
   const saveNotes = () => {
@@ -880,6 +863,8 @@ const CropTrackerView = ({ language = "en" }) => {
                     <p><span role="img" aria-label="status">📊</span> {t.status}: {selectedCrop.status}</p>
                     <p><span role="img" aria-label="calendar">📅</span> {t.planted}: {selectedCrop.planted}</p>
                     <p><span role="img" aria-label="location">📍</span> {t.location}: {selectedCrop.location}</p>
+                    <p><span role="img" aria-label="calendar">📅</span> {t.daysSincePlanting}: {calculateDAP(selectedCrop.planted) ?? "Unknown"} DAP</p>
+                    <p><span role="img" aria-label="stage">🌱</span> {t.generalTimeline}: {getCurrentStage(calculateDAP(selectedCrop.planted))}</p>
                     <div className="flex items-center mt-2">
                       <p>{t.overallProgress}</p>
                       <div className="w-full bg-gray-200 rounded-full h-2.5 ml-2">
@@ -897,16 +882,8 @@ const CropTrackerView = ({ language = "en" }) => {
                       {selectedCrop.details.stages.map((stage, index) => (
                         <li key={index} className="flex items-center mb-2">
                           <span className={stage.completed ? "text-green-600" : "text-gray-500"}>
-                            {stage.stage} {stage.completed ? `(Completed on ${stage.date})` : "Pending"}
+                            {stage.stage} ({stage.dapRange}) {stage.completed ? `(Completed on ${stage.date})` : `(${t.expected}: ${stage.date})`}
                           </span>
-                          {!stage.completed && (
-                            <button
-                              className="ml-2 bg-gray-200 text-gray-700 py-1 px-2 rounded"
-                              onClick={() => markComplete(index)}
-                            >
-                              {t.markComplete}
-                            </button>
-                          )}
                         </li>
                       ))}
                     </ul>
