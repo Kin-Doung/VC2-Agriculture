@@ -30,3 +30,4 @@ npm install
 npm run dev
 npm install recharts
 npm install react-router-dom
+npm install jspdf

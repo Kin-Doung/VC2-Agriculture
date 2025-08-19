@@ -3,6 +3,7 @@
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import debounce from "lodash/debounce";
+import jsPDF from "jspdf"; // Import jsPDF for PDF generation
 
 const CropTrackerView = ({ language = "en" }) => {
   const generalTimeline = [
@@ -156,13 +157,13 @@ const CropTrackerView = ({ language = "en" }) => {
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
   const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
-  const currentDateTime = "10:14 AM, Tuesday, August 19, 2025";
+  const currentDateTime = "01:20 PM, Tuesday, August 19, 2025";
 
   const calculateDAP = (plantedDate) => {
     if (!plantedDate || plantedDate === "Unknown") return null;
     try {
       const planted = new Date(plantedDate);
-      const current = new Date("2025-08-19T10:14:00+07:00");
+      const current = new Date("2025-08-19T13:20:00+07:00");
       const diffTime = current - planted;
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       return diffDays >= 0 ? diffDays : 0;
@@ -498,6 +499,58 @@ const CropTrackerView = ({ language = "en" }) => {
     }
   };
 
+  // Download Report Handler
+  const handleDownloadReport = (crop) => {
+    try {
+      const doc = new jsPDF();
+      const margin = 10;
+      let yPosition = 20;
+
+      // Add title
+      doc.setFontSize(18);
+      doc.text(`${t.viewCrop}: ${crop.name}`, margin, yPosition);
+      yPosition += 10;
+
+      // Add crop details
+      doc.setFontSize(12);
+      doc.text(`${t.status}: ${crop.status}`, margin, yPosition);
+      yPosition += 8;
+      doc.text(`${t.planted}: ${crop.planted}`, margin, yPosition);
+      yPosition += 8;
+      doc.text(`${t.location}: ${crop.location}`, margin, yPosition);
+      yPosition += 8;
+      doc.text(`${t.daysSincePlanting}: ${calculateDAP(crop.planted) ?? "Unknown"} DAP`, margin, yPosition);
+      yPosition += 8;
+      doc.text(`${t.generalTimeline}: ${getCurrentStage(calculateDAP(crop.planted))}`, margin, yPosition);
+      yPosition += 8;
+      doc.text(`${t.overallProgress}: ${crop.progress}`, margin, yPosition);
+      yPosition += 12;
+
+      // Add growth stages timeline
+      doc.setFontSize(14);
+      doc.text(t.growthStagesTimeline, margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(10);
+      crop.details.stages.forEach((stage, index) => {
+        const statusText = stage.completed
+          ? `(Completed on ${stage.date})`
+          : `(${t.expected}: ${stage.date})`;
+        doc.text(`${stage.stage} (${stage.dapRange}) ${statusText}`, margin + 5, yPosition);
+        yPosition += 8;
+      });
+
+      // Add photo placeholder (actual image requires html2canvas)
+      doc.setFontSize(12);
+      yPosition += 5;
+      doc.text(`${t.photos}: ${crop.image_path}`, margin, yPosition);
+
+      // Save the PDF
+      doc.save(`${crop.name}_Report.pdf`);
+    } catch (err) {
+      alert(`Failed to generate report: ${err.message}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-6 space-y-6" onClick={() => setActiveMenu(null)}>
@@ -696,7 +749,7 @@ const CropTrackerView = ({ language = "en" }) => {
                     name="planted"
                     value={newCrop.planted}
                     onChange={handleInputChange}
-                    max={new Date().toISOString().split("T")[0]} // Prevent future dates
+                    max={new Date().toISOString().split("T")[0]}
                     className={`w-full px-3 py-2 border ${formErrors.planted ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                     disabled={isSubmitting}
@@ -809,11 +862,11 @@ const CropTrackerView = ({ language = "en" }) => {
                     {t.planted} *
                   </label>
                   <input
-                    type="text"
+                    type="date"
                     name="planted"
                     value={editCrop.planted}
                     onChange={handleEditInputChange}
-                    placeholder={t.enterPlanted}
+                    max={new Date().toISOString().split("T")[0]}
                     className={`w-full px-3 py-2 border ${formErrors.planted ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                     disabled={isSubmitting}
@@ -922,7 +975,12 @@ const CropTrackerView = ({ language = "en" }) => {
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-gray-600 mb-2">{t.cropGrowthHistory}</p>
-                    <button className="w-full bg-black text-white py-2 rounded">{t.downloadReport}</button>
+                    <button
+                      onClick={() => handleDownloadReport(selectedCrop)}
+                      className="w-full bg-black text-white py-2 rounded"
+                    >
+                      {t.downloadReport}
+                    </button>
                   </div>
                 </div>
               </div>
