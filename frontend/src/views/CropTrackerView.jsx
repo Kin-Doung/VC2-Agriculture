@@ -3,8 +3,38 @@
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import debounce from "lodash/debounce";
-import jsPDF from "jspdf"; // Import jsPDF for PDF generation
-import html2canvas from "html2canvas"; // Import html2canvas for image rendering
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
+// Component to handle image loading with fallback and loading state
+const ImageWithFallback = ({ src, alt, className, fallbackSrc, fallbackAlt }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => setIsLoading(false);
+    img.onerror = () => {
+      setIsLoading(false);
+      setHasError(true);
+    };
+  }, [src]);
+
+  if (isLoading) {
+    return (
+      <div className={className + " flex items-center justify-center bg-gray-100"}>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return <img src={fallbackSrc} alt={fallbackAlt} className={className} loading="lazy" />;
+  }
+
+  return <img src={src} alt={alt} className={className} crossOrigin="anonymous" loading="lazy" />;
+};
 
 const CropTrackerView = ({ language = "en" }) => {
   const generalTimeline = [
@@ -21,7 +51,7 @@ const CropTrackerView = ({ language = "en" }) => {
   const defaultDetails = () => ({
     status: "Growing",
     stages: generalTimeline.map((stage) => ({ ...stage })),
-    photoUrl: "/placeholder-photo.jpg",
+    photoUrl: "/images/placeholder-photo.jpg", // Updated to a more specific path
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -153,7 +183,7 @@ const CropTrackerView = ({ language = "en" }) => {
       previous: "មុន",
       next: "បន្ទាប់",
       page: "ទំព័រ",
-      reportError: "បរាជ័យក្នុងការបង្កើតរបាយការណ៍។ សូមព្យាយាមម្តងទៀត។",
+      reportError: "បរាជ័យក្នុងការបង្កើតរបាយការណ៍។ �សូមព្យាយាមម្តងទៀត។",
     },
   };
 
@@ -166,7 +196,7 @@ const CropTrackerView = ({ language = "en" }) => {
     if (!plantedDate || plantedDate === "Unknown") return null;
     try {
       const planted = new Date(plantedDate);
-      const current = new Date(); // Dynamic current time
+      const current = new Date();
       const diffTime = current - planted;
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       return diffDays >= 0 ? diffDays : 0;
@@ -226,11 +256,11 @@ const CropTrackerView = ({ language = "en" }) => {
         status: clientData.status || "Growing",
         planted: formatDate(crop.planted || "Unknown"),
         location: crop.location || "Unknown",
-        image_path: crop.image_path || "/placeholder-photo.jpg",
+        image_path: crop.image_path && crop.image_path !== "" ? crop.image_path : "/images/placeholder-photo.jpg",
         details: {
           ...clientData,
           stages,
-          photoUrl: crop.image_path || clientData.photoUrl,
+          photoUrl: crop.image_path && crop.image_path !== "" ? crop.image_path : clientData.photoUrl,
         },
         progress: `${stages.filter((s) => s.completed).length} / ${stages.length} stages completed`,
       };
@@ -560,15 +590,16 @@ const CropTrackerView = ({ language = "en" }) => {
         yPosition += 8;
       });
 
-      if (crop.image_path && crop.image_path !== "/placeholder-photo.jpg") {
+      if (crop.image_path && crop.image_path !== "/images/placeholder-photo.jpg") {
         try {
           const imgElement = document.createElement("img");
           imgElement.src = crop.image_path;
+          imgElement.crossOrigin = "anonymous";
           await new Promise((resolve, reject) => {
             imgElement.onload = resolve;
             imgElement.onerror = () => reject(new Error("Failed to load image"));
           });
-          const canvas = await html2canvas(imgElement, { scale: 1 });
+          const canvas = await html2canvas(imgElement, { scale: 1, useCORS: true });
           const imgData = canvas.toDataURL("image/jpeg");
           if (yPosition > 230) {
             doc.addPage();
@@ -883,6 +914,13 @@ const CropTrackerView = ({ language = "en" }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                       disabled={isSubmitting}
                     />
+                    {newCrop.image && (
+                      <img
+                        src={URL.createObjectURL(newCrop.image)}
+                        alt="Image preview"
+                        className="mt-2 w-full h-32 object-cover rounded"
+                      />
+                    )}
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button
@@ -998,7 +1036,13 @@ const CropTrackerView = ({ language = "en" }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                       disabled={isSubmitting}
                     />
-                    <img src={editCrop.image_path} alt="Current photo" className="mt-2 w-full h-32 object-cover rounded" />
+                    <ImageWithFallback
+                      src={editCrop.image_path}
+                      alt={`${editCrop.name} photo`}
+                      className="mt-2 w-full h-32 object-cover rounded"
+                      fallbackSrc="/images/placeholder-photo.jpg"
+                      fallbackAlt="Placeholder image"
+                    />
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button
@@ -1070,7 +1114,13 @@ const CropTrackerView = ({ language = "en" }) => {
                   <div>
                     <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                       <p className="text-gray-600 mb-2">{t.photos}</p>
-                      <img src={selectedCrop.image_path} alt={`${selectedCrop.name} photo`} className="w-full h-32 object-cover rounded mb-2" />
+                      <ImageWithFallback
+                        src={selectedCrop.image_path}
+                        alt={`${selectedCrop.name} photo`}
+                        className="w-full h-32 object-cover rounded mb-2"
+                        fallbackSrc="/images/placeholder-photo.jpg"
+                        fallbackAlt="Placeholder image"
+                      />
                       <p className="text-gray-600">{t.uploadPhoto}: {selectedCrop.image_path}</p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg">
