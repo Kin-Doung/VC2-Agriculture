@@ -40,13 +40,14 @@ const CropTrackerView = ({ language = "en" }) => {
     planted: "",
     location: "",
     image: "",
+    status: "",
   });
   const [editCrop, setEditCrop] = useState(null);
   const [availableCrops, setAvailableCrops] = useState([]);
   const [clientDetails, setClientDetails] = useState({});
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 9;
 
   const translations = {
     en: {
@@ -62,6 +63,7 @@ const CropTrackerView = ({ language = "en" }) => {
       viewCrop: "Crop Tracker Details",
       cropName: "Crop Name",
       status: "Status",
+      selectStatus: "Select status...",
       planted: "Planted Date",
       location: "Location",
       progress: "Progress",
@@ -70,7 +72,7 @@ const CropTrackerView = ({ language = "en" }) => {
       update: "Update Crop Tracker",
       close: "Close",
       enterCropName: "Select crop name...",
-      enterPlanted: "e.g., August 14, 2025",
+      enterPlanted: "Select a date...",
       enterLocation: "Enter location...",
       noCropsAvailable: "No crops available. Add a new crop to get started.",
       noCropsFound: "No crops found matching your search.",
@@ -111,6 +113,7 @@ const CropTrackerView = ({ language = "en" }) => {
       viewCrop: "លម្អិតដំណាំ",
       cropName: "ឈ្មោះដំណាំ",
       status: "ស្ថានភាព",
+      selectStatus: "ជ្រើសរើសស្ថានភាព...",
       planted: "ថ្ងៃដាំ",
       location: "ទីតាំង",
       progress: "វឌ្ឍនភាព",
@@ -119,7 +122,7 @@ const CropTrackerView = ({ language = "en" }) => {
       update: "ធ្វើបច្ចុប្បន្នភាពដំណាំ",
       close: "បិទ",
       enterCropName: "ជ្រើសរើសឈ្មោះដំណាំ...",
-      enterPlanted: "ឧ. ថ្ងៃទី ១៤ សីហា ២៦៨២",
+      enterPlanted: "ជ្រើសរើសកាលបរិច្ឆេទ...",
       enterLocation: "បញ្ចូលទីតាំង...",
       noCropsAvailable: "មិនមានដំណាំទេ។ បន្ថែមដំណាំថ្មីដើម្បីចាប់ផ្តើម។",
       noCropsFound: "រកមិនឃើញដំណាំដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
@@ -153,13 +156,13 @@ const CropTrackerView = ({ language = "en" }) => {
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
   const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
-  const currentDateTime = "05:03 PM, Monday, August 18, 2025";
+  const currentDateTime = "07:51 AM, Tuesday, August 19, 2025";
 
   const calculateDAP = (plantedDate) => {
     if (!plantedDate || plantedDate === "Unknown") return null;
     try {
       const planted = new Date(plantedDate);
-      const current = new Date("2025-08-18T17:03:00+07:00");
+      const current = new Date("2025-08-19T07:51:00+07:00");
       const diffTime = current - planted;
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       return diffDays >= 0 ? diffDays : 0;
@@ -330,7 +333,7 @@ const CropTrackerView = ({ language = "en" }) => {
     setEditCrop({
       ...crop,
       crop_id: crop.crop?.id || "",
-      status: crop.status,
+      status: crop.status || "",
       planted: crop.planted === "Unknown" ? "" : crop.planted,
       image: "",
     });
@@ -361,7 +364,6 @@ const CropTrackerView = ({ language = "en" }) => {
       });
       setShowDeleteModal(false);
       alert(t.deleteSuccess);
-      // Reset to first page if current page becomes empty
       if (paginatedCrops.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       }
@@ -399,8 +401,8 @@ const CropTrackerView = ({ language = "en" }) => {
   const validateForm = (crop) => {
     const errors = {};
     if (!crop.crop_id) errors.crop_id = t.enterCropName;
-    if (!crop.status) errors.status = t.status;
-    if (!crop.planted.trim()) errors.planted = t.enterPlanted;
+    if (!crop.status) errors.status = t.selectStatus;
+    if (!crop.planted) errors.planted = t.enterPlanted;
     if (!crop.location.trim()) errors.location = t.enterLocation;
     return errors;
   };
@@ -417,6 +419,7 @@ const CropTrackerView = ({ language = "en" }) => {
     formData.append("crop_id", newCrop.crop_id);
     formData.append("planted", newCrop.planted);
     formData.append("location", newCrop.location);
+    formData.append("status", newCrop.status);
     if (newCrop.image) formData.append("image", newCrop.image);
 
     try {
@@ -439,14 +442,13 @@ const CropTrackerView = ({ language = "en" }) => {
       setCrops((prev) => [normalizeCrop(savedCrop), ...prev]);
       setNewCrop({
         crop_id: "",
-        status: "Growing",
+        status: "",
         planted: "",
         location: "",
         image: "",
       });
       setFormErrors({});
       setShowAddModal(false);
-      // Reset to first page to show new crop
       setCurrentPage(1);
     } catch (err) {
       alert(err.message);
@@ -467,6 +469,7 @@ const CropTrackerView = ({ language = "en" }) => {
     formData.append("crop_id", editCrop.crop_id);
     formData.append("planted", editCrop.planted);
     formData.append("location", editCrop.location);
+    formData.append("status", editCrop.status);
     if (editCrop.image) formData.append("image", editCrop.image);
     formData.append("_method", "PUT");
 
@@ -614,7 +617,6 @@ const CropTrackerView = ({ language = "en" }) => {
                 </div>
               ))}
             </div>
-            {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-6">
                 <button
@@ -679,10 +681,11 @@ const CropTrackerView = ({ language = "en" }) => {
                     name="status"
                     value={newCrop.status}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white appearance-none`}
                     required
                     disabled={isSubmitting}
                   >
+                    <option value="" disabled>{t.selectStatus}</option>
                     <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
                     <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
                     <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
@@ -694,14 +697,16 @@ const CropTrackerView = ({ language = "en" }) => {
                     {t.planted} *
                   </label>
                   <input
-                    type="text"
+                    type="date"
                     name="planted"
                     value={newCrop.planted}
                     onChange={handleInputChange}
-                    placeholder={t.enterPlanted}
+                    max={new Date().toISOString().split("T")[0]} // Prevent future dates
                     className={`w-full px-3 py-2 border ${formErrors.planted ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                     disabled={isSubmitting}
+                    lang={language}
+                    placeholder={t.enterPlanted}
                   />
                   {formErrors.planted && <p className="text-red-500 text-sm mt-1">{formErrors.planted}</p>}
                 </div>
@@ -793,10 +798,11 @@ const CropTrackerView = ({ language = "en" }) => {
                     name="status"
                     value={editCrop.status}
                     onChange={handleEditInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white appearance-none`}
                     required
                     disabled={isSubmitting}
                   >
+                    <option value="" disabled>{t.selectStatus}</option>
                     <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
                     <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
                     <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
