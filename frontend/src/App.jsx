@@ -15,6 +15,8 @@ import MeasurementHistory from "./views/MeasurementHistory"
 import CropTrackerView from "./views/CropTrackerView"
 import TasksView from "./views/TasksView"
 import Marketplace from "./views/Marketplace"
+import Product from "./views/Product"
+import Category from "./views/Category"
 import MarketPricesView from "./views/MarketPricesView"
 import SeedScanner from "./views/SeedScanner"
 import Messages from "./views/Messages"
@@ -102,6 +104,8 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       />
       <Route path="/crops" element={<CropTrackerView language={language} />} />
       <Route path="/tasks" element={<TasksView language={language} />} />
+      <Route path="/category" element={<Category language={language} />} />
+      <Route path="/product" element={<Product language={language} />} />
       <Route path="/marketplace" element={<Marketplace language={language} />} />
       <Route path="/prices" element={<MarketPricesView language={language} />} />
       <Route path="/scanner" element={<SeedScanner language={language} />} />
