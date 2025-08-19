@@ -24,6 +24,7 @@ class User extends Authenticatable
         'farm_name',
         'location',
         'phone',
+        'role',
     ];
     public function seedScans()
     {
@@ -52,6 +53,11 @@ class User extends Authenticatable
     public function productPhotos()
     {
         return $this->hasMany(ProductPhoto::class, 'user_id');
+    }
+
+    public function categories()
+    {
+        return $this->hasMany(Category::class);
     }
     
 

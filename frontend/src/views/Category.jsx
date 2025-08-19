@@ -1,19 +1,23 @@
 "use client";
 
 import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import debounce from "lodash/debounce";
 
 const Category = ({ language = "en" }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // Added for delete confirmation modal
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null); // Track category to delete
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
@@ -47,14 +51,19 @@ const Category = ({ language = "en" }) => {
       close: "Close",
       enterCategoryName: "Enter category name...",
       enterDescription: "Enter description...",
+      noCategoriesAvailable: "No category available. Add a new category to get started.",
       noCategoriesFound: "No categories found matching your search.",
       confirmDelete: "Are you sure you want to delete this category?",
       loading: "Loading categories...",
       error: "Failed to load data. Please try again later.",
       updateError: "Failed to update category: ",
       deleteSuccess: "Category deleted successfully.",
+      deleteError: "Failed to delete category: ",
       updateSuccess: "Category updated successfully.",
       addError: "Failed to add category: ",
+      saving: "Saving...",
+      updating: "Updating...",
+      deleting: "Deleting...",
       prevPage: "Previous",
       nextPage: "Next",
     },
@@ -77,14 +86,19 @@ const Category = ({ language = "en" }) => {
       close: "បិទ",
       enterCategoryName: "បញ្ចូលឈ្មោះប្រភេទ...",
       enterDescription: "បញ្ចូលការពិពណ៌នា...",
-      noCategoriesFound: "រកមិនឃើញប្រភេទដែលត្រូវនឹងការស្វែngរករបស់អ្នក។",
+      noCategoriesAvailable: "មិនមានប្រភេទទេ។ បន្ថែមប្រភេទថ្មីដើម្បីចាប់ផ្តើម�।",
+      noCategoriesFound: "រកមិនឃើញប្រភេទដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបប្រភេទនេះមែនទេ?",
       loading: "កំពុងផ្ទុកប្រភេទ...",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
       updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពប្រភេទ៖ ",
       deleteSuccess: "ប្រភេទត្រូវបានលុបដោយជោគជ័យ។",
+      deleteError: "បរាជ័យក្នុងការលុបប្រភេទ៖ ",
       updateSuccess: "ប្រភេទត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
       addError: "បរាជ័យក្នុងការបន្ថែមប្រភេទ៖ ",
+      saving: "កំពុងរក្សាទុក...",
+      updating: "កំពុងធ្វើបច្ចុប្បន្នភាព...",
+      deleting: "កំពុងលុប...",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
     },
@@ -92,8 +106,17 @@ const Category = ({ language = "en" }) => {
 
   const t = translations[language] || translations.en;
   const API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = "your-auth-token-here";
+  const AUTH_TOKEN = localStorage.getItem("token");
 
+  // Debounced search handler
+  const debouncedSetSearchTerm = useCallback(
+    debounce((value) => setSearchTerm(value), 300),
+    []
+  );
+
+  const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
+
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -124,6 +147,7 @@ const Category = ({ language = "en" }) => {
     fetchData();
   }, [t.error]);
 
+  // Filtering, Sorting, Pagination
   const filteredCategories = categories.filter(
     (category) =>
       category.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -156,36 +180,50 @@ const Category = ({ language = "en" }) => {
 
   const handleClickOutside = () => setActiveMenu(null);
 
+  // View Action: Show category details in a modal
   const handleViewCategory = (category) => {
     setSelectedCategory(category);
     setShowViewModal(true);
     setActiveMenu(null);
   };
 
+  // Edit Action: Open modal with pre-filled category data
   const handleEditCategory = (category) => {
     setEditCategory({ ...category });
     setShowEditModal(true);
     setActiveMenu(null);
   };
 
-  const handleDeleteCategory = async (categoryId) => {
-    if (!categoryId || !window.confirm(t.confirmDelete)) return;
+  // Delete Action: Open confirmation modal
+  const handleDeleteCategory = (category) => {
+    setCategoryToDelete(category);
+    setShowDeleteModal(true);
+    setActiveMenu(null);
+  };
+
+  // Confirm Delete Action: Send DELETE request
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_URL}/${categoryId}`, {
+      const response = await fetch(`${API_URL}/${categoryToDelete.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Delete failed: ${errorText}`);
+        throw new Error(`${t.deleteError}${errorText || "Unknown error"}`);
       }
-      setCategories(categories.filter((c) => c.id !== categoryId));
+      setCategories(categories.filter((c) => c.id !== categoryToDelete.id));
+      setShowDeleteModal(false);
       alert(t.deleteSuccess);
     } catch (err) {
       console.error("Delete error:", err);
-      alert(`${t.error}: ${err.message}`);
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+      setCategoryToDelete(null);
     }
-    setActiveMenu(null);
   };
 
   const handleInputChange = (e) => {
@@ -200,21 +238,22 @@ const Category = ({ language = "en" }) => {
     setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const validateForm = () => {
+  const validateForm = (category) => {
     const errors = {};
-    if (!newCategory.name.trim()) errors.name = t.enterCategoryName;
+    if (!category.name.trim()) errors.name = t.enterCategoryName;
     return errors;
   };
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
-    const errors = validateForm();
+    const errors = validateForm(newCategory);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
       return;
     }
 
+    setIsSubmitting(true);
     const formData = new FormData();
     formData.append("name", newCategory.name);
     if (newCategory.description) formData.append("description", newCategory.description);
@@ -269,19 +308,21 @@ const Category = ({ language = "en" }) => {
     } catch (err) {
       console.error("Add category error:", err);
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleUpdateCategory = async (e) => {
     e.preventDefault();
-    const errors = {};
-    if (!editCategory.name.trim()) errors.name = t.enterCategoryName;
+    const errors = validateForm(editCategory);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
       return;
     }
 
+    setIsSubmitting(true);
     const formData = new FormData();
     formData.append("name", editCategory.name);
     if (editCategory.description) formData.append("description", editCategory.description);
@@ -338,6 +379,8 @@ const Category = ({ language = "en" }) => {
     } catch (err) {
       console.error("Update category error:", err);
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -362,14 +405,16 @@ const Category = ({ language = "en" }) => {
             <input
               type="text"
               placeholder={t.search}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
         </div>
         {loading ? (
-          <div className="text-center py-12">{t.loading}</div>
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.loading}</div>
+            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
+          </div>
         ) : error ? (
           <div className="text-center py-12">
             <div className="text-red-500 text-lg">{error}</div>
@@ -380,6 +425,10 @@ const Category = ({ language = "en" }) => {
               Retry
             </button>
           </div>
+        ) : categories.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.noCategoriesAvailable}</div>
+          </div>
         ) : paginatedCategories.length === 0 ? (
           <div className="text-center py-12">{t.noCategoriesFound}</div>
         ) : (
@@ -389,7 +438,7 @@ const Category = ({ language = "en" }) => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("name")} className="flex items-center gap-1">
-                      {t.categoryName}{" "}
+                      {t.categoryName}
                       {sortConfig.key === "name" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
@@ -400,7 +449,7 @@ const Category = ({ language = "en" }) => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("description")} className="flex items-center gap-1">
-                      {t.categoryDescription}{" "}
+                      {t.categoryDescription}
                       {sortConfig.key === "description" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
@@ -428,6 +477,7 @@ const Category = ({ language = "en" }) => {
                           toggleMenu(category.id);
                         }}
                         className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-all"
+                        disabled={isSubmitting}
                       >
                         <MoreVertical className="h-5 w-5 text-gray-600" />
                       </button>
@@ -454,11 +504,12 @@ const Category = ({ language = "en" }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteCategory(category.id);
+                              handleDeleteCategory(category);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            disabled={isSubmitting}
                           >
-                            <Trash2 className="h-4 w-4" /> {t.delete}
+                            <Trash2 className="h-4 w-4" /> {isSubmitting ? t.deleting : t.delete}
                           </button>
                         </div>
                       )}
@@ -488,6 +539,7 @@ const Category = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Add Category Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -515,6 +567,7 @@ const Category = ({ language = "en" }) => {
                       formErrors.name ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   />
                   {formErrors.name && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
@@ -531,6 +584,7 @@ const Category = ({ language = "en" }) => {
                     placeholder={t.enterDescription}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -538,20 +592,25 @@ const Category = ({ language = "en" }) => {
                     type="button"
                     onClick={() => setShowAddModal(false)}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    {t.save}
+                    {isSubmitting ? t.saving : t.save}
                   </button>
                 </div>
               </form>
             </div>
           </div>
         )}
+        {/* Edit Category Modal */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -579,6 +638,7 @@ const Category = ({ language = "en" }) => {
                       formErrors.name ? "border-red-500" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
+                    disabled={isSubmitting}
                   />
                   {formErrors.name && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
@@ -595,6 +655,7 @@ const Category = ({ language = "en" }) => {
                     placeholder={t.enterDescription}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -602,20 +663,25 @@ const Category = ({ language = "en" }) => {
                     type="button"
                     onClick={() => setShowEditModal(false)}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    {t.update}
+                    {isSubmitting ? t.updating : t.update}
                   </button>
                 </div>
               </form>
             </div>
           </div>
         )}
+        {/* View Category Modal */}
         {showViewModal && selectedCategory && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -647,6 +713,45 @@ const Category = ({ language = "en" }) => {
                     className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                   >
                     {t.close}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && categoryToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-bold text-gray-800">{t.confirmDelete}</h2>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-600">
+                  {t.confirmDelete} <strong>{categoryToDelete.name}</strong>?
+                </p>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={isSubmitting}
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    onClick={confirmDeleteCategory}
+                    disabled={isSubmitting}
+                    className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    {isSubmitting ? t.deleting : t.delete}
                   </button>
                 </div>
               </div>

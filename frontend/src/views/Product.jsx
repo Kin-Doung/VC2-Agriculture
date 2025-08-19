@@ -1,11 +1,13 @@
 "use client";
 
-import { ShoppingCart, Plus, Search, Filter, X, Upload, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Search, Filter, X, Upload, MoreVertical, Eye, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const Product = ({ language = "en" }) => {
+  // State declarations
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCrop, setSelectedCrop] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -13,10 +15,14 @@ const Product = ({ language = "en" }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
@@ -24,29 +30,34 @@ const Product = ({ language = "en" }) => {
     name: "",
     price: "",
     description: "",
-    quantity: 10,
+    quantity: "",
     image: "",
     imageFile: null,
     category_id: "",
-    crop_id: "1",
+    crop_id: "",
     user_id: localStorage.getItem("user_id") || "1",
+    creation_date: new Date().toISOString().split("T")[0],
+    expiration_date: "",
   });
   const [editProduct, setEditProduct] = useState({
     id: null,
     name: "",
     price: "",
     description: "",
-    quantity: 10,
+    quantity: "",
     image: "",
     imageFile: null,
     category_id: "",
-    crop_id: "1",
+    crop_id: "",
     user_id: localStorage.getItem("user_id") || "1",
+    creation_date: new Date().toISOString().split("T")[0],
+    expiration_date: "",
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const itemsPerPage = 10;
 
+  // Translations for English and Khmer
   const translations = {
     en: {
       title: "My Product",
@@ -70,24 +81,30 @@ const Product = ({ language = "en" }) => {
       productDescription: "Description",
       productStock: "Stock Status",
       productCategory: "Category",
+      productCrop: "Crop",
       selectCategory: "Select a category",
+      selectCrop: "Select a crop",
       uploadImage: "Upload Image",
       cancel: "Cancel",
       save: "Save Product",
       update: "Update Product",
       close: "Close",
-      enterProductName: "Enter product name...",
-      enterPrice: "Enter price...",
-      enterDescription: "Enter product description...",
-      enterQuantity: "Enter quantity...",
-      noProductsFound: "No products found matching your search.",
+      enterProductName: "Enter product name",
+      enterPrice: "Enter price",
+      enterDescription: "Enter product description",
+      enterQuantity: "Enter quantity",
+      selectCategoryRequired: "Select a category",
+      selectCropRequired: "Select a crop",
+      noProducts: "No products available. Add a new product to get started!",
+      noFilteredProducts: "No products match your search or filters.",
       confirmDelete: "Are you sure you want to delete this product?",
+      deleting: "Deleting...",
+      deleteSuccess: "Product deleted successfully.",
+      deleteError: "Failed to delete product: ",
       loading: "Loading products...",
       error: "Failed to load data. Please try again later.",
-      updateError: "Failed to update product: ",
-      deleteSuccess: "Product deleted successfully.",
+      addSuccess: "Product added successfully.",
       updateSuccess: "Product updated successfully.",
-      addError: "Failed to add product: ",
       prevPage: "Previous",
       nextPage: "Next",
       stockStatus: "Stock Status",
@@ -96,6 +113,11 @@ const Product = ({ language = "en" }) => {
       maxPrice: "Max Price",
       applyFilters: "Apply Filters",
       resetFilters: "Reset Filters",
+      creationDate: "Creation Date",
+      expirationDate: "Expiration Date",
+      enterExpirationDate: "Enter expiration date",
+      invalidDate: "Invalid date format",
+      invalidImage: "Please upload a valid image (JPEG, JPG, PNG, max 10MB)",
     },
     km: {
       title: "ផលិតផលរបស់ខ្ញុំ",
@@ -119,24 +141,30 @@ const Product = ({ language = "en" }) => {
       productDescription: "ការពិពណ៌នា",
       productStock: "ស្ថានភាពស្តុក",
       productCategory: "ប្រភេទ",
+      productCrop: "ដំណាំ",
       selectCategory: "ជ្រើសរើសប្រភេទ",
+      selectCrop: "ជ្រើសរើសដំណាំ",
       uploadImage: "ផ្ទុករូបភាព",
       cancel: "បោះបង់",
       save: "រក្សាទុកផលិតផល",
       update: "ធ្វើបច្ចុប្បន្នភាពផលិតផល",
       close: "បិទ",
-      enterProductName: "បញ្ចូលឈ្មោះផលិតផល...",
-      enterPrice: "បញ្ចូលតម្លៃ...",
-      enterDescription: "បញ្ចូលការពិពណ៌នាផលិតផល...",
-      enterQuantity: "បញ្ចូលបរិមាណ...",
-      noProductsFound: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរករបស់អ្នក។",
+      enterProductName: "បញ្ចូលឈ្មោះផលិតផល",
+      enterPrice: "បញ្ចូលតម្លៃ",
+      enterDescription: "បញ្ចូលការពិពណ៌នាផលិតផល",
+      enterQuantity: "បញ្ចូលបរិមាណ",
+      selectCategoryRequired: "ជ្រើសរើសប្រភេទ",
+      selectCropRequired: "ជ្រើសរើសដំណាំ",
+      noProducts: "មិនមានផលិតផល។ បន្ថែមផលិតផលថ្មីដើម្បីចាប់ផ្តើម!",
+      noFilteredProducts: "រកមិនឃើញផលិតផលដែលត្រូវនឹងការស្វែងរក ឬតម្រងរបស់អ្នក។",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបផលិតផលនេះមែនទេ?",
+      deleting: "កំពុងលុប...",
+      deleteSuccess: "ផលិតផលត្រូវបានលុបដោយជោគជ័យ។",
+      deleteError: "បរាជ័យក្នុងការលុបផលិតផល៖ ",
       loading: "កំពុងផ្ទុកផលិតផល...",
       error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
-      updateError: "បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពផលិតផល៖ ",
-      deleteSuccess: "ផលិតផលត្រូវបានលុបដោយជោគជ័យ។",
+      addSuccess: "ផលិតផលត្រូវបានបន្ថែមដោយជោគជ័យ។",
       updateSuccess: "ផលិតផលត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។",
-      addError: "បរាជ័យក្នុងការបន្ថែមផលិតផល៖ ",
       prevPage: "មុន",
       nextPage: "បន្ទាប់",
       stockStatus: "ស្ថានភាពស្តុក",
@@ -145,57 +173,77 @@ const Product = ({ language = "en" }) => {
       maxPrice: "តម្លៃអតិបរមា",
       applyFilters: "អនុវត្តតម្រង",
       resetFilters: "កំណត់តម្រងឡើងវិញ",
+      creationDate: "កាលបរិច្ឆេទបង្កើត",
+      expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
+      enterExpirationDate: "បញ្ចូលកាលបរិច្ឆេទផុតកំណត់",
+      invalidDate: "ទម្រង់កាលបរិច្ឆេទមិនត្រឹមត្រូវ",
+      invalidImage: "សូមផ្ទុករូបភាពត្រឹមត្រូវ (JPEG, JPG, PNG, អតិបរមា ១០ មេហ្គាបៃ)",
     },
   };
 
   const t = translations[language] || translations.en;
-  const API_URL = "http://127.0.0.1:8000/api/products";
+  const API_URL = "http://127.0.0.1:8000/api/products?only_mine=true";
+  const PRODUCT_BASE_URL = "http://127.0.0.1:8000/api/products";
   const CATEGORIES_API_URL = "http://127.0.0.1:8000/api/categories";
-  const AUTH_TOKEN = "your-auth-token-here";
+  const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
+  const AUTH_TOKEN = localStorage.getItem("token");
 
+  // Fetch products, categories, and crops on component mount
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [productResponse, categoryResponse] = await Promise.all([
+        const [productResponse, categoryResponse, cropResponse] = await Promise.all([
           fetch(API_URL, {
             headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
           }),
           fetch(CATEGORIES_API_URL, {
             headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
           }),
+          fetch(CROPS_API_URL, {
+            headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
+          }),
         ]);
 
-        if (!productResponse.ok) {
-          const errorText = await productResponse.text();
-          throw new Error(`Products fetch failed: ${errorText}`);
-        }
+        if (!productResponse.ok) throw new Error(`${t.error}: ${await productResponse.text()}`);
         const productData = await productResponse.json();
         if (!Array.isArray(productData)) throw new Error("Products API response is not an array");
-        const transformedProducts = productData.map((item) => ({
-          id: item.id || null,
-          name: item.name || "Unnamed Product",
-          price: item.price ? `$${Number(item.price).toFixed(2)}` : "$0.00",
-          image: item.image_url || "/placeholder.svg",
-          stock: item.quantity > 0 ? "In Stock" : "Out of Stock",
-          description: item.description || "No description",
-          category: item.category?.name || "Uncategorized",
-          category_id: item.category_id || null,
-        }));
-        setProducts(transformedProducts);
 
-        if (!categoryResponse.ok) {
-          const errorText = await categoryResponse.text();
-          throw new Error(`Categories fetch failed: ${errorText}`);
-        }
+        if (!categoryResponse.ok) throw new Error(`${t.error}: ${await categoryResponse.text()}`);
         const categoryData = await categoryResponse.json();
         if (!Array.isArray(categoryData)) throw new Error("Categories API response is not an array");
-        const transformedCategories = categoryData.map((item) => ({
-          id: item.id,
-          name: item.name || "Uncategorized",
-        }));
-        setCategories(transformedCategories);
+
+        if (!cropResponse.ok) throw new Error(`${t.error}: ${await cropResponse.text()}`);
+        const cropData = await cropResponse.json();
+        if (!Array.isArray(cropData)) throw new Error("Crops API response is not an array");
+
+        // Transform product data for frontend display
+        const transformedProducts = productData.map((item) => {
+          const today = new Date();
+          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+          const isExpired = expirationDate && expirationDate < today;
+
+          return {
+            id: item.id,
+            name: item.name || "Unnamed Product",
+            price: `$${Number(item.price || 0).toFixed(2)}`,
+            image: item.image_url || "/placeholder.svg",
+            stock: isExpired || item.quantity === 0 ? t.outOfStock : t.inStock,
+            description: item.description || "No description",
+            category: item.category?.name || "Uncategorized",
+            category_id: item.category_id || null,
+            crop: item.crop?.name || "No Crop",
+            crop_id: item.crop_id || null,
+            quantity: item.quantity || 0,
+            creation_date: item.creation_date ? item.creation_date.split("T")[0] : new Date().toISOString().split("T")[0],
+            expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
+          };
+        });
+
+        setProducts(transformedProducts);
+        setCategories(categoryData.map((item) => ({ id: item.id, name: item.name || "Uncategorized" })));
+        setCrops(cropData.map((item) => ({ id: item.id, name: item.name || "No Crop" })));
       } catch (err) {
         console.error("Fetch error:", err);
         setError(`${t.error}: ${err.message}`);
@@ -204,40 +252,48 @@ const Product = ({ language = "en" }) => {
       }
     };
     fetchData();
-  }, [t.error]);
+  }, [t.error, t.inStock, t.outOfStock]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedCrop, stockStatus, minPrice, maxPrice]);
+
+  // Filter products based on search and filter criteria
   const filteredProducts = products.filter((product) => {
     if (!product) return false;
-
-    const nameMatch = product.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const descriptionMatch = product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const categoryMatch = product.category?.toLowerCase().includes(searchTerm.toLowerCase());
-    const searchMatch = nameMatch || descriptionMatch || categoryMatch;
-
+    const searchMatch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.crop.toLowerCase().includes(searchTerm.toLowerCase());
     const categoryFilter = !selectedCategory || product.category_id === parseInt(selectedCategory);
+    const cropFilter = !selectedCrop || product.crop_id === parseInt(selectedCrop);
     const stockFilter = !stockStatus || product.stock === stockStatus;
     const priceValue = parseFloat(product.price.replace("$", ""));
     const minPriceFilter = !minPrice || priceValue >= parseFloat(minPrice);
     const maxPriceFilter = !maxPrice || priceValue <= parseFloat(maxPrice);
-
-    return searchMatch && categoryFilter && stockFilter && minPriceFilter && maxPriceFilter;
+    return searchMatch && categoryFilter && cropFilter && stockFilter && minPriceFilter && maxPriceFilter;
   });
 
+  // Sort filtered products
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (!sortConfig.key) return 0;
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
+    const aValue = a[sortConfig.key] ?? "";
+    const bValue = b[sortConfig.key] ?? "";
     if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
     if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
     return 0;
   });
 
+  // Paginate sorted products
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
   const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
+  // Sorting handler
   const requestSort = (key) => {
     setSortConfig((prev) => ({
       key,
@@ -245,85 +301,137 @@ const Product = ({ language = "en" }) => {
     }));
   };
 
+  // Toggle action menu
   const toggleMenu = (productId) => setActiveMenu(activeMenu === productId ? null : productId);
 
+  // Close action menu on outside click
   const handleClickOutside = () => setActiveMenu(null);
 
+  // View product details
   const handleViewProduct = (product) => {
     setSelectedProduct(product);
     setShowViewModal(true);
     setActiveMenu(null);
   };
 
+  // Prepare product for editing
   const handleEditProduct = (product) => {
     setEditProduct({
-      ...product,
-      price: product.price.replace("$", ""),
+      id: product.id,
+      name: product.name,
+      price: parseFloat(product.price.replace("$", "")).toString(),
+      description: product.description,
+      quantity: product.quantity,
+      image: product.image,
       imageFile: null,
-      category_id: product.category_id,
-      crop_id: product.crop_id || "1",
-      quantity: product.stock === "In Stock" ? 10 : 0,
+      category_id: product.category_id || "",
+      crop_id: product.crop_id || "",
       user_id: localStorage.getItem("user_id") || "1",
+      creation_date: product.creation_date,
+      expiration_date: product.expiration_date || "",
     });
-    setSelectedCategory(product.category_id);
+    setSelectedCategory(product.category_id || "");
+    setSelectedCrop(product.crop_id || "");
     setShowEditModal(true);
     setActiveMenu(null);
   };
 
-  const handleDeleteProduct = async (productId) => {
-    if (!productId || !window.confirm(t.confirmDelete)) return;
-    try {
-      const response = await fetch(`${API_URL}/${productId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Delete failed: ${errorText}`);
-      }
-      setProducts(products.filter((p) => p.id !== productId));
-      alert(t.deleteSuccess);
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert(`${t.error}: ${err.message}`);
-    }
+  // Delete product: Open confirmation modal
+  const handleDeleteProduct = (product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
     setActiveMenu(null);
   };
 
+  // Confirm delete product
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${PRODUCT_BASE_URL}/${productToDelete.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
+      });
+      const responseText = await response.text();
+      if (!response.ok) {
+        let errorMessage = `${t.deleteError}Unexpected error`;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = `${t.deleteError}${errorData.message || "Unknown error"}`;
+        } catch (parseErr) {
+          errorMessage = `${t.deleteError}${responseText.slice(0, 100)}...`;
+        }
+        throw new Error(errorMessage);
+      }
+      setProducts(products.filter((p) => p.id !== productToDelete.id));
+      setShowDeleteModal(false);
+      alert(t.deleteSuccess);
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+      setProductToDelete(null);
+    }
+  };
+
+  // Handle input changes for new product form
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewProduct((prev) => ({ ...prev, [name]: value }));
     setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  // Handle input changes for edit product form
   const handleEditInputChange = (e) => {
     const { name, value } = e.target;
     setEditProduct((prev) => ({ ...prev, [name]: value }));
     setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  // Handle category selection for new product
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value;
     setSelectedCategory(categoryId);
     setNewProduct((prev) => ({ ...prev, category_id: categoryId }));
+    setFormErrors((prev) => ({ ...prev, category_id: "" }));
   };
 
+  // Handle category selection for edit product
   const handleEditCategoryChange = (e) => {
     const categoryId = e.target.value;
     setSelectedCategory(categoryId);
     setEditProduct((prev) => ({ ...prev, category_id: categoryId }));
+    setFormErrors((prev) => ({ ...prev, category_id: "" }));
   };
 
+  // Handle crop selection for new product
+  const handleCropChange = (e) => {
+    const cropId = e.target.value;
+    setSelectedCrop(cropId);
+    setNewProduct((prev) => ({ ...prev, crop_id: cropId }));
+    setFormErrors((prev) => ({ ...prev, crop_id: "" }));
+  };
+
+  // Handle crop selection for edit product
+  const handleEditCropChange = (e) => {
+    const cropId = e.target.value;
+    setSelectedCrop(cropId);
+    setEditProduct((prev) => ({ ...prev, crop_id: cropId }));
+    setFormErrors((prev) => ({ ...prev, crop_id: "" }));
+  };
+
+  // Handle image upload for new product
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const validTypes = ["image/jpeg", "image/jpg", "image/png"];
       if (!validTypes.includes(file.type)) {
-        setFormErrors((prev) => ({ ...prev, image: "Please upload a valid image file (jpg, jpeg, or png)." }));
+        setFormErrors((prev) => ({ ...prev, image: t.invalidImage }));
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        setFormErrors((prev) => ({ ...prev, image: "Image size must be less than 10MB." }));
+        setFormErrors((prev) => ({ ...prev, image: t.invalidImage }));
         return;
       }
       const reader = new FileReader();
@@ -334,16 +442,17 @@ const Product = ({ language = "en" }) => {
     }
   };
 
+  // Handle image upload for edit product
   const handleEditImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const validTypes = ["image/jpeg", "image/jpg", "image/png"];
       if (!validTypes.includes(file.type)) {
-        setFormErrors((prev) => ({ ...prev, image: "Please upload a valid image file (jpg, jpeg, or png)." }));
+        setFormErrors((prev) => ({ ...prev, image: t.invalidImage }));
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        setFormErrors((prev) => ({ ...prev, image: "Image size must be less than 10MB." }));
+        setFormErrors((prev) => ({ ...prev, image: t.invalidImage }));
         return;
       }
       const reader = new FileReader();
@@ -354,19 +463,28 @@ const Product = ({ language = "en" }) => {
     }
   };
 
-  const validateForm = () => {
+  // Validate form data
+  const validateForm = (data) => {
     const errors = {};
-    if (!newProduct.name.trim()) errors.name = t.enterProductName;
-    if (!newProduct.price || newProduct.price <= 0) errors.price = t.enterPrice;
-    if (!newProduct.description.trim()) errors.description = t.enterDescription;
-    if (!newProduct.category_id) errors.category_id = t.selectCategory;
-    if (!newProduct.quantity || newProduct.quantity < 0) errors.quantity = t.enterQuantity;
+    if (!data.name.trim()) errors.name = t.enterProductName;
+    if (!data.price || parseFloat(data.price) <= 0) errors.price = t.enterPrice;
+    if (!data.description.trim()) errors.description = t.enterDescription;
+    if (!data.category_id) errors.category_id = t.selectCategoryRequired;
+    if (!data.crop_id) errors.crop_id = t.selectCropRequired;
+    if (data.quantity === "" || parseInt(data.quantity) < 0) errors.quantity = t.enterQuantity;
+    if (!data.creation_date || !/^\d{4}-\d{2}-\d{2}$/.test(data.creation_date))
+      errors.creation_date = t.invalidDate;
+    if (parseInt(data.quantity) === 0 && !data.expiration_date)
+      errors.expiration_date = t.enterExpirationDate;
+    if (data.expiration_date && !/^\d{4}-\d{2}-\d{2}$/.test(data.expiration_date))
+      errors.expiration_date = t.invalidDate;
     return errors;
   };
 
+  // Add new product
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    const errors = validateForm();
+    const errors = validateForm(newProduct);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
@@ -381,31 +499,18 @@ const Product = ({ language = "en" }) => {
     formData.append("category_id", newProduct.category_id);
     formData.append("crop_id", newProduct.crop_id);
     formData.append("user_id", newProduct.user_id);
-    if (newProduct.imageFile) {
-      formData.append("image", newProduct.imageFile);
-    }
+    formData.append("creation_date", newProduct.creation_date);
+    if (newProduct.expiration_date) formData.append("expiration_date", newProduct.expiration_date);
+    if (newProduct.imageFile) formData.append("image", newProduct.imageFile);
 
     try {
-      console.log("Sending POST request to:", API_URL);
-      const formDataLog = {};
-      for (let [key, value] of formData.entries()) {
-        formDataLog[key] = value instanceof File ? value.name : value;
-      }
-      console.log("FormData contents:", formDataLog);
-
       const response = await fetch(API_URL, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
       });
 
       const responseText = await response.text();
-      console.log("Response status:", response.status, response.statusText);
-      console.log("Response body:", responseText);
-
       if (!response.ok) {
         let errorMessage = `${t.addError}Unexpected error`;
         try {
@@ -417,26 +522,27 @@ const Product = ({ language = "en" }) => {
         throw new Error(errorMessage);
       }
 
-      let savedProduct;
-      try {
-        savedProduct = JSON.parse(responseText);
-      } catch (parseErr) {
-        throw new Error(`${t.addError}Invalid JSON response: ${responseText.slice(0, 100)}...`);
-      }
-
-      if (!savedProduct.id) {
-        throw new Error(`${t.addError}API response missing product ID`);
-      }
+      const savedProduct = JSON.parse(responseText);
+      const category = categories.find((c) => c.id === parseInt(newProduct.category_id));
+      const crop = crops.find((c) => c.id === parseInt(newProduct.crop_id));
+      const today = new Date();
+      const expirationDate = savedProduct.expiration_date ? new Date(savedProduct.expiration_date) : null;
+      const isExpired = expirationDate && expirationDate < today;
 
       const transformedProduct = {
         id: savedProduct.id,
         name: savedProduct.name,
         price: `$${Number(savedProduct.price).toFixed(2)}`,
         image: savedProduct.image_url || "/placeholder.svg",
-        stock: savedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
+        stock: isExpired || savedProduct.quantity === 0 ? t.outOfStock : t.inStock,
         description: savedProduct.description,
-        category: savedProduct.category?.name || "Uncategorized",
+        category: category ? category.name : "Uncategorized",
         category_id: savedProduct.category_id,
+        crop: crop ? crop.name : "No Crop",
+        crop_id: savedProduct.crop_id,
+        quantity: savedProduct.quantity,
+        creation_date: savedProduct.creation_date ? savedProduct.creation_date.split("T")[0] : newProduct.creation_date,
+        expiration_date: savedProduct.expiration_date ? new Date(savedProduct.expiration_date).toISOString().split("T")[0] : newProduct.expiration_date,
       };
 
       setProducts((prev) => [transformedProduct, ...prev]);
@@ -444,31 +550,31 @@ const Product = ({ language = "en" }) => {
         name: "",
         price: "",
         description: "",
-        quantity: 10,
+        quantity: "",
         image: "",
         imageFile: null,
         category_id: "",
-        crop_id: "1",
+        crop_id: "",
         user_id: localStorage.getItem("user_id") || "1",
+        creation_date: new Date().toISOString().split("T")[0],
+        expiration_date: "",
       });
       setFormErrors({});
       setShowAddModal(false);
       setSelectedCategory("");
-      alert(t.save);
+      setSelectedCrop("");
+      setCurrentPage(1);
+      alert(t.addSuccess);
     } catch (err) {
       console.error("Add product error:", err);
       alert(err.message);
     }
   };
 
+  // Update existing product
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
-    const errors = {};
-    if (!editProduct.name.trim()) errors.name = t.enterProductName;
-    if (!editProduct.price || editProduct.price <= 0) errors.price = t.enterPrice;
-    if (!editProduct.description.trim()) errors.description = t.enterDescription;
-    if (!editProduct.category_id) errors.category_id = t.selectCategory;
-    if (!editProduct.quantity || editProduct.quantity < 0) errors.quantity = t.enterQuantity;
+    const errors = validateForm(editProduct);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       alert("Please fill in all required fields correctly.");
@@ -483,25 +589,21 @@ const Product = ({ language = "en" }) => {
     formData.append("category_id", editProduct.category_id);
     formData.append("crop_id", editProduct.crop_id);
     formData.append("user_id", editProduct.user_id);
-    if (editProduct.imageFile) {
-      formData.append("image", editProduct.imageFile);
-    }
+    formData.append("creation_date", editProduct.creation_date);
+    if (editProduct.expiration_date) formData.append("expiration_date", editProduct.expiration_date);
+    if (editProduct.imageFile) formData.append("image", editProduct.imageFile);
     formData.append("_method", "PUT");
 
+    let responseText = null;
+
     try {
-      const response = await fetch(`${API_URL}/${editProduct.id}`, {
+      const response = await fetch(`${PRODUCT_BASE_URL}/${editProduct.id}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
         body: formData,
       });
 
-      const responseText = await response.text();
-      console.log("Response status:", response.status, response.statusText);
-      console.log("Response body:", responseText);
-
+      responseText = await response.text();
       if (!response.ok) {
         let errorMessage = `${t.updateError}Unexpected error`;
         try {
@@ -513,54 +615,60 @@ const Product = ({ language = "en" }) => {
         throw new Error(errorMessage);
       }
 
-      let updatedProduct;
-      try {
-        updatedProduct = JSON.parse(responseText);
-      } catch (parseErr) {
-        throw new Error(`${t.updateError}Invalid JSON response: ${responseText.slice(0, 100)}...`);
-      }
-
-      if (!updatedProduct.id) {
-        throw new Error(`${t.updateError}Updated product response missing ID`);
-      }
+      const updatedProduct = JSON.parse(responseText);
+      const category = categories.find((c) => c.id === parseInt(updatedProduct.category_id));
+      const crop = crops.find((c) => c.id === parseInt(updatedProduct.crop_id));
+      const today = new Date();
+      const expirationDate = updatedProduct.expiration_date ? new Date(updatedProduct.expiration_date) : null;
+      const isExpired = expirationDate && expirationDate < today;
 
       const transformedProduct = {
         id: updatedProduct.id,
         name: updatedProduct.name,
         price: `$${Number(updatedProduct.price).toFixed(2)}`,
         image: updatedProduct.image_url || "/placeholder.svg",
-        stock: updatedProduct.quantity > 0 ? "In Stock" : "Out of Stock",
+        stock: isExpired || updatedProduct.quantity === 0 ? t.outOfStock : t.inStock,
         description: updatedProduct.description,
-        category: updatedProduct.category?.name || "Uncategorized",
+        category: category ? category.name : "Uncategorized",
         category_id: updatedProduct.category_id,
+        crop: crop ? crop.name : "No Crop",
+        crop_id: updatedProduct.crop_id,
+        quantity: updatedProduct.quantity,
+        creation_date: updatedProduct.creation_date ? updatedProduct.creation_date.split("T")[0] : editProduct.creation_date,
+        expiration_date: updatedProduct.expiration_date ? new Date(updatedProduct.expiration_date).toISOString().split("T")[0] : editProduct.expiration_date,
       };
 
-      setProducts(products.map((p) => (p.id === editProduct.id ? transformedProduct : p)));
+      setProducts(products.map((p) => (p.id === updatedProduct.id ? transformedProduct : p)));
       setEditProduct({
         id: null,
         name: "",
         price: "",
         description: "",
-        quantity: 10,
+        quantity: "",
         image: "",
         imageFile: null,
         category_id: "",
-        crop_id: "1",
+        crop_id: "",
         user_id: localStorage.getItem("user_id") || "1",
+        creation_date: new Date().toISOString().split("T")[0],
+        expiration_date: "",
       });
       setFormErrors({});
       setShowEditModal(false);
       setSelectedCategory("");
+      setSelectedCrop("");
       alert(t.updateSuccess);
     } catch (err) {
-      console.error("Update product error:", err);
+      console.error("Update product error:", err, "Response:", responseText || "No response received");
       alert(err.message);
     }
   };
 
+  // Reset filters
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedCategory("");
+    setSelectedCrop("");
     setStockStatus("");
     setMinPrice("");
     setMaxPrice("");
@@ -629,6 +737,23 @@ const Product = ({ language = "en" }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.productCrop}
+                  </label>
+                  <select
+                    value={selectedCrop}
+                    onChange={(e) => setSelectedCrop(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">{t.selectCrop}</option>
+                    {crops.map((crop) => (
+                      <option key={crop.id} value={crop.id}>
+                        {crop.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t.stockStatus}
                   </label>
                   <select
@@ -637,8 +762,8 @@ const Product = ({ language = "en" }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="">{t.all}</option>
-                    <option value="In Stock">{t.inStock}</option>
-                    <option value="Out of Stock">{t.outOfStock}</option>
+                    <option value={t.inStock}>{t.inStock}</option>
+                    <option value={t.outOfStock}>{t.outOfStock}</option>
                   </select>
                 </div>
                 <div>
@@ -690,7 +815,10 @@ const Product = ({ language = "en" }) => {
           </div>
         )}
         {loading ? (
-          <div className="text-center py-12">{t.loading}</div>
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.loading}</div>
+            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
+          </div>
         ) : error ? (
           <div className="text-center py-12">
             <div className="text-red-500 text-lg">{error}</div>
@@ -702,26 +830,22 @@ const Product = ({ language = "en" }) => {
             </button>
           </div>
         ) : paginatedProducts.length === 0 ? (
-          <div className="text-center py-12">{t.noProductsFound}</div>
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">
+              {products.length === 0 ? t.noProducts : t.noFilteredProducts}
+            </div>
+          </div>
         ) : (
           <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort("image")} className="flex items-center gap-1">
-                      {t.image}{" "}
-                      {sortConfig.key === "image" &&
-                        (sortConfig.direction === "asc" ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        ))}
-                    </button>
+                    {t.image}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("name")} className="flex items-center gap-1">
-                      {t.productName}{" "}
+                      {t.productName}
                       {sortConfig.key === "name" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
@@ -732,7 +856,7 @@ const Product = ({ language = "en" }) => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("price")} className="flex items-center gap-1">
-                      {t.price}{" "}
+                      {t.price}
                       {sortConfig.key === "price" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
@@ -743,7 +867,7 @@ const Product = ({ language = "en" }) => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("category")} className="flex items-center gap-1">
-                      {t.productCategory}{" "}
+                      {t.productCategory}
                       {sortConfig.key === "category" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
@@ -753,9 +877,42 @@ const Product = ({ language = "en" }) => {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => requestSort("crop")} className="flex items-center gap-1">
+                      {t.productCrop}
+                      {sortConfig.key === "crop" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button onClick={() => requestSort("stock")} className="flex items-center gap-1">
-                      {t.productStock}{" "}
+                      {t.productStock}
                       {sortConfig.key === "stock" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => requestSort("creation_date")} className="flex items-center gap-1">
+                      {t.creationDate}
+                      {sortConfig.key === "creation_date" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => requestSort("expiration_date")} className="flex items-center gap-1">
+                      {t.expirationDate}
+                      {sortConfig.key === "expiration_date" &&
                         (sortConfig.direction === "asc" ? (
                           <ChevronUp className="h-4 w-4" />
                         ) : (
@@ -787,16 +944,25 @@ const Product = ({ language = "en" }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {product.category}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.crop}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          product.stock === "In Stock"
+                          product.stock === t.inStock
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
                         {product.stock}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.creation_date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.expiration_date || "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
                       <button
@@ -805,6 +971,7 @@ const Product = ({ language = "en" }) => {
                           toggleMenu(product.id);
                         }}
                         className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-all"
+                        disabled={isSubmitting}
                       >
                         <MoreVertical className="h-5 w-5 text-gray-600" />
                       </button>
@@ -831,11 +998,12 @@ const Product = ({ language = "en" }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteProduct(product.id);
+                              handleDeleteProduct(product);
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            disabled={isSubmitting}
                           >
-                            <Trash2 className="h-4 w-4" /> {t.delete}
+                            <Trash2 className="h-4 w-4" /> {isSubmitting ? t.deleting : t.delete}
                           </button>
                         </div>
                       )}
@@ -865,6 +1033,46 @@ const Product = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && productToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-bold text-gray-800">{t.confirmDelete}</h2>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-600">
+                  {t.confirmDelete} <strong>{productToDelete.name}</strong>?
+                </p>
+              </div>
+              <div className="flex gap-3 p-6 border-t">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  disabled={isSubmitting}
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={confirmDeleteProduct}
+                  className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${
+                    isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? t.deleting : t.delete}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Add Product Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -943,7 +1151,7 @@ const Product = ({ language = "en" }) => {
                   </label>
                   <select
                     name="category_id"
-                    value={selectedCategory}
+                    value={newProduct.category_id}
                     onChange={handleCategoryChange}
                     className={`w-full px-3 py-2 border ${
                       formErrors.category_id ? "border-red-500" : "border-gray-300"
@@ -963,7 +1171,31 @@ const Product = ({ language = "en" }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Quantity *
+                    {t.productCrop} *
+                  </label>
+                  <select
+                    name="crop_id"
+                    value={newProduct.crop_id}
+                    onChange={handleCropChange}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.crop_id ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required
+                  >
+                    <option value="">{t.selectCrop}</option>
+                    {crops.map((crop) => (
+                      <option key={crop.id} value={crop.id}>
+                        {crop.name}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.crop_id && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.enterQuantity} *
                   </label>
                   <input
                     type="number"
@@ -979,6 +1211,43 @@ const Product = ({ language = "en" }) => {
                   />
                   {formErrors.quantity && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.quantity}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.creationDate} *
+                  </label>
+                  <input
+                    type="date"
+                    name="creation_date"
+                    value={newProduct.creation_date}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.creation_date ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required
+                  />
+                  {formErrors.creation_date && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.creation_date}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.expirationDate} {newProduct.quantity === "0" ? "*" : ""}
+                  </label>
+                  <input
+                    type="date"
+                    name="expiration_date"
+                    value={newProduct.expiration_date}
+                    onChange={handleInputChange}
+                    placeholder={t.enterExpirationDate}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.expiration_date ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    required={newProduct.quantity === "0"}
+                  />
+                  {formErrors.expiration_date && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.expiration_date}</p>
                   )}
                 </div>
                 <div>
@@ -1030,6 +1299,7 @@ const Product = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* Edit Product Modal */}
         {showEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1146,7 +1416,7 @@ const Product = ({ language = "en" }) => {
                       </label>
                       <select
                         name="category_id"
-                        value={selectedCategory}
+                        value={editProduct.category_id}
                         onChange={handleEditCategoryChange}
                         className={`w-full px-4 py-3 text-lg border ${
                           formErrors.category_id ? "border-red-500" : "border-gray-300"
@@ -1166,7 +1436,31 @@ const Product = ({ language = "en" }) => {
                     </div>
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-3">
-                        Quantity *
+                        {t.productCrop} *
+                      </label>
+                      <select
+                        name="crop_id"
+                        value={editProduct.crop_id}
+                        onChange={handleEditCropChange}
+                        className={`w-full px-4 py-3 text-lg border ${
+                          formErrors.crop_id ? "border-red-500" : "border-gray-300"
+                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        required
+                      >
+                        <option value="">{t.selectCrop}</option>
+                        {crops.map((crop) => (
+                          <option key={crop.id} value={crop.id}>
+                            {crop.name}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.crop_id && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-3">
+                        {t.enterQuantity} *
                       </label>
                       <input
                         type="number"
@@ -1182,6 +1476,43 @@ const Product = ({ language = "en" }) => {
                       />
                       {formErrors.quantity && (
                         <p className="text-red-500 text-sm mt-1">{formErrors.quantity}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-3">
+                        {t.creationDate} *
+                      </label>
+                      <input
+                        type="date"
+                        name="creation_date"
+                        value={editProduct.creation_date}
+                        onChange={handleEditInputChange}
+                        className={`w-full px-4 py-3 text-lg border ${
+                          formErrors.creation_date ? "border-red-500" : "border-gray-300"
+                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        required
+                      />
+                      {formErrors.creation_date && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors.creation_date}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-3">
+                        {t.expirationDate} {editProduct.quantity === "0" ? "*" : ""}
+                      </label>
+                      <input
+                        type="date"
+                        name="expiration_date"
+                        value={editProduct.expiration_date}
+                        onChange={handleEditInputChange}
+                        placeholder={t.enterExpirationDate}
+                        className={`w-full px-4 py-3 text-lg border ${
+                          formErrors.expiration_date ? "border-red-500" : "border-gray-300"
+                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        required={editProduct.quantity === "0"}
+                      />
+                      {formErrors.expiration_date && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors.expiration_date}</p>
                       )}
                     </div>
                   </div>
@@ -1205,6 +1536,7 @@ const Product = ({ language = "en" }) => {
             </div>
           </div>
         )}
+        {/* View Product Modal */}
         {showViewModal && selectedProduct && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1243,6 +1575,12 @@ const Product = ({ language = "en" }) => {
                     </div>
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">
+                        {t.productCrop}
+                      </label>
+                      <p className="text-xl text-gray-900">{selectedProduct.crop}</p>
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">
                         {t.price}
                       </label>
                       <p className="text-3xl font-bold text-green-600">
@@ -1256,13 +1594,25 @@ const Product = ({ language = "en" }) => {
                       </label>
                       <span
                         className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
-                          selectedProduct.stock === "In Stock"
+                          selectedProduct.stock === t.inStock
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
                         {selectedProduct.stock}
                       </span>
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">
+                        {t.creationDate}
+                      </label>
+                      <p className="text-xl text-gray-900">{selectedProduct.creation_date}</p>
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium text-gray-700 mb-2">
+                        {t.expirationDate}
+                      </label>
+                      <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
                     </div>
                     <div>
                       <label className="block text-lg font-medium text-gray-700 mb-2">

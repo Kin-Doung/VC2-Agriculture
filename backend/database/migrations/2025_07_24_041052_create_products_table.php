@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('price', 10, 2);
             $table->integer('quantity')->default(0);
             $table->string('image_path')->nullable();
-            $table->dateTime('available_from')->nullable();
+            $table->dateTime('expiration_date')->nullable();
             $table->timestamps();
         });
     }
