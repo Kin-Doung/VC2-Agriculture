@@ -16,6 +16,7 @@ class CropTrackerController extends Controller
 
     public function index()
     {
+
         $cropTrackers = CropTracker::with('crop')->get()->map(function ($cropTracker) {
             // Append full URL to image_path
             if ($cropTracker->image_path) {
@@ -32,7 +33,7 @@ class CropTrackerController extends Controller
             'crop_id' => 'required|exists:crops,id',
             'planted' => 'required|string',
             'location' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Added max size for clarity
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif', // Added max size for clarity
         ]);
 
         if ($validator->fails()) {
@@ -75,7 +76,7 @@ class CropTrackerController extends Controller
             'crop_id' => 'sometimes|exists:crops,id',
             'planted' => 'sometimes|string',
             'location' => 'sometimes|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
         ]);
 
         if ($validator->fails()) {
