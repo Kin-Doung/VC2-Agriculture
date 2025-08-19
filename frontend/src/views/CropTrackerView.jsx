@@ -4,6 +4,7 @@ import { Plus, Search, X, MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import debounce from "lodash/debounce";
 import jsPDF from "jspdf"; // Import jsPDF for PDF generation
+import html2canvas from "html2canvas"; // Import html2canvas for image rendering
 
 const CropTrackerView = ({ language = "en" }) => {
   const generalTimeline = [
@@ -46,7 +47,6 @@ const CropTrackerView = ({ language = "en" }) => {
   const [editCrop, setEditCrop] = useState(null);
   const [availableCrops, setAvailableCrops] = useState([]);
   const [clientDetails, setClientDetails] = useState({});
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
@@ -90,6 +90,7 @@ const CropTrackerView = ({ language = "en" }) => {
       uploadPhoto: "Upload Photo",
       cropGrowthHistory: "Crop Growth History",
       downloadReport: "Download Report",
+      downloadCSV: "Download CSV",
       growthProgress: "Growth Progress",
       growthStagesTimeline: "Growth Stages Timeline",
       markComplete: "Mark Complete",
@@ -100,6 +101,7 @@ const CropTrackerView = ({ language = "en" }) => {
       previous: "Previous",
       next: "Next",
       page: "Page",
+      reportError: "Failed to generate report. Please try again.",
     },
     km: {
       title: "តាមដានដំណាំ",
@@ -140,6 +142,7 @@ const CropTrackerView = ({ language = "en" }) => {
       uploadPhoto: "ផ្ទុកឡើងរូបថត",
       cropGrowthHistory: "ប្រវត្តិកំណើនដំណាំ",
       downloadReport: "ទាញយករបាយការណ៍",
+      downloadCSV: "ទាញយក CSV",
       growthProgress: "វឌ្ឍនភាពកំណើន",
       growthStagesTimeline: "ពេលវេលាដំណាក់កាលកំណើន",
       markComplete: "សម្គាល់បញ្ចប់",
@@ -150,6 +153,7 @@ const CropTrackerView = ({ language = "en" }) => {
       previous: "មុន",
       next: "បន្ទាប់",
       page: "ទំព័រ",
+      reportError: "បរាជ័យក្នុងការបង្កើតរបាយការណ៍។ សូមព្យាយាមម្តងទៀត។",
     },
   };
 
@@ -157,13 +161,12 @@ const CropTrackerView = ({ language = "en" }) => {
   const API_URL = "http://127.0.0.1:8000/api/croptrackers";
   const CROPS_API_URL = "http://127.0.0.1:8000/api/crops";
   const AUTH_TOKEN = localStorage.getItem("token");
-  const currentDateTime = "01:20 PM, Tuesday, August 19, 2025";
 
   const calculateDAP = (plantedDate) => {
     if (!plantedDate || plantedDate === "Unknown") return null;
     try {
       const planted = new Date(plantedDate);
-      const current = new Date("2025-08-19T13:20:00+07:00");
+      const current = new Date(); // Dynamic current time
       const diffTime = current - planted;
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       return diffDays >= 0 ? diffDays : 0;
@@ -172,7 +175,7 @@ const CropTrackerView = ({ language = "en" }) => {
     }
   };
 
-  const getCurrentStage = (dap) => {
+  const getCurrentStage = useCallback((dap) => {
     if (dap === null) return "Unknown";
     for (let stage of generalTimeline) {
       const [start, end] = stage.dapRange.match(/\d+/g).map(Number);
@@ -181,9 +184,9 @@ const CropTrackerView = ({ language = "en" }) => {
       }
     }
     return "Beyond Harvest";
-  };
+  }, []);
 
-  const calculateExpectedDate = (plantedDate, dapRange, isCompleted = false) => {
+  const calculateExpectedDate = useCallback((plantedDate, dapRange, isCompleted = false) => {
     if (!plantedDate || plantedDate === "Unknown") return "Unknown";
     try {
       const planted = new Date(plantedDate);
@@ -199,38 +202,41 @@ const CropTrackerView = ({ language = "en" }) => {
     } catch {
       return "Unknown";
     }
-  };
+  }, []);
 
-  const normalizeCrop = (crop) => {
-    const clientData = clientDetails[crop.id] || defaultDetails();
-    const dap = calculateDAP(crop.planted);
+  const normalizeCrop = useCallback(
+    (crop) => {
+      const clientData = clientDetails[crop.id] || defaultDetails();
+      const dap = calculateDAP(crop.planted);
 
-    const stages = (clientData.stages || generalTimeline.map((stage) => ({ ...stage }))).map((stage) => {
-      const [start, end] = stage.dapRange.match(/\d+/g).map(Number);
-      const isCompleted = dap !== null && dap >= start;
+      const stages = (clientData.stages || generalTimeline.map((stage) => ({ ...stage }))).map((stage) => {
+        const [start, end] = stage.dapRange.match(/\d+/g).map(Number);
+        const isCompleted = dap !== null && dap >= start;
+        return {
+          ...stage,
+          completed: isCompleted,
+          date: isCompleted ? calculateExpectedDate(crop.planted, stage.dapRange, true) : calculateExpectedDate(crop.planted, stage.dapRange),
+        };
+      });
+
       return {
-        ...stage,
-        completed: isCompleted,
-        date: isCompleted ? calculateExpectedDate(crop.planted, stage.dapRange, true) : calculateExpectedDate(crop.planted, stage.dapRange),
+        ...crop,
+        id: crop.id,
+        name: crop.crop?.name || `Crop ${crop.id || "Unknown"}`,
+        status: clientData.status || "Growing",
+        planted: formatDate(crop.planted || "Unknown"),
+        location: crop.location || "Unknown",
+        image_path: crop.image_path || "/placeholder-photo.jpg",
+        details: {
+          ...clientData,
+          stages,
+          photoUrl: crop.image_path || clientData.photoUrl,
+        },
+        progress: `${stages.filter((s) => s.completed).length} / ${stages.length} stages completed`,
       };
-    });
-
-    return {
-      ...crop,
-      id: crop.id,
-      name: crop.crop?.name || `Crop ${crop.id || "Unknown"}`,
-      status: clientData.status || "Growing",
-      planted: formatDate(crop.planted || "Unknown"),
-      location: crop.location || "Unknown",
-      image_path: crop.image_path || "/placeholder-photo.jpg",
-      details: {
-        ...clientData,
-        stages,
-        photoUrl: crop.image_path || clientData.photoUrl,
-      },
-      progress: `${stages.filter((s) => s.completed).length} / ${stages.length} stages completed`,
-    };
-  };
+    },
+    [clientDetails, calculateExpectedDate]
+  );
 
   const debouncedSetSearchTerm = useCallback(
     debounce((value) => setSearchTerm(value), 300),
@@ -239,17 +245,31 @@ const CropTrackerView = ({ language = "en" }) => {
 
   const handleSearchChange = (e) => debouncedSetSearchTerm(e.target.value);
 
+  const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        return await response.json();
+      } catch (err) {
+        if (i < retries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)));
+          continue;
+        }
+        throw err;
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchAvailableCrops = async () => {
       try {
-        const response = await fetch(CROPS_API_URL, {
+        const data = await fetchWithRetry(CROPS_API_URL, {
           headers: {
             "Content-Type": "application/json",
             ...(AUTH_TOKEN && { Authorization: `Bearer ${AUTH_TOKEN}` }),
           },
         });
-        if (!response.ok) throw new Error("Failed to fetch available crops");
-        const data = await response.json();
         setAvailableCrops(data);
       } catch (err) {
         console.error(err);
@@ -276,13 +296,10 @@ const CropTrackerView = ({ language = "en" }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(API_URL, {
+      const data = await fetchWithRetry(API_URL, {
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
-      if (!response.ok) throw new Error("Failed to fetch crops");
-      const data = await response.json();
       if (!Array.isArray(data)) throw new Error("API response is not an array");
-
       const newClientDetails = {};
       data.forEach((crop) => {
         newClientDetails[crop.id] = clientDetails[crop.id] || defaultDetails();
@@ -308,11 +325,18 @@ const CropTrackerView = ({ language = "en" }) => {
       crop.location?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredCrops.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedCrops = filteredCrops.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    } else if (totalPages === 0) {
+      setCurrentPage(1);
+    }
+  }, [filteredCrops, currentPage, totalPages]);
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -332,7 +356,7 @@ const CropTrackerView = ({ language = "en" }) => {
       ...crop,
       crop_id: crop.crop?.id || "",
       status: crop.status || "",
-      planted: crop.planted === "Unknown" ? "" : crop.planted,
+      planted: crop.planted === "Unknown" ? "" : new Date(crop.planted).toISOString().split("T")[0],
       image: "",
     });
     setShowEditModal(true);
@@ -362,9 +386,6 @@ const CropTrackerView = ({ language = "en" }) => {
       });
       setShowDeleteModal(false);
       alert(t.deleteSuccess);
-      if (paginatedCrops.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      }
     } catch (err) {
       alert(err.message);
     } finally {
@@ -499,19 +520,16 @@ const CropTrackerView = ({ language = "en" }) => {
     }
   };
 
-  // Download Report Handler to PDF
-  const handleDownloadReport = (crop) => {
+  const handleDownloadReport = async (crop) => {
     try {
       const doc = new jsPDF();
       const margin = 10;
       let yPosition = 20;
 
-      // Add title
       doc.setFontSize(18);
       doc.text(`${t.viewCrop}: ${crop.name}`, margin, yPosition);
       yPosition += 10;
 
-      // Add crop details
       doc.setFontSize(12);
       doc.text(`${t.status}: ${crop.status}`, margin, yPosition);
       yPosition += 8;
@@ -526,506 +544,595 @@ const CropTrackerView = ({ language = "en" }) => {
       doc.text(`${t.overallProgress}: ${crop.progress}`, margin, yPosition);
       yPosition += 12;
 
-      // Add growth stages timeline
       doc.setFontSize(14);
       doc.text(t.growthStagesTimeline, margin, yPosition);
       yPosition += 8;
       doc.setFontSize(10);
-      crop.details.stages.forEach((stage, index) => {
+      crop.details.stages.forEach((stage) => {
         const statusText = stage.completed
           ? `(Completed on ${stage.date})`
           : `(${t.expected}: ${stage.date})`;
+        if (yPosition > 280) {
+          doc.addPage();
+          yPosition = 20;
+        }
         doc.text(`${stage.stage} (${stage.dapRange}) ${statusText}`, margin + 5, yPosition);
         yPosition += 8;
       });
 
-      // Add photo placeholder (actual image requires html2canvas)
-      doc.setFontSize(12);
-      yPosition += 5;
-      doc.text(`${t.photos}: ${crop.image_path}`, margin, yPosition);
+      if (crop.image_path && crop.image_path !== "/placeholder-photo.jpg") {
+        try {
+          const imgElement = document.createElement("img");
+          imgElement.src = crop.image_path;
+          await new Promise((resolve, reject) => {
+            imgElement.onload = resolve;
+            imgElement.onerror = () => reject(new Error("Failed to load image"));
+          });
+          const canvas = await html2canvas(imgElement, { scale: 1 });
+          const imgData = canvas.toDataURL("image/jpeg");
+          if (yPosition > 230) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.addImage(imgData, "JPEG", margin, yPosition, 80, 60);
+          yPosition += 65;
+        } catch (imgError) {
+          doc.setFontSize(12);
+          if (yPosition > 280) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(`${t.photos}: ${crop.image_path} (Image not available)`, margin, yPosition);
+          yPosition += 8;
+        }
+      } else {
+        doc.setFontSize(12);
+        if (yPosition > 280) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.text(`${t.photos}: ${crop.image_path}`, margin, yPosition);
+        yPosition += 8;
+      }
 
-      // Save the PDF
       doc.save(`${crop.name}_Report.pdf`);
     } catch (err) {
-      alert(`Failed to generate report: ${err.message}`);
+      alert(`${t.reportError}: ${err.message}`);
     }
   };
 
+  const handleDownloadCSV = (crop) => {
+    try {
+      const rows = [
+        ["Field", "Value"],
+        [t.cropName, crop.name],
+        [t.status, crop.status],
+        [t.planted, crop.planted],
+        [t.location, crop.location],
+        [t.daysSincePlanting, `${calculateDAP(crop.planted) ?? "Unknown"} DAP`],
+        [t.generalTimeline, getCurrentStage(calculateDAP(crop.planted))],
+        [t.overallProgress, crop.progress],
+        [],
+        [t.growthStagesTimeline, ""],
+        ...crop.details.stages.map((stage) => [
+          stage.stage,
+          `${stage.dapRange} ${stage.completed ? `(Completed on ${stage.date})` : `(${t.expected}: ${stage.date})`}`,
+        ]),
+        [],
+        [t.photos, crop.image_path],
+      ];
+      const csvContent = "data:text/csv;charset=utf-8," + rows.map((e) => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `${crop.name}_Report.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert(`${t.reportError}: ${err.message}`);
+    }
+  };
+
+  const ErrorBoundary = ({ children }) => {
+    const [hasError, setHasError] = useState(false);
+    useEffect(() => {
+      const errorHandler = (error) => {
+        console.error(error);
+        setHasError(true);
+      };
+      window.addEventListener("error", errorHandler);
+      return () => window.removeEventListener("error", errorHandler);
+    }, []);
+    if (hasError) {
+      return <div className="text-red-500 text-center py-12">{t.error}</div>;
+    }
+    return children;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="p-6 space-y-6" onClick={() => setActiveMenu(null)}>
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-green-800 mb-2">{t.title}</h1>
-            <p className="text-green-600">{t.subtitle}</p>
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" /> {t.addCrop}
-          </button>
-        </div>
-        <div className="bg-white rounded-lg p-4 shadow-lg">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder={t.search}
-              onChange={handleSearchChange}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="text-gray-600 text-lg">{t.loading}</div>
-            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
-          </div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <div className="text-red-500 text-lg">{error}</div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <div className="p-6 space-y-6" onClick={() => setActiveMenu(null)}>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-green-800 mb-2">{t.title}</h1>
+              <p className="text-green-600">{t.subtitle}</p>
+            </div>
             <button
-              onClick={fetchCrops}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
             >
-              Retry
+              <Plus className="h-4 w-4" /> {t.addCrop}
             </button>
           </div>
-        ) : crops.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-600 text-lg">{t.noCropsAvailable}</div>
+          <div className="bg-white rounded-lg p-4 shadow-lg">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder={t.search}
+                onChange={handleSearchChange}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
           </div>
-        ) : filteredCrops.length === 0 ? (
-          <div className="text-center py-12">{t.noCropsFound}</div>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-6 bg-white rounded-lg shadow-md p-6">
-              {paginatedCrops.map((crop) => (
-                <div key={crop.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 w-full">
-                      <h3 className="text-lg font-medium text-gray-900">{crop.name}</h3>
-                      <div className="bg-gray-50 p-2 rounded-lg space-y-1">
-                        <p><span role="img" aria-label="status">📊</span> <strong>{t.status}:</strong> {crop.status}</p>
-                        <p><span role="img" aria-label="calendar">📅</span> <strong>{t.planted}:</strong> {crop.planted}</p>
-                        <p><span role="img" aria-label="location">📍</span> <strong>{t.location}:</strong> {crop.location}</p>
-                        <p><span role="img" aria-label="progress">📈</span> <strong>{t.progress}:</strong> {crop.progress}</p>
-                      </div>
-                      <button
-                        onClick={() => handleViewCrop(crop)}
-                        className="mt-6 px-4 py-2 bg-green-600 text-white rounded-lg w-full shadow-lg hover:bg-green-700 hover:scale-105 transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex justify-center items-center"
-                        disabled={isSubmitting}
-                        aria-label={`View details for ${crop.name}`}
-                        tabIndex="0"
-                        title={`View details for ${crop.name}`}
-                      >
-                        <span className="text-sm">{t.view}</span>
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveMenu(activeMenu === crop.id ? null : crop.id);
-                        }}
-                        className="p-2 bg-green-50 rounded-full shadow-md hover:bg-green-100 transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                        disabled={isSubmitting}
-                        aria-label="More options"
-                        tabIndex="0"
-                        title="More options"
-                      >
-                        <MoreVertical className="h-5 w-5 text-gray-600" />
-                      </button>
-                      {activeMenu === crop.id && (
-                        <div className="absolute right-0 mt-2 w-30 bg-white rounded-lg shadow-sm border border-gray-200 py-2 z-30 transition-opacity duration-200">
-                          <button
-                            onClick={() => handleEditCrop(crop)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                            aria-label={`Edit ${crop.name}`}
-                            tabIndex="0"
-                            title={`Edit ${crop.name}`}
-                          >
-                            <Edit className="h-4 w-4" /> {t.edit}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCrop(crop)}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                            disabled={isSubmitting}
-                            aria-label={`Delete ${crop.name}`}
-                            tabIndex="0"
-                            title={`Delete ${crop.name}`}
-                          >
-                            <Trash2 className="h-4 w-4" /> {isSubmitting ? t.deleting : t.delete}
-                          </button>
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="text-gray-600 text-lg">{t.loading}</div>
+              <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <div className="text-red-500 text-lg">{error}</div>
+              <button
+                onClick={fetchCrops}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Retry
+              </button>
+            </div>
+          ) : crops.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-600 text-lg">{t.noCropsAvailable}</div>
+            </div>
+          ) : filteredCrops.length === 0 ? (
+            <div className="text-center py-12">{t.noCropsFound}</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-6 bg-white rounded-lg shadow-md p-6">
+                {paginatedCrops.map((crop) => (
+                  <div key={crop.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 w-full">
+                        <h3 className="text-lg font-medium text-gray-900">{crop.name}</h3>
+                        <div className="bg-gray-50 p-2 rounded-lg space-y-1">
+                          <p><span role="img" aria-label="status">📊</span> <strong>{t.status}:</strong> {crop.status}</p>
+                          <p><span role="img" aria-label="calendar">📅</span> <strong>{t.planted}:</strong> {crop.planted}</p>
+                          <p><span role="img" aria-label="location">📍</span> <strong>{t.location}:</strong> {crop.location}</p>
+                          <p><span role="img" aria-label="progress">📈</span> <strong>{t.progress}:</strong> {crop.progress}</p>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-4 py-2 rounded-lg ${currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"}`}
-                >
-                  {t.previous}
-                </button>
-                <span>
-                  {t.page} {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`px-4 py-2 rounded-lg ${currentPage === totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"}`}
-                >
-                  {t.next}
-                </button>
-              </div>
-            )}
-          </>
-        )}
-        {/* Add Crop Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h2 className="text-xl font-bold text-gray-800">{t.addNewCrop}</h2>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <form onSubmit={handleAddCrop} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.cropName} *
-                  </label>
-                  <select
-                    name="crop_id"
-                    value={newCrop.crop_id}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="" disabled>{t.enterCropName}</option>
-                    {availableCrops.map((crop) => (
-                      <option key={crop.id} value={crop.id}>
-                        {crop.name}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.crop_id && <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.status} *</label>
-                  <select
-                    name="status"
-                    value={newCrop.status}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white appearance-none`}
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="" disabled>{t.selectStatus}</option>
-                    <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
-                    <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
-                    <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
-                  </select>
-                  {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.planted} *
-                  </label>
-                  <input
-                    type="date"
-                    name="planted"
-                    value={newCrop.planted}
-                    onChange={handleInputChange}
-                    max={new Date().toISOString().split("T")[0]}
-                    className={`w-full px-3 py-2 border ${formErrors.planted ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                    lang={language}
-                    placeholder={t.enterPlanted}
-                  />
-                  {formErrors.planted && <p className="text-red-500 text-sm mt-1">{formErrors.planted}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.location} *
-                  </label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={newCrop.location}
-                    onChange={handleInputChange}
-                    placeholder={t.enterLocation}
-                    className={`w-full px-3 py-2 border ${formErrors.location ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                  />
-                  {formErrors.location && <p className="text-red-500 text-sm mt-1">{formErrors.location}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.photos}</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageChange(e)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    disabled={isSubmitting}
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    {isSubmitting ? t.saving : t.save}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-        {/* Edit Crop Modal */}
-        {showEditModal && editCrop && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h2 className="text-xl font-bold text-gray-800">{t.editCrop}</h2>
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <form onSubmit={handleUpdateCrop} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.cropName} *
-                  </label>
-                  <select
-                    name="crop_id"
-                    value={editCrop.crop_id}
-                    onChange={handleEditInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="" disabled>{t.enterCropName}</option>
-                    {availableCrops.map((crop) => (
-                      <option key={crop.id} value={crop.id}>
-                        {crop.name}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.crop_id && <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.status} *</label>
-                  <select
-                    name="status"
-                    value={editCrop.status}
-                    onChange={handleEditInputChange}
-                    className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white appearance-none`}
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="" disabled>{t.selectStatus}</option>
-                    <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
-                    <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
-                    <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
-                  </select>
-                  {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.planted} *
-                  </label>
-                  <input
-                    type="date"
-                    name="planted"
-                    value={editCrop.planted}
-                    onChange={handleEditInputChange}
-                    max={new Date().toISOString().split("T")[0]}
-                    className={`w-full px-3 py-2 border ${formErrors.planted ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                  />
-                  {formErrors.planted && <p className="text-red-500 text-sm mt-1">{formErrors.planted}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.location} *
-                  </label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={editCrop.location}
-                    onChange={handleEditInputChange}
-                    placeholder={t.enterLocation}
-                    className={`w-full px-3 py-2 border ${formErrors.location ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                    required
-                    disabled={isSubmitting}
-                  />
-                  {formErrors.location && <p className="text-red-500 text-sm mt-1">{formErrors.location}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.photos}</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageChange(e, true)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    disabled={isSubmitting}
-                  />
-                  <img src={editCrop.image_path} alt="Current photo" className="mt-2 w-full h-32 object-cover rounded" />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    disabled={isSubmitting}
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    {isSubmitting ? t.updating : t.update}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-        {/* View Crop Modal */}
-        {showViewModal && selectedCrop && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h2 className="text-xl font-bold text-gray-800">{t.viewCrop}: {selectedCrop.name}</h2>
-                <button
-                  onClick={() => setShowViewModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="col-span-2">
-                  <div className="mb-6">
-                    <p className="text-gray-600 mb-2">{t.growthProgress}</p>
-                    <p><span role="img" aria-label="status">📊</span> {t.status}: {selectedCrop.status}</p>
-                    <p><span role="img" aria-label="calendar">📅</span> {t.planted}: {selectedCrop.planted}</p>
-                    <p><span role="img" aria-label="location">📍</span> {t.location}: {selectedCrop.location}</p>
-                    <p><span role="img" aria-label="calendar">📅</span> {t.daysSincePlanting}: {calculateDAP(selectedCrop.planted) ?? "Unknown"} DAP</p>
-                    <p><span role="img" aria-label="stage">🌱</span> {t.generalTimeline}: {getCurrentStage(calculateDAP(selectedCrop.planted))}</p>
-                    <div className="flex items-center mt-2">
-                      <p>{t.overallProgress}</p>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5 ml-2">
-                        <div
-                          className="bg-black h-2.5 rounded-full"
-                          style={{ width: `${(selectedCrop.details.stages.filter((s) => s.completed).length / selectedCrop.details.stages.length) * 100}%` }}
-                        ></div>
+                        <button
+                          onClick={() => handleViewCrop(crop)}
+                          className="mt-6 px-4 py-2 bg-green-600 text-white rounded-lg w-full shadow-lg hover:bg-green-700 hover:scale-105 transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex justify-center items-center"
+                          disabled={isSubmitting}
+                          aria-label={`View details for ${crop.name}`}
+                          tabIndex="0"
+                          title={`View details for ${crop.name}`}
+                        >
+                          <span className="text-sm">{t.view}</span>
+                        </button>
                       </div>
-                      <span className="ml-2">{selectedCrop.progress}</span>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenu(activeMenu === crop.id ? null : crop.id);
+                          }}
+                          className="p-2 bg-green-50 rounded-full shadow-md hover:bg-green-100 transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                          disabled={isSubmitting}
+                          aria-label="More options"
+                          tabIndex="0"
+                          title="More options"
+                        >
+                          <MoreVertical className="h-5 w-5 text-gray-600" />
+                        </button>
+                        {activeMenu === crop.id && (
+                          <div className="absolute right-0 mt-2 w-30 bg-white rounded-lg shadow-sm border border-gray-200 py-2 z-30 transition-opacity duration-200">
+                            <button
+                              onClick={() => handleEditCrop(crop)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              aria-label={`Edit ${crop.name}`}
+                              tabIndex="0"
+                              title={`Edit ${crop.name}`}
+                            >
+                              <Edit className="h-4 w-4" /> {t.edit}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCrop(crop)}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              disabled={isSubmitting}
+                              aria-label={`Delete ${crop.name}`}
+                              tabIndex="0"
+                              title={`Delete ${crop.name}`}
+                            >
+                              <Trash2 className="h-4 w-4" /> {isSubmitting ? t.deleting : t.delete}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="mb-6">
-                    <p className="text-gray-600 mb-2">{t.growthStagesTimeline}</p>
-                    <ul className="list-disc pl-5">
-                      {selectedCrop.details.stages.map((stage, index) => (
-                        <li key={index} className="flex items-center mb-2">
-                          <span className={stage.completed ? "text-green-600" : "text-gray-500"}>
-                            {stage.stage} ({stage.dapRange}) {stage.completed ? `(Completed on ${stage.date})` : `(${t.expected}: ${stage.date})`}
-                          </span>
-                        </li>
+                ))}
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-4 py-2 rounded-lg ${currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"}`}
+                  >
+                    {t.previous}
+                  </button>
+                  <span>
+                    {t.page} {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-4 py-2 rounded-lg ${currentPage === totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"}`}
+                  >
+                    {t.next}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          {showAddModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-6 border-b">
+                  <h2 className="text-xl font-bold text-gray-800">{t.addNewCrop}</h2>
+                  <button
+                    onClick={() => setShowAddModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close modal"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <form onSubmit={handleAddCrop} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.cropName} *
+                    </label>
+                    <select
+                      name="crop_id"
+                      value={newCrop.crop_id}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="" disabled>{t.enterCropName}</option>
+                      {availableCrops.map((crop) => (
+                        <option key={crop.id} value={crop.id}>
+                          {crop.name}
+                        </option>
                       ))}
-                    </ul>
+                    </select>
+                    {formErrors.crop_id && <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.status} *</label>
+                    <select
+                      name="status"
+                      value={newCrop.status}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white appearance-none`}
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="" disabled>{t.selectStatus}</option>
+                      <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
+                      <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
+                      <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
+                    </select>
+                    {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.planted} *
+                    </label>
+                    <input
+                      type="date"
+                      name="planted"
+                      value={newCrop.planted}
+                      onChange={handleInputChange}
+                      max={new Date().toISOString().split("T")[0]}
+                      className={`w-full px-3 py-2 border ${formErrors.planted ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                      required
+                      disabled={isSubmitting}
+                      lang={language}
+                      placeholder={t.enterPlanted}
+                    />
+                    {formErrors.planted && <p className="text-red-500 text-sm mt-1">{formErrors.planted}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.location} *
+                    </label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={newCrop.location}
+                      onChange={handleInputChange}
+                      placeholder={t.enterLocation}
+                      className={`w-full px-3 py-2 border ${formErrors.location ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                      required
+                      disabled={isSubmitting}
+                    />
+                    {formErrors.location && <p className="text-red-500 text-sm mt-1">{formErrors.location}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.photos}</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      disabled={isSubmitting}
+                    >
+                      {t.cancel}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {isSubmitting ? t.saving : t.save}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+          {showEditModal && editCrop && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-6 border-b">
+                  <h2 className="text-xl font-bold text-gray-800">{t.editCrop}</h2>
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close modal"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <form onSubmit={handleUpdateCrop} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.cropName} *
+                    </label>
+                    <select
+                      name="crop_id"
+                      value={editCrop.crop_id}
+                      onChange={handleEditInputChange}
+                      className={`w-full px-3 py-2 border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="" disabled>{t.enterCropName}</option>
+                      {availableCrops.map((crop) => (
+                        <option key={crop.id} value={crop.id}>
+                          {crop.name}
+                        </option>
+                      ))}
+                    </select>
+                    {formErrors.crop_id && <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.status} *</label>
+                    <select
+                      name="status"
+                      value={editCrop.status}
+                      onChange={handleEditInputChange}
+                      className={`w-full px-3 py-2 border ${formErrors.status ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white appearance-none`}
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="" disabled>{t.selectStatus}</option>
+                      <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
+                      <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
+                      <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
+                    </select>
+                    {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.planted} *
+                    </label>
+                    <input
+                      type="date"
+                      name="planted"
+                      value={editCrop.planted}
+                      onChange={handleEditInputChange}
+                      max={new Date().toISOString().split("T")[0]}
+                      className={`w-full px-3 py-2 border ${formErrors.planted ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                      required
+                      disabled={isSubmitting}
+                    />
+                    {formErrors.planted && <p className="text-red-500 text-sm mt-1">{formErrors.planted}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t.location} *
+                    </label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={editCrop.location}
+                      onChange={handleEditInputChange}
+                      placeholder={t.enterLocation}
+                      className={`w-full px-3 py-2 border ${formErrors.location ? "border-red-500" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                      required
+                      disabled={isSubmitting}
+                    />
+                    {formErrors.location && <p className="text-red-500 text-sm mt-1">{formErrors.location}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.photos}</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, true)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      disabled={isSubmitting}
+                    />
+                    <img src={editCrop.image_path} alt="Current photo" className="mt-2 w-full h-32 object-cover rounded" />
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowEditModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      disabled={isSubmitting}
+                    >
+                      {t.cancel}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {isSubmitting ? t.updating : t.update}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+          {showViewModal && selectedCrop && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-6 border-b">
+                  <h2 className="text-xl font-bold text-gray-800">{t.viewCrop}: {selectedCrop.name}</h2>
+                  <button
+                    onClick={() => setShowViewModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close modal"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="col-span-2">
+                    <div className="mb-6">
+                      <p className="text-gray-600 mb-2">{t.growthProgress}</p>
+                      <p><span role="img" aria-label="status">📊</span> {t.status}: {selectedCrop.status}</p>
+                      <p><span role="img" aria-label="calendar">📅</span> {t.planted}: {selectedCrop.planted}</p>
+                      <p><span role="img" aria-label="location">📍</span> {t.location}: {selectedCrop.location}</p>
+                      <p><span role="img" aria-label="calendar">📅</span> {t.daysSincePlanting}: {calculateDAP(selectedCrop.planted) ?? "Unknown"} DAP</p>
+                      <p><span role="img" aria-label="stage">🌱</span> {t.generalTimeline}: {getCurrentStage(calculateDAP(selectedCrop.planted))}</p>
+                      <div className="flex items-center mt-2">
+                        <p>{t.overallProgress}</p>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 ml-2">
+                          <div
+                            className="bg-black h-2.5 rounded-full"
+                            style={{ width: `${(selectedCrop.details.stages.filter((s) => s.completed).length / selectedCrop.details.stages.length) * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="ml-2">{selectedCrop.progress}</span>
+                      </div>
+                    </div>
+                    <div className="mb-6">
+                      <p className="text-gray-600 mb-2">{t.growthStagesTimeline}</p>
+                      <ul className="list-disc pl-5">
+                        {selectedCrop.details.stages.map((stage, index) => (
+                          <li key={index} className="flex items-center mb-2">
+                            <span className={stage.completed ? "text-green-600" : "text-gray-500"}>
+                              {stage.stage} ({stage.dapRange}) {stage.completed ? `(Completed on ${stage.date})` : `(${t.expected}: ${stage.date})`}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                      <p className="text-gray-600 mb-2">{t.photos}</p>
+                      <img src={selectedCrop.image_path} alt={`${selectedCrop.name} photo`} className="w-full h-32 object-cover rounded mb-2" />
+                      <p className="text-gray-600">{t.uploadPhoto}: {selectedCrop.image_path}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-gray-600 mb-2">{t.cropGrowthHistory}</p>
+                      <button
+                        onClick={() => handleDownloadReport(selectedCrop)}
+                        className="w-full bg-black text-white py-2 rounded hover:bg-gray-800 transition-colors"
+                      >
+                        {t.downloadReport}
+                      </button>
+                      <button
+                        onClick={() => handleDownloadCSV(selectedCrop)}
+                        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors mt-2"
+                      >
+                        {t.downloadCSV}
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <p className="text-gray-600 mb-2">{t.photos}</p>
-                    <img src={selectedCrop.image_path} alt={`${selectedCrop.name} photo`} className="w-full h-32 object-cover rounded mb-2" />
-                    <input type="text" className="w-full p-2 border rounded" placeholder={t.uploadPhoto} disabled />
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-gray-600 mb-2">{t.cropGrowthHistory}</p>
+              </div>
+            </div>
+          )}
+          {showDeleteModal && cropToDelete && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg max-w-md w-full">
+                <div className="flex items-center justify-between p-6 border-b">
+                  <h2 className="text-xl font-bold text-gray-800">{t.confirmDelete}</h2>
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close modal"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <div className="p-6">
+                  <p className="text-gray-600">
+                    {t.confirmDelete} <strong>{cropToDelete.name}</strong>?
+                  </p>
+                  <div className="flex gap-3 pt-4">
                     <button
-                      onClick={() => handleDownloadReport(selectedCrop)}
-                      className="w-full bg-black text-white py-2 rounded"
+                      onClick={() => setShowDeleteModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      disabled={isSubmitting}
                     >
-                      {t.downloadReport}
+                      {t.cancel}
+                    </button>
+                    <button
+                      onClick={confirmDeleteCrop}
+                      disabled={isSubmitting}
+                      className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {isSubmitting ? t.deleting : t.delete}
                     </button>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && cropToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h2 className="text-xl font-bold text-gray-800">{t.confirmDelete}</h2>
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-600">
-                  {t.confirmDelete} <strong>{cropToDelete.name}</strong>?
-                </p>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => setShowDeleteModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    disabled={isSubmitting}
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    onClick={confirmDeleteCrop}
-                    disabled={isSubmitting}
-                    className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    {isSubmitting ? t.deleting : t.delete}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 };
 
