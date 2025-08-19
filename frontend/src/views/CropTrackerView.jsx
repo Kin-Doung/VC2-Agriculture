@@ -499,7 +499,7 @@ const CropTrackerView = ({ language = "en" }) => {
     }
   };
 
-  // Download Report Handler
+  // Download Report Handler to PDF
   const handleDownloadReport = (crop) => {
     try {
       const doc = new jsPDF();
