@@ -1,53 +1,11 @@
 "use client"
 
-import { Calendar, Clock, Plus, CheckCircle } from "lucide-react"
+import { Calendar, Clock, CheckCircle } from "lucide-react"
 import { useState } from "react"
 
 const TasksView = ({ language }) => {
   const [filter, setFilter] = useState("all")
-
-  const translations = {
-    en: {
-      title: "Tasks & Reminders",
-      subtitle: "Manage your farming activities and never miss important tasks",
-      addTask: "Add New Task",
-      all: "All Tasks",
-      today: "Today",
-      overdue: "Overdue",
-      upcoming: "Upcoming",
-      completed: "Completed",
-      markDone: "Mark Done",
-      edit: "Edit",
-      delete: "Delete",
-      noTasks: "No tasks found",
-      priority: "Priority",
-      high: "High",
-      medium: "Medium",
-      low: "Low",
-    },
-    km: {
-      title: "កិច្ចការ និងការរំលឹក",
-      subtitle: "គ្រប់គ្រងសកម្មភាពកសិកម្មរបស់អ្នក និងកុំឱ្យខកខានកិច្ចការសំខាន់ៗ",
-      addTask: "បន្ថែមកិច្ចការថ្មី",
-      all: "កិច្ចការទាំងអស់",
-      today: "ថ្ងៃនេះ",
-      overdue: "ហួសកាលកំណត់",
-      upcoming: "នាពេលខាងមុខ",
-      completed: "បានបញ្ចប់",
-      markDone: "សម្គាល់ថាបានធ្វើ",
-      edit: "កែប្រែ",
-      delete: "លុប",
-      noTasks: "រកមិនឃើញកិច្ចការ",
-      priority: "អាទិភាព",
-      high: "ខ្ពស់",
-      medium: "មធ្យម",
-      low: "ទាប",
-    },
-  }
-
-  const t = translations[language]
-
-  const tasks = [
+  const [tasks, setTasks] = useState([
     {
       id: 1,
       title: "Apply fertilizer to rice field",
@@ -84,7 +42,58 @@ const TasksView = ({ language }) => {
       status: "upcoming",
       category: "inspection",
     },
-  ]
+  ])
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [currentTask, setCurrentTask] = useState(null)
+  const [editForm, setEditForm] = useState({ title: "", description: "", dueDate: "", priority: "" })
+
+  const translations = {
+    en: {
+      title: "Tasks & Reminders",
+      subtitle: "Manage your farming activities and never miss important tasks",
+      all: "All Tasks",
+      today: "Today",
+      overdue: "Overdue",
+      upcoming: "Upcoming",
+      completed: "Completed",
+      markDone: "Mark Done",
+      edit: "Edit",
+      delete: "Delete",
+      noTasks: "No tasks found",
+      priority: "Priority",
+      high: "High",
+      medium: "Medium",
+      low: "Low",
+      save: "Save",
+      cancel: "Cancel",
+      confirmDelete: "Are you sure you want to delete this task?",
+      editTask: "Edit Task",
+    },
+    km: {
+      title: "កិច្ចការ និងការរំលឹក",
+      subtitle: "គ្រប់គ្រងសកម្មភាពកសិកម្មរបស់អ្នក និងកុំឱ្យខកខានកិច្ចការសំខាន់ៗ",
+      all: "កិច្ចការទាំងអស់",
+      today: "ថ្ងៃនេះ",
+      overdue: "ហួសកាលកំណត់",
+      upcoming: "នាពេលខាងមុខ",
+      completed: "បានបញ្ចប់",
+      markDone: "សម្គាល់ថាបានធ្វើ",
+      edit: "កែប្រែ",
+      delete: "លុប",
+      noTasks: "រកមិនឃើញកិច្ចការ",
+      priority: "អាទិភាព",
+      high: "ខ្ពស់",
+      medium: "មធ្យម",
+      low: "ទាប",
+      save: "រក្សាទុក",
+      cancel: "បោះបង់",
+      confirmDelete: "តើអ្នកប្រាកដជាចង់លុបកិច្ចការនេះមែនទេ?",
+      editTask: "កែប្រែកិច្ចការ",
+    },
+  }
+
+  const t = translations[language]
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -114,6 +123,38 @@ const TasksView = ({ language }) => {
     }
   }
 
+  const handleEditClick = (task) => {
+    setCurrentTask(task)
+    setEditForm({
+      title: task.title,
+      description: task.description,
+      dueDate: task.dueDate,
+      priority: task.priority,
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const handleDeleteClick = (task) => {
+    setCurrentTask(task)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleEditSubmit = () => {
+    setTasks(tasks.map((task) =>
+      task.id === currentTask.id
+        ? { ...task, ...editForm }
+        : task
+    ))
+    setIsEditModalOpen(false)
+    setCurrentTask(null)
+  }
+
+  const handleDeleteConfirm = () => {
+    setTasks(tasks.filter((task) => task.id !== currentTask.id))
+    setIsDeleteModalOpen(false)
+    setCurrentTask(null)
+  }
+
   const filteredTasks = filter === "all" ? tasks : tasks.filter((task) => task.status === filter)
 
   return (
@@ -123,10 +164,6 @@ const TasksView = ({ language }) => {
           <h1 className="text-3xl font-bold text-green-800 mb-2">{t.title}</h1>
           <p className="text-green-600">{t.subtitle}</p>
         </div>
-        <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          {t.addTask}
-        </button>
       </div>
 
       {/* Filter Tabs */}
@@ -176,10 +213,16 @@ const TasksView = ({ language }) => {
                       {t.markDone}
                     </button>
                   )}
-                  <button className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
+                  <button
+                    onClick={() => handleEditClick(task)}
+                    className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
                     {t.edit}
                   </button>
-                  <button className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                  <button
+                    onClick={() => handleDeleteClick(task)}
+                    className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                  >
                     {t.delete}
                   </button>
                 </div>
@@ -193,6 +236,93 @@ const TasksView = ({ language }) => {
           </div>
         )}
       </div>
+
+      {/* Edit Task Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t.editTask}</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Due Date</label>
+                <input
+                  type="date"
+                  value={editForm.dueDate}
+                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Priority</label>
+                <select
+                  value={editForm.priority}
+                  onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                >
+                  <option value="high">{t.high}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="low">{t.low}</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                {t.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t.delete}</h2>
+            <p className="text-gray-600 mb-6">{t.confirmDelete}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                {t.delete}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

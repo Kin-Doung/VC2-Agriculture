@@ -18,7 +18,7 @@ pip install flask
 pip install pillow
 pip install numpy
 pip install opencv-python
-
+pip install tensorflow
 php artisan storage:link
 ```
 ### Frontend (React)
@@ -30,3 +30,5 @@ npm install
 npm run dev
 npm install recharts
 npm install react-router-dom
+npm install jspdf
+npm install lodash jspdf html2canvas lucide-react
