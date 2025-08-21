@@ -38,14 +38,14 @@ const ImageWithFallback = ({ src, alt, className, fallbackSrc, fallbackAlt }) =>
 
 const CropTrackerView = ({ language = "en" }) => {
   const generalTimeline = [
-    { stage: "Germination & Emergence", dapRange: "0–10 DAP", completed: false, date: "Pending" },
-    { stage: "Vegetative Growth", dapRange: "10–40 DAP", completed: false, date: "Pending" },
-    { stage: "Rapid Growth", dapRange: "40–60 DAP", completed: false, date: "Pending" },
-    { stage: "Reproductive Stage", dapRange: "60–90 DAP", completed: false, date: "Pending" },
-    { stage: "Early Grain/Pod/Head Filling", dapRange: "90–110 DAP", completed: false, date: "Pending" },
-    { stage: "Grain/Seed Development", dapRange: "110–130 DAP", completed: false, date: "Pending" },
-    { stage: "Maturity", dapRange: "130–150+ DAP", completed: false, date: "Pending" },
-    { stage: "Harvest Ready", dapRange: "150–180+ DAP", completed: false, date: "Pending" },
+    { stage: "Germination & Emergence", dapRange: "0 to 10 DAP", completed: false, date: "Pending" },
+    { stage: "Vegetative Growth", dapRange: "10 to 40 DAP", completed: false, date: "Pending" },
+    { stage: "Rapid Growth", dapRange: "40 to 60 DAP", completed: false, date: "Pending" },
+    { stage: "Reproductive Stage", dapRange: "60 to 90 DAP", completed: false, date: "Pending" },
+    { stage: "Early Grain/Pod/Head Filling", dapRange: "90 to 110 DAP", completed: false, date: "Pending" },
+    { stage: "Grain/Seed Development", dapRange: "110 to 130 DAP", completed: false, date: "Pending" },
+    { stage: "Maturity", dapRange: "130 to 150+ DAP", completed: false, date: "Pending" },
+    { stage: "Harvest Ready", dapRange: "150 to 180+ DAP", completed: false, date: "Pending" },
   ];
 
   const defaultDetails = () => ({

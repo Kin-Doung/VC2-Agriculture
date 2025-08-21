@@ -31,3 +31,4 @@ npm run dev
 npm install recharts
 npm install react-router-dom
 npm install jspdf
+npm install lodash jspdf html2canvas lucide-react
