@@ -18,7 +18,7 @@ import Marketplace from "./views/Marketplace"
 import CropManagement from "./views/CropManagement" 
 import Product from "./views/Product"
 import Category from "./views/Category"
-// import MarketPricesView from "./views/MarketPrice/MarketPricesView"
+import MarketPricesView from "./views/MarketPrice/MarketPricesView"
 import SeedScanner from "./views/SeedScanner"
 import Messages from "./views/Messages"
 import Learning from "./views/Learning"
@@ -131,7 +131,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       <Route path="/category" element={<Category language={language} />} />
       <Route path="/product" element={<Product language={language} />} />
       <Route path="/marketplace" element={<Marketplace language={language} />} />
-      {/* <Route path="/prices" element={<MarketPricesView language={language} />} /> */}
+      <Route path="/prices" element={<MarketPricesView language={language} />} />
       <Route path="/prices/history" element={<HistoryPrice language={language} />} />
       <Route path="/prices/importing-countries" element={<ImportingCountries language={language} />} />
       <Route path="/scanner" element={<SeedScanner language={language} />} />
