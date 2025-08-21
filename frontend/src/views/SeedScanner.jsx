@@ -1,12 +1,12 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
 import CameraCapture from "../components/ScantTypeOfRice/CameraCapture"
 import ImageUpload from "../components/ScantTypeOfRice/ImageUpload"
-import RiceComparisonTool from "../components/ScantTypeOfRice/RiceComparisonTool"
-import { Camera, Upload, ScanSearch } from "lucide-react" // Added ScanSearch icon
+import { Camera, Upload, ScanSearch } from "lucide-react"
 
-// Placeholder UI components (re-introduced)
+// Placeholder UI components
 const Card = ({ children, className }) => (
   <div className={`border rounded-lg shadow-sm bg-white ${className}`}>{children}</div>
 )
@@ -29,22 +29,95 @@ const Button = ({ children, className, variant, ...props }) => {
   )
 }
 
-// Helper function to apply the mixed < pure logic for display
+// RiceComparisonTool component
+const RiceComparisonTool = ({ userImage, detectedType, scannedFeatures, referenceData }) => {
+  const varietyName = detectedType ? detectedType.replace(" (Mixed)", "") : "Unknown";
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Paddy Comparison Tool</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Scanned Paddy */}
+          <div>
+            <h3 className="text-lg font-semibold text-green-700 mb-2">Scanned Paddy</h3>
+            {userImage ? (
+              <img
+                src={userImage}
+                alt="Scanned Paddy"
+                className="w-full max-w-md rounded-lg shadow mb-4 object-cover"
+                onError={(e) => {
+                  e.target.src = "/placeholder.svg";
+                  console.error("Scanned image load error:", userImage);
+                }}
+              />
+            ) : (
+              <p className="text-gray-500">No scanned image available</p>
+            )}
+            <p className="text-sm font-medium">Detected Variety: <span className="text-green-800">{detectedType || "N/A"}</span></p>
+            {scannedFeatures && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-600">Scanned Features</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>Average Length: {scannedFeatures.avg_length ? `${scannedFeatures.avg_length.toFixed(2)} pixels` : "N/A"}</li>
+                  <li>Average Width: {scannedFeatures.avg_width ? `${scannedFeatures.avg_width.toFixed(2)} pixels` : "N/A"}</li>
+                  <li>Length/Width Ratio: {scannedFeatures.avg_ratio ? scannedFeatures.avg_ratio.toFixed(2) : "N/A"}</li>
+                  <li>Shape Factor: {scannedFeatures.avg_shape_factor ? scannedFeatures.avg_shape_factor.toFixed(2) : "N/A"}</li>
+                </ul>
+              </div>
+            )}
+          </div>
+          {/* Reference Paddy */}
+          <div>
+            <h3 className="text-lg font-semibold text-green-700 mb-2">Reference Paddy ({varietyName})</h3>
+            {referenceData && referenceData.reference_image_base64 ? (
+              <img
+                src={`data:image/jpeg;base64,${referenceData.reference_image_base64}`}
+                alt={`Reference ${varietyName}`}
+                className="w-full max-w-md rounded-lg shadow mb-4 object-cover"
+                onError={(e) => {
+                  e.target.src = "/placeholder.svg";
+                  console.error("Reference image load error:", varietyName);
+                }}
+              />
+            ) : (
+              <p className="text-gray-500">No reference image available</p>
+            )}
+            {referenceData ? (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-600">Reference Features</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>Length: {referenceData.length_mm ? `${referenceData.length_mm.toFixed(2)} mm` : "N/A"}</li>
+                  <li>Width: {referenceData.width_mm ? `${referenceData.width_mm.toFixed(2)} mm` : "N/A"}</li>
+                  <li>Length/Width Ratio: {referenceData.length_width_ratio ? referenceData.length_width_ratio.toFixed(2) : "N/A"}</li>
+                  <li>Shape Factor: {referenceData.shape_factor ? referenceData.shape_factor.toFixed(2) : "N/A"}</li>
+                </ul>
+              </div>
+            ) : (
+              <p className="text-gray-500 mt-4">No reference data available</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Helper function for percentages
 const getAdjustedPercentages = (mixed, pure, hasResult) => {
   let displayMixed = mixed || 0
   let displayPure = pure || 0
 
   if (!hasResult) {
-    // For initial state, both are 0
     displayMixed = 0
     displayPure = 0
   } else {
-    // For actual results, apply the mixed < pure rule
     if (displayMixed >= displayPure) {
       if (displayPure === 0) {
-        displayMixed = 0 // If pure is 0, mixed must also be 0 to be "smaller"
+        displayMixed = 0
       } else {
-        displayMixed = Math.max(0, displayPure - 20.00) // Make mixed slightly less than pure
+        displayMixed = Math.max(0, displayPure - 20.00)
       }
     }
   }
@@ -94,7 +167,6 @@ const ScanResults = ({ result, error, isScanning }) => {
     hasResult,
   )
 
-  // Ensure percentages are within 0-100 range for display
   const normalized_pure = Math.min(Math.max(displayPure, 0), 100)
   const normalized_mixed = Math.min(Math.max(displayMixed, 0), 100)
 
@@ -145,7 +217,7 @@ export default function SeedScanner() {
   const [scanHistory, setScanHistory] = useState([])
   const [isServerReachable, setIsServerReachable] = useState(false)
 
-  // Check server connectivity with the /api/health endpoint
+  // Check server connectivity
   useEffect(() => {
     const checkServer = async () => {
       try {
@@ -182,7 +254,7 @@ export default function SeedScanner() {
 
     setIsScanning(true)
     setError(null)
-    setResult(null) // Clear previous results immediately on new scan
+    setResult(null)
 
     try {
       console.log("Scan initiated at", new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }))
@@ -240,37 +312,27 @@ export default function SeedScanner() {
   }
 
   const compressImage = async (imageDataUrl) => {
-    try {
-      return new Promise((resolve, reject) => {
-        const img = new Image()
-        img.crossOrigin = "anonymous"
-        img.src = imageDataUrl
-        img.onload = () => {
-          const canvas = document.createElement("canvas")
-          const ctx = canvas.getContext("2d")
-          const maxWidth = 800
-          let width = img.width
-          let height = img.height
-          if (width > maxWidth) {
-            height = (maxWidth / width) * height
-            width = maxWidth
-          }
-          canvas.width = width
-          canvas.height = height
-          ctx.drawImage(img, 0, 0, width, height)
-          const compressedData = canvas.toDataURL("image/jpeg", 0.7)
-          resolve(compressedData)
-        }
-        img.onerror = () => {
-          console.error("Image load failed:", imageDataUrl)
-          reject(new Error("Failed to load image for compression"))
-        }
-      })
-    } catch (error) {
-      console.error("Compression error:", error)
-      return imageDataUrl
-    }
+  try {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = imageDataUrl;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        const compressedData = canvas.toDataURL("image/jpeg", 0.9);
+        resolve(compressedData);
+      };
+      img.onerror = () => resolve(imageDataUrl); // Fallback to original
+    });
+  } catch (error) {
+    console.error("Compression error:", error);
+    return imageDataUrl;
   }
+};
 
   const resetScanner = () => {
     setSelectedImage(null)
@@ -288,11 +350,10 @@ export default function SeedScanner() {
     setScanHistory([])
   }
 
-  // Get adjusted percentages for the top summary display
   const { displayMixed: summaryMixed, displayPure: summaryPure } = getAdjustedPercentages(
     result?.mixed_paddy_percent,
     result?.pure_paddy_percent,
-    !!result, // Pass true if result exists, false otherwise
+    !!result,
   )
 
   return (
@@ -480,16 +541,16 @@ export default function SeedScanner() {
 
           <div className="lg:col-span-3">
             <ScanResults result={result} error={error} isScanning={isScanning} />
+            {selectedImage && (
+              <RiceComparisonTool
+                userImage={selectedImage}
+                detectedType={result?.paddy_name}
+                scannedFeatures={result?.scanned_features}
+                referenceData={result?.reference_data}
+              />
+            )}
           </div>
         </div>
-
-        {selectedImage && (
-          <RiceComparisonTool
-            userImage={selectedImage}
-            detectedType={result?.paddy_name}
-            title="Paddy Comparison Tool"
-          />
-        )}
       </div>
     </div>
   )
