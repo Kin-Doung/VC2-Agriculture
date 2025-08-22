@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CropTrackerRequest;
 use App\Models\CropTracker;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
 class CropTrackerController extends Controller
@@ -14,91 +13,85 @@ class CropTrackerController extends Controller
         $this->middleware('auth:sanctum');
     }
 
+    /**
+     * Display a listing of crop trackers.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index()
     {
-
-        $cropTrackers = CropTracker::with('crop')->get()->map(function ($cropTracker) {
-            // Append full URL to image_path
-            if ($cropTracker->image_path) {
-                $cropTracker->image_path = Storage::url($cropTracker->image_path);
-            }
-            return $cropTracker;
-        });
+        $cropTrackers = CropTracker::with('crop')->get();
         return response()->json($cropTrackers, 200);
     }
 
-    public function store(Request $request)
+    /**
+     * Store a newly created crop tracker.
+     *
+     * @param  \App\Http\Requests\CropTrackerRequest  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(CropTrackerRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'crop_id' => 'required|exists:crops,id',
-            'planted' => 'required|string',
-            'location' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif', // Added max size for clarity
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
         $data = $request->only(['crop_id', 'planted', 'location']);
 
-        // Handle image upload
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('images', 'public');
-            $data['image_path'] = Storage::url($imagePath); // Store full URL
+            $data['image_path'] = $imagePath; // Store relative path
         }
 
         $cropTracker = CropTracker::create($data);
         return response()->json($cropTracker->load('crop'), 201);
     }
 
+    /**
+     * Display the specified crop tracker.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function show($id)
     {
         $cropTracker = CropTracker::with('crop')->find($id);
         if (!$cropTracker) {
             return response()->json(['message' => 'Crop Tracker not found'], 404);
         }
-        // Append full URL to image_path
-        if ($cropTracker->image_path) {
-            $cropTracker->image_path = Storage::url($cropTracker->image_path);
-        }
         return response()->json($cropTracker, 200);
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update the specified crop tracker.
+     *
+     * @param  \App\Http\Requests\CropTrackerRequest  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function update(CropTrackerRequest $request, $id)
     {
         $cropTracker = CropTracker::find($id);
         if (!$cropTracker) {
             return response()->json(['message' => 'Crop Tracker not found'], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'crop_id' => 'sometimes|exists:crops,id',
-            'planted' => 'sometimes|string',
-            'location' => 'sometimes|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
         $data = $request->only(['crop_id', 'planted', 'location']);
 
-        // Handle image upload
         if ($request->hasFile('image')) {
-            // Optionally delete the old image
-            if ($cropTracker->image_path) {
-                Storage::disk('public')->delete(str_replace(Storage::url(''), '', $cropTracker->image_path));
+            if ($cropTracker->getRawOriginal('image_path')) {
+                Storage::disk('public')->delete($cropTracker->getRawOriginal('image_path'));
             }
             $imagePath = $request->file('image')->store('images', 'public');
-            $data['image_path'] = Storage::url($imagePath);
+            $data['image_path'] = $imagePath; // Store relative path
         }
 
         $cropTracker->update($data);
         return response()->json($cropTracker->load('crop'), 200);
     }
 
+    /**
+     * Remove the specified crop tracker.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy($id)
     {
         $cropTracker = CropTracker::find($id);
@@ -106,9 +99,8 @@ class CropTrackerController extends Controller
             return response()->json(['message' => 'Crop Tracker not found'], 404);
         }
 
-        // Optionally delete the image file when deleting the record
-        if ($cropTracker->image_path) {
-            Storage::disk('public')->delete(str_replace(Storage::url(''), '', $cropTracker->image_path));
+        if ($cropTracker->getRawOriginal('image_path')) {
+            Storage::disk('public')->delete($cropTracker->getRawOriginal('image_path'));
         }
 
         $cropTracker->delete();
