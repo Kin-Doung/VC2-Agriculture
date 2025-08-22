@@ -6,34 +6,27 @@ import debounce from "lodash/debounce";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-// Component to handle image loading with fallback and loading state
+// Component to handle image loading with fallback
 const ImageWithFallback = ({ src, alt, className, fallbackSrc, fallbackAlt }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    const img = new Image();
-    img.src = src;
-    img.onload = () => setIsLoading(false);
-    img.onerror = () => {
-      setIsLoading(false);
-      setHasError(true);
-    };
-  }, [src]);
-
-  if (isLoading) {
-    return (
-      <div className={className + " flex items-center justify-center bg-gray-100"}>
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
-      </div>
-    );
+  const BASE_URL = "http://127.0.0.1:8000";
+  let resolvedSrc = src;
+  if (src && !src.startsWith("http")) {
+    resolvedSrc = `${BASE_URL}${src.startsWith("/") ? src : `/${src}`}`;
   }
-
-  if (hasError) {
-    return <img src={fallbackSrc} alt={fallbackAlt} className={className} loading="lazy" />;
-  }
-
-  return <img src={src} alt={alt} className={className} crossOrigin="anonymous" loading="lazy" />;
+  console.log(`Resolved Image URL: ${resolvedSrc}`); // Debug log
+  return (
+    <img
+      src={resolvedSrc || fallbackSrc}
+      alt={resolvedSrc ? alt : fallbackAlt}
+      className={className}
+      loading="lazy"
+      onError={(e) => {
+        console.error(`Failed to load image: ${resolvedSrc}`);
+        e.target.src = fallbackSrc;
+        e.target.alt = fallbackAlt;
+      }}
+    />
+  );
 };
 
 const CropTrackerView = ({ language = "en" }) => {
@@ -49,12 +42,14 @@ const CropTrackerView = ({ language = "en" }) => {
   ];
 
   const defaultDetails = () => ({
-    status: "Growing",
+    status: "Planned",
     stages: generalTimeline.map((stage) => ({ ...stage })),
-    photoUrl: "/images/placeholder-photo.jpg", // Updated to a more specific path
+    photoUrl: "/images/placeholder-photo.jpg",
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterBy, setFilterBy] = useState("name"); // Filter by field
+  const [selectedCropName, setSelectedCropName] = useState("all"); // New state for specific crop name filter
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -72,7 +67,7 @@ const CropTrackerView = ({ language = "en" }) => {
     planted: "",
     location: "",
     image: "",
-    status: "",
+    status: "Planned",
   });
   const [editCrop, setEditCrop] = useState(null);
   const [availableCrops, setAvailableCrops] = useState([]);
@@ -86,6 +81,11 @@ const CropTrackerView = ({ language = "en" }) => {
       subtitle: "Manage your crop trackers",
       addCrop: "Add Crop Tracker",
       search: "Search crops...",
+      filterName: "Crop Name",
+      filterStatus: "Status",
+      filterLocation: "Location",
+      filterAll: "All Fields",
+      allCrops: "All Crops",
       edit: "Edit",
       delete: "Delete",
       view: "View",
@@ -138,6 +138,13 @@ const CropTrackerView = ({ language = "en" }) => {
       subtitle: "គ្រប់គ្រងតាមដានដំណាំរបស់អ្នក",
       addCrop: "បន្ថែមតាមដានដំណាំ",
       search: "ស្វែងរកដំណាំ...",
+      filterBy: "តម្រងតាម",
+      filterName: "ឈ្មោះដំណាំ",
+      filterStatus: "ស្ថានភាព",
+      filterLocation: "ទីតាំង",
+      filterAll: "គ្រប់វាល",
+      filterCrop: "តម្រងដំណាំ",
+      allCrops: "ដំណាំទាំងអស់",
       edit: "កែសម្រួល",
       delete: "លុប",
       view: "មើលលម្អិត",
@@ -183,7 +190,7 @@ const CropTrackerView = ({ language = "en" }) => {
       previous: "មុន",
       next: "បន្ទាប់",
       page: "ទំព័រ",
-      reportError: "បរាជ័យក្នុងការបង្កើតរបាយការណ៍។ �សូមព្យាយាមម្តងទៀត។",
+      reportError: "Failed to generate report. Please try again.",
     },
   };
 
@@ -216,6 +223,12 @@ const CropTrackerView = ({ language = "en" }) => {
     return "Beyond Harvest";
   }, []);
 
+  const getStatusFromStage = useCallback((stage, dap) => {
+    if (dap === null || stage === "Unknown") return "Planned";
+    if (stage === "Beyond Harvest") return "Harvested";
+    return "Growing";
+  }, []);
+
   const calculateExpectedDate = useCallback((plantedDate, dapRange, isCompleted = false) => {
     if (!plantedDate || plantedDate === "Unknown") return "Unknown";
     try {
@@ -238,6 +251,8 @@ const CropTrackerView = ({ language = "en" }) => {
     (crop) => {
       const clientData = clientDetails[crop.id] || defaultDetails();
       const dap = calculateDAP(crop.planted);
+      const currentStage = getCurrentStage(dap);
+      const status = crop.status || getStatusFromStage(currentStage, dap);
 
       const stages = (clientData.stages || generalTimeline.map((stage) => ({ ...stage }))).map((stage) => {
         const [start, end] = stage.dapRange.match(/\d+/g).map(Number);
@@ -253,19 +268,19 @@ const CropTrackerView = ({ language = "en" }) => {
         ...crop,
         id: crop.id,
         name: crop.crop?.name || `Crop ${crop.id || "Unknown"}`,
-        status: clientData.status || "Growing",
+        status: status,
         planted: formatDate(crop.planted || "Unknown"),
         location: crop.location || "Unknown",
-        image_path: crop.image_path && crop.image_path !== "" ? crop.image_path : "/images/placeholder-photo.jpg",
+        image_path: crop.image_path || null,
         details: {
           ...clientData,
           stages,
-          photoUrl: crop.image_path && crop.image_path !== "" ? crop.image_path : clientData.photoUrl,
+          photoUrl: crop.image_path || clientData.photoUrl,
         },
         progress: `${stages.filter((s) => s.completed).length} / ${stages.length} stages completed`,
       };
     },
-    [clientDetails, calculateExpectedDate]
+    [clientDetails, calculateExpectedDate, getCurrentStage, getStatusFromStage]
   );
 
   const debouncedSetSearchTerm = useCallback(
@@ -279,7 +294,7 @@ const CropTrackerView = ({ language = "en" }) => {
     for (let i = 0; i < retries; i++) {
       try {
         const response = await fetch(url, options);
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         return await response.json();
       } catch (err) {
         if (i < retries - 1) {
@@ -302,7 +317,7 @@ const CropTrackerView = ({ language = "en" }) => {
         });
         setAvailableCrops(data);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch crops:", err);
       }
     };
     fetchAvailableCrops();
@@ -329,6 +344,7 @@ const CropTrackerView = ({ language = "en" }) => {
       const data = await fetchWithRetry(API_URL, {
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
+      console.log("API Response:", JSON.stringify(data, null, 2)); // Debug log
       if (!Array.isArray(data)) throw new Error("API response is not an array");
       const newClientDetails = {};
       data.forEach((crop) => {
@@ -348,12 +364,31 @@ const CropTrackerView = ({ language = "en" }) => {
     else setError("Authentication token not found. Please log in.");
   }, []);
 
-  const filteredCrops = crops.filter(
-    (crop) =>
-      crop.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      crop.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      crop.location?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCrops = crops.filter((crop) => {
+    const searchLower = searchTerm.toLowerCase();
+    let matchesText = false;
+    switch (filterBy) {
+      case "name":
+        matchesText = crop.name?.toLowerCase().includes(searchLower);
+        break;
+      case "status":
+        matchesText = crop.status?.toLowerCase().includes(searchLower);
+        break;
+      case "location":
+        matchesText = crop.location?.toLowerCase().includes(searchLower);
+        break;
+      case "all":
+        matchesText =
+          crop.name?.toLowerCase().includes(searchLower) ||
+          crop.status?.toLowerCase().includes(searchLower) ||
+          crop.location?.toLowerCase().includes(searchLower);
+        break;
+      default:
+        matchesText = true;
+    }
+    const matchesCropName = selectedCropName === "all" || crop.name === selectedCropName;
+    return matchesText && matchesCropName;
+  });
 
   const totalPages = Math.ceil(filteredCrops.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -382,10 +417,12 @@ const CropTrackerView = ({ language = "en" }) => {
   };
 
   const handleEditCrop = (crop) => {
+    const dap = calculateDAP(crop.planted);
+    const currentStage = getCurrentStage(dap);
     setEditCrop({
       ...crop,
       crop_id: crop.crop?.id || "",
-      status: crop.status || "",
+      status: crop.status || getStatusFromStage(currentStage, dap),
       planted: crop.planted === "Unknown" ? "" : new Date(crop.planted).toISOString().split("T")[0],
       image: "",
     });
@@ -407,7 +444,7 @@ const CropTrackerView = ({ language = "en" }) => {
         method: "DELETE",
         headers: { Authorization: `Bearer ${AUTH_TOKEN}`, Accept: "application/json" },
       });
-      if (!response.ok) throw new Error(t.deleteError);
+      if (!response.ok) throw new Error(`${t.deleteError}${response.statusText}`);
       setCrops(crops.filter((c) => c.id !== cropToDelete.id));
       setClientDetails((prev) => {
         const newDetails = { ...prev };
@@ -417,7 +454,7 @@ const CropTrackerView = ({ language = "en" }) => {
       setShowDeleteModal(false);
       alert(t.deleteSuccess);
     } catch (err) {
-      alert(err.message);
+      alert(`${t.deleteError}${err.message}`);
     } finally {
       setIsSubmitting(false);
       setCropToDelete(null);
@@ -480,8 +517,12 @@ const CropTrackerView = ({ language = "en" }) => {
         },
         body: formData,
       });
-      if (!response.ok) throw new Error(t.addError);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`${t.addError}${errorData.message || response.statusText}`);
+      }
       const savedCrop = await response.json();
+      console.log("Saved Crop:", JSON.stringify(savedCrop, null, 2)); // Debug log
       const newDetails = { ...defaultDetails(), status: newCrop.status };
       setClientDetails((prev) => ({
         ...prev,
@@ -490,7 +531,7 @@ const CropTrackerView = ({ language = "en" }) => {
       setCrops((prev) => [normalizeCrop(savedCrop), ...prev]);
       setNewCrop({
         crop_id: "",
-        status: "",
+        status: "Planned",
         planted: "",
         location: "",
         image: "",
@@ -498,8 +539,10 @@ const CropTrackerView = ({ language = "en" }) => {
       setFormErrors({});
       setShowAddModal(false);
       setCurrentPage(1);
+      alert("Crop tracker added successfully.");
     } catch (err) {
-      alert(err.message);
+      console.error("Add Crop Error:", err);
+      alert(`${t.addError}${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -530,8 +573,12 @@ const CropTrackerView = ({ language = "en" }) => {
         },
         body: formData,
       });
-      if (!response.ok) throw new Error(t.updateError);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`${t.updateError}${errorData.message || response.statusText}`);
+      }
       const updatedCropData = await response.json();
+      console.log("Updated Crop:", JSON.stringify(updatedCropData, null, 2)); // Debug log
       setClientDetails((prev) => ({
         ...prev,
         [updatedCropData.id]: {
@@ -544,7 +591,8 @@ const CropTrackerView = ({ language = "en" }) => {
       setShowEditModal(false);
       alert(t.updateSuccess);
     } catch (err) {
-      alert(err.message);
+      console.error("Update Crop Error:", err);
+      alert(`${t.updateError}${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -590,17 +638,21 @@ const CropTrackerView = ({ language = "en" }) => {
         yPosition += 8;
       });
 
-      if (crop.image_path && crop.image_path !== "/images/placeholder-photo.jpg") {
+      if (crop.image_path) {
         try {
           const imgElement = document.createElement("img");
-          imgElement.src = crop.image_path;
+          const resolvedImageSrc = crop.image_path.startsWith("http") ? crop.image_path : `http://127.0.0.1:8000${crop.image_path.startsWith("/") ? crop.image_path : `/${crop.image_path}`}`;
+          console.log(`PDF Image URL: ${resolvedImageSrc}`); // Debug log
+          imgElement.src = resolvedImageSrc;
           imgElement.crossOrigin = "anonymous";
+          document.body.appendChild(imgElement);
           await new Promise((resolve, reject) => {
             imgElement.onload = resolve;
-            imgElement.onerror = () => reject(new Error("Failed to load image"));
+            imgElement.onerror = () => reject(new Error(`Failed to load image: ${resolvedImageSrc}`));
           });
           const canvas = await html2canvas(imgElement, { scale: 1, useCORS: true });
           const imgData = canvas.toDataURL("image/jpeg");
+          document.body.removeChild(imgElement);
           if (yPosition > 230) {
             doc.addPage();
             yPosition = 20;
@@ -608,6 +660,7 @@ const CropTrackerView = ({ language = "en" }) => {
           doc.addImage(imgData, "JPEG", margin, yPosition, 80, 60);
           yPosition += 65;
         } catch (imgError) {
+          console.error(`PDF Image Error: ${imgError.message}`);
           doc.setFontSize(12);
           if (yPosition > 280) {
             doc.addPage();
@@ -622,12 +675,13 @@ const CropTrackerView = ({ language = "en" }) => {
           doc.addPage();
           yPosition = 20;
         }
-        doc.text(`${t.photos}: ${crop.image_path}`, margin, yPosition);
+        doc.text(`${t.photos}: No image available`, margin, yPosition);
         yPosition += 8;
       }
 
       doc.save(`${crop.name}_Report.pdf`);
     } catch (err) {
+      console.error(`Report Generation Error: ${err.message}`);
       alert(`${t.reportError}: ${err.message}`);
     }
   };
@@ -650,7 +704,7 @@ const CropTrackerView = ({ language = "en" }) => {
           `${stage.dapRange} ${stage.completed ? `(Completed on ${stage.date})` : `(${t.expected}: ${stage.date})`}`,
         ]),
         [],
-        [t.photos, crop.image_path],
+        [t.photos, crop.image_path || "No image"],
       ];
       const csvContent = "data:text/csv;charset=utf-8," + rows.map((e) => e.join(",")).join("\n");
       const encodedUri = encodeURI(csvContent);
@@ -661,6 +715,7 @@ const CropTrackerView = ({ language = "en" }) => {
       link.click();
       document.body.removeChild(link);
     } catch (err) {
+      console.error(`CSV Generation Error: ${err.message}`);
       alert(`${t.reportError}: ${err.message}`);
     }
   };
@@ -698,14 +753,31 @@ const CropTrackerView = ({ language = "en" }) => {
             </button>
           </div>
           <div className="bg-white rounded-lg p-4 shadow-lg">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder={t.search}
-                onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={t.search}
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <select
+                  value={selectedCropName}
+                  onChange={(e) => setSelectedCropName(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="all">{t.allCrops}</option>
+                  {availableCrops.map((crop) => (
+                    <option key={crop.id} value={crop.name}>
+                      {crop.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           {loading ? (
@@ -865,9 +937,9 @@ const CropTrackerView = ({ language = "en" }) => {
                       disabled={isSubmitting}
                     >
                       <option value="" disabled>{t.selectStatus}</option>
+                      <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
                       <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
                       <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
-                      <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
                     </select>
                     {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
                   </div>
@@ -989,9 +1061,9 @@ const CropTrackerView = ({ language = "en" }) => {
                       disabled={isSubmitting}
                     >
                       <option value="" disabled>{t.selectStatus}</option>
+                      <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
                       <option value="Growing">{language === "en" ? "Growing" : "កំពុងដុះ"}</option>
                       <option value="Harvested">{language === "en" ? "Harvested" : "ប្រមូលផល"}</option>
-                      <option value="Planned">{language === "en" ? "Planned" : "គ្រោង"}</option>
                     </select>
                     {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
                   </div>
@@ -1037,7 +1109,7 @@ const CropTrackerView = ({ language = "en" }) => {
                       disabled={isSubmitting}
                     />
                     <ImageWithFallback
-                      src={editCrop.image_path}
+                      src={editCrop.image ? URL.createObjectURL(editCrop.image) : editCrop.image_path}
                       alt={`${editCrop.name} photo`}
                       className="mt-2 w-full h-32 object-cover rounded"
                       fallbackSrc="/images/placeholder-photo.jpg"
@@ -1121,7 +1193,6 @@ const CropTrackerView = ({ language = "en" }) => {
                         fallbackSrc="/images/placeholder-photo.jpg"
                         fallbackAlt="Placeholder image"
                       />
-                      <p className="text-gray-600">{t.uploadPhoto}: {selectedCrop.image_path}</p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg">
                       <p className="text-gray-600 mb-2">{t.cropGrowthHistory}</p>
