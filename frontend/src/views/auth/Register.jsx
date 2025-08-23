@@ -182,7 +182,9 @@ const handleSubmit = async (e) => {
       navigate("/");
     });
 
-    onRegister(response.data);
+    localStorage.setItem("token", response.data.access_token);
+
+    onRegister(response.data.user);
   } catch (error) {
     const backendErrors = error.response?.data?.errors;
 
