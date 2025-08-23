@@ -87,7 +87,7 @@ export default function HistoryPrice() {
 
   const chartConfig = {
     price: {
-      label: "Price (₹)",
+      label: "Price ($)",
       color: "hsl(210, 70%, 50%)",
     },
     volume: {
@@ -95,15 +95,15 @@ export default function HistoryPrice() {
       color: "hsl(120, 50%, 50%)",
     },
     avgPrice: {
-      label: "Average Price (₹)",
+      label: "Average Price ($)",
       color: "hsl(210, 70%, 50%)",
     },
     minPrice: {
-      label: "Min Price (₹)",
+      label: "Min Price ($)",
       color: "hsl(0, 50%, 50%)",
     },
     maxPrice: {
-      label: "Max Price (₹)",
+      label: "Max Price ($)",
       color: "hsl(280, 50%, 50%)",
     },
   }
@@ -161,7 +161,7 @@ export default function HistoryPrice() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Current Price</p>
-                <p className="text-2xl font-bold text-gray-900">₹{currentData.currentPrice.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-gray-900">${currentData.currentPrice.toFixed(2)}</p>
                 <p className="text-xs text-gray-500">{currentData.unit}</p>
               </div>
               <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -338,19 +338,19 @@ export default function HistoryPrice() {
                 <div className="p-4 bg-green-50 rounded-lg">
                   <p className="text-sm font-medium text-green-800">Highest Price</p>
                   <p className="text-2xl font-bold text-green-900">
-                    ₹{Math.max(...currentData.monthlyData.map((d) => d.maxPrice)).toFixed(2)}
+                    ${Math.max(...currentData.monthlyData.map((d) => d.maxPrice)).toFixed(2)}
                   </p>
                 </div>
                 <div className="p-4 bg-red-50 rounded-lg">
                   <p className="text-sm font-medium text-red-800">Lowest Price</p>
                   <p className="text-2xl font-bold text-red-900">
-                    ₹{Math.min(...currentData.monthlyData.map((d) => d.minPrice)).toFixed(2)}
+                    ${Math.min(...currentData.monthlyData.map((d) => d.minPrice)).toFixed(2)}
                   </p>
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm font-medium text-blue-800">Average Price (4 months)</p>
                   <p className="text-2xl font-bold text-blue-900">
-                    ₹
+                    $
                     {(
                       currentData.monthlyData.reduce((sum, d) => sum + d.avgPrice, 0) / currentData.monthlyData.length
                     ).toFixed(2)}
@@ -388,16 +388,16 @@ export default function HistoryPrice() {
                   {selectedTimeframe === "daily" ? (
                     <>
                       <th className="text-left p-2">Date</th>
-                      <th className="text-right p-2">Price (₹)</th>
+                      <th className="text-right p-2">Price ($)</th>
                       <th className="text-right p-2">Volume (kg)</th>
                       <th className="text-right p-2">Change</th>
                     </>
                   ) : (
                     <>
                       <th className="text-left p-2">Month</th>
-                      <th className="text-right p-2">Avg Price (₹)</th>
-                      <th className="text-right p-2">Min Price (₹)</th>
-                      <th className="text-right p-2">Max Price (₹)</th>
+                      <th className="text-right p-2">Avg Price ($)</th>
+                      <th className="text-right p-2">Min Price ($)</th>
+                      <th className="text-right p-2">Max Price ($)</th>
                       <th className="text-right p-2">Range</th>
                     </>
                   )}
@@ -411,7 +411,7 @@ export default function HistoryPrice() {
                       return (
                         <tr key={item.date} className="border-b">
                           <td className="p-2">{new Date(item.date).toLocaleDateString()}</td>
-                          <td className="text-right p-2">₹{item.price.toFixed(2)}</td>
+                          <td className="text-right p-2">${item.price.toFixed(2)}</td>
                           <td className="text-right p-2">{item.volume.toLocaleString()}</td>
                           <td className={`text-right p-2 ${change >= 0 ? "text-green-600" : "text-red-600"}`}>
                             {index > 0 ? `${change >= 0 ? "+" : ""}${change.toFixed(2)}%` : "-"}
@@ -422,10 +422,10 @@ export default function HistoryPrice() {
                   : currentData.monthlyData.map((item) => (
                       <tr key={item.month} className="border-b">
                         <td className="p-2">{item.month} 2024</td>
-                        <td className="text-right p-2">₹{item.avgPrice.toFixed(2)}</td>
-                        <td className="text-right p-2">₹{item.minPrice.toFixed(2)}</td>
-                        <td className="text-right p-2">₹{item.maxPrice.toFixed(2)}</td>
-                        <td className="text-right p-2">₹{(item.maxPrice - item.minPrice).toFixed(2)}</td>
+                        <td className="text-right p-2">${item.avgPrice.toFixed(2)}</td>
+                        <td className="text-right p-2">${item.minPrice.toFixed(2)}</td>
+                        <td className="text-right p-2">${item.maxPrice.toFixed(2)}</td>
+                        <td className="text-right p-2">${(item.maxPrice - item.minPrice).toFixed(2)}</td>
                       </tr>
                     ))}
               </tbody>
