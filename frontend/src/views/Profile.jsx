@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect  } from "react"
+import { User } from "lucide-react"
 
 const Profile = ({ language = "en" }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [photo, setPhoto] = useState(null)
   const [profileData, setProfileData] = useState({
     fullName: "John Doe",
     email: "john.doe@example.com",
@@ -105,6 +107,45 @@ const Profile = ({ language = "en" }) => {
     },
   }
 
+  useEffect(() => {
+  const user = localStorage.getItem("user")
+  if (user) {
+    setProfileData(prev => ({
+      ...prev,
+      fullName: JSON.parse(user).name,
+      email: JSON.parse(user).email,
+      farmName: JSON.parse(user).farm_name || "N/A",
+      phone: JSON.parse(user).phone || "N/A",
+      location: JSON.parse(user).location || "N/A",
+    }))
+  }
+
+    // load saved photo
+    const savedPhoto = localStorage.getItem("profilePhoto")
+    if (savedPhoto) {
+      setPhoto(savedPhoto)
+    }
+}, [])
+
+// 📤 Upload photo
+  const handleUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPhoto(reader.result)
+        localStorage.setItem("profilePhoto", reader.result) // save in localStorage
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // ❌ Remove photo
+  const handleRemove = () => {
+    setPhoto(null)
+    localStorage.removeItem("profilePhoto")
+  }
+
   const t = translations[language] || translations.en
 
   const handleInputChange = (field, value) => {
@@ -141,7 +182,9 @@ const Profile = ({ language = "en" }) => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-green-800 mb-2 flex items-center gap-2">
-          <span>👤</span>
+          <span>
+            <User className="h-12 w-12 text-black" />
+          </span>
           {t.profile}
         </h1>
         <p className="text-sm sm:text-base text-green-600">{t.subtitle}</p>
@@ -152,8 +195,12 @@ const Profile = ({ language = "en" }) => {
         <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-green-200">
           <h2 className="text-lg sm:text-xl font-semibold text-green-800 mb-4">{t.profilePicture}</h2>
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-3xl sm:text-4xl text-green-600">👤</span>
+            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-green-100 rounded-full flex items-center justify-center overflow-hidden">
+              {photo ? (
+                <img src={photo} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User className="h-12 w-12 text-black" />
+              )}
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base">
@@ -395,8 +442,8 @@ const Profile = ({ language = "en" }) => {
         <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-green-200">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <p className="text-sm text-green-600">{t.lastUpdated}: January 15, 2024 at 2:30 PM</p>
-              <p className="text-sm text-green-600">{t.memberSince}: January 1, 2024</p>
+              <p className="text-sm text-green-600">{t.lastUpdated}: January 15, 2025 at 2:30 PM</p>
+              <p className="text-sm text-green-600">{t.memberSince}: January 1, 2025</p>
             </div>
             <button className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm sm:text-base">
               {t.deleteAccount}
