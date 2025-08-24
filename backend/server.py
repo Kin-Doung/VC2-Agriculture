@@ -4,576 +4,403 @@ import base64
 from io import BytesIO
 from PIL import Image, UnidentifiedImageError
 import numpy as np
-import cv2
+import os
 import logging
 from datetime import datetime
-import hashlib
-import uuid
-import requests
-import sqlite3
-import os
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
+import sys
+import traceback
 
+# Enable TensorFlow model (set to False if model is unavailable)
+USE_MODEL = False
+MODEL_PATH = "rice_model.h5"
+
+# Initialize Flask
 app = Flask(__name__)
-# Relax CORS for development (add common dev ports)
-CORS(app, resources={r"/api/*": {"origins": [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",  # Vite default port
-    "http://127.0.0.1:5173"
-]}})
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
-# Logging with timestamp and request ID
-class RequestIdFilter(logging.Filter):
-    def filter(self, record):
-        if not hasattr(record, 'request_id'):
-            record.request_id = 'global'
-        return True
+# Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - [RequestID: %(request_id)s] - %(message)s'
-)
-
-logger = logging.getLogger()
-logger.addFilter(RequestIdFilter())
-QUANTITY_CACHE = {}
-RICE_PARAMS = {
-    "min_area": 120,
-    "max_area": 500,
-    "shape_factor": 0.65
-}
-
-def init_variety_database():
-    conn = sqlite3.connect('paddy_varieties.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS varieties (
-            name TEXT PRIMARY KEY,
-            hsv_lower TEXT,
-            hsv_upper TEXT,
-            shape_factor REAL,
-            intensity_range TEXT,
-            length_mm REAL,
-            width_mm REAL,
-            length_width_ratio REAL
-        )
-    ''')
-    # Updated parameters for affected varieties with accurate dimensions and recalculated shape_factors
-    initial_varieties = [
-        ("Phka Rumduol", "[5, 60, 60]", "[25, 255, 255]", 0.69, "[85, 205]", 7.0, 2.0, 3.5),  # Updated to long grain specs
-        ("Phka Romeat", "[5, 58, 58]", "[25, 255, 255]", 0.71, "[84, 204]", 6.1, 2.2, 2.77),
-        ("Phka Rumdeng", "[5, 55, 55]", "[25, 250, 255]", 0.71, "[82, 202]", 5.8, 2.3, 2.52),
-        ("Phka Malis", "[8, 48, 52]", "[28, 255, 255]", 0.72, "[80, 200]", 6.5, 2.0, 3.25),
-        ("Somali", "[6, 50, 50]", "[26, 255, 255]", 0.69, "[80, 200]", 6.4, 2.1, 3.05),
-        ("Neang Malis", "[7, 50, 50]", "[27, 255, 255]", 0.69, "[80, 200]", 6.4, 2.1, 3.05),
-        ("Basmati", "[10, 30, 60]", "[30, 200, 255]", 0.65, "[90, 210]", 7.0, 1.8, 3.89),
-        ("Sen Kra'ob", "[8, 60, 70]", "[28, 255, 255]", 0.68, "[80, 200]", 7.2, 2.0, 3.6),  # Updated dimensions and shape_factor
-        ("Sen Pidao", "[10, 40, 50]", "[30, 200, 255]", 0.75, "[90, 210]", 6.2, 2.1, 2.95),
-        ("Phka Knhei", "[5, 52, 52]", "[25, 255, 255]", 0.71, "[82, 202]", 6.3, 2.1, 3.0),
-        ("IR64", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),  # Updated shape_factor approx
-        ("IRRI-6", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IRRI-9", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
-        ("Chul'sa", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Riang Chey", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Damnoeb Srov Krahorm", "[10, 50, 60]", "[30, 220, 255]", 0.70, "[90, 210]", 5.5, 2.4, 2.29),
-        ("Neang Khon", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Phka Sla", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("OM5451", "[12, 35, 60]", "[32, 190, 255]", 0.69, "[88, 208]", 7.1, 2.0, 3.55),  # Updated dimensions and shape_factor
-        ("CARDI-1", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Phka Chan Sen", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Neang Minh", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Kraham", "[10, 50, 60]", "[30, 220, 255]", 0.70, "[90, 210]", 5.5, 2.5, 2.2),
-        ("Srov Krahorm", "[10, 50, 60]", "[30, 220, 255]", 0.70, "[90, 210]", 5.5, 2.5, 2.2),
-        ("Phka Damnoeb", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Neang Ngu", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Srov Damnoeb", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Phka Srov", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Neang Chey", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Kampong Speu", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Sticky Rice", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),  # Updated shape_factor
-        ("Black Sticky Rice", "[0, 20, 50]", "[20, 100, 200]", 0.72, "[60, 180]", 4.5, 2.5, 1.8),
-        ("White Sticky Rice", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Phka Sla Thom", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Srov Leu", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Khao Niew", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Phka Sticky", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Neang Khmau", "[0, 20, 50]", "[20, 100, 200]", 0.72, "[60, 180]", 4.5, 2.5, 1.8),
-        ("Srov Kmao", "[0, 20, 50]", "[20, 100, 200]", 0.72, "[60, 180]", 4.5, 2.5, 1.8),
-        ("Phka Romchang", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Sen Pidor", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Phka Meun", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Phka Rumdoul", "[5, 60, 60]", "[25, 255, 255]", 0.72, "[85, 205]", 6.0, 2.2, 2.73),
-        ("IR504", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IR66", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IR68", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
-        ("IR72", "[5, 40, 50]", "[25, 200, 255]", 0.89, "[80, 200]", 5.0, 2.5, 2.0),
-        ("CARDI-2", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("CARDI-3", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Chhlat", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("CARDI-Drought-1", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("CARDI-Drought-2", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("CARDI-Flood-1", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("CARDI-Flood-2", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("IRRI-Drought-1", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("IRRI-Flood-1", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Phka Resilient", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Sen Resilient", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Neang Drought", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Srov Flood", "[5, 40, 50]", "[25, 200, 255]", 0.65, "[80, 200]", 5.2, 2.4, 2.17),
-        ("Neang Yin", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Phka Kravan", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Srov Krahom", "[10, 50, 60]", "[30, 220, 255]", 0.70, "[90, 210]", 5.5, 2.5, 2.2),
-        ("Neang Khnong", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Phka Leu", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Srov Thom", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Neang Meas", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Phka Kngok", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Srov Krahom Leu", "[10, 50, 60]", "[30, 220, 255]", 0.70, "[90, 210]", 5.5, 2.5, 2.2),
-        ("Neang Veng", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 1", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 2", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 3", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 4", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 5", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 6", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 7", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 8", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 9", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 10", "[8, 45, 55]", "[28, 210, 255]", 0.67, "[85, 205]", 5.5, 2.4, 2.29),
-        ("Local Traditional 11", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 12", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 13", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 14", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 15", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 16", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 17", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 18", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 19", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Local Traditional 20", "[8, 50, 50]", "[28, 200, 255]", 0.68, "[80, 200]", 5.5, 2.5, 2.2),
-        ("Heirloom 1", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 2", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 3", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 4", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 5", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 6", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 7", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 8", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 9", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Heirloom 10", "[0, 20, 100]", "[20, 100, 255]", 0.72, "[70, 190]", 4.5, 2.5, 1.8),
-        ("Jasmine", "[10, 30, 60]", "[30, 200, 255]", 0.65, "[90, 210]", 7.0, 1.8, 3.89)  # Added Jasmine entry with Basmati-like parameters
-    ]
-    cursor.executemany('''
-        INSERT OR REPLACE INTO varieties (name, hsv_lower, hsv_upper, shape_factor, intensity_range, length_mm, width_mm, length_width_ratio)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', initial_varieties)
-    conn.commit()
-    conn.close()
-
-init_variety_database()
-
+# Log environment details
+logger.info(f"Python version: {sys.version}")
+has_cv2 = False
 try:
-    CNN_MODEL = load_model("paddy_variety_classifier.h5")
-except Exception as e:
-    logger.error(f"Failed to load CNN model: {str(e)}")
-    CNN_MODEL = None
+    import cv2
+    has_cv2 = True
+    logger.info(f"OpenCV version: {cv2.__version__}")
+except ImportError:
+    logger.error("OpenCV (cv2) not found. Install with 'pip install opencv-python-headless'.")
+try:
+    import tensorflow as tf
+    logger.info(f"TensorFlow version: {tf.__version__}")
+except ImportError:
+    logger.error("TensorFlow not found. Install with 'pip install tensorflow'.")
 
+# Health check endpoint
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    logger.info("Health check requested")
+    return jsonify({"status": "healthy"}), 200
+
+# Rice types
+RICE_TYPES = [
+    {"type": "Basmati", "details": "Long-grain rice used in Indian cuisine", "image_paths": ["images/basmati1.jpg"]},
+    {"type": "Sen Kra Ob", "details": "Fragrant rice used in Thai cuisine", "image_paths": ["images/sen_kra_ob1.jpg"]},
+    {"type": "Phka Rumduol", "details": "Fragrant rice used in Thai cuisine", "image_paths": ["images/romdul1.png"]},
+    {"type": "Neang Khon", "details": "Fragrant rice used in Thai cuisine", "image_paths": ["images/neang_khon1.png"]},
+    {"type": "Sro 54", "details": "Fragrant rice used in Thai cuisine", "image_paths": ["images/sro54_1.png"]},
+    {"type": "Neang Am", "details": "Fragrant rice used in Thai cuisine", "image_paths": ["images/neang_am1.png"]},
+]
+
+# Load reference images
+def load_reference_images():
+    reference_images = {}
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    for rice in RICE_TYPES:
+        reference_images[rice["type"]] = []
+        for image_path in rice.get("image_paths", [rice.get("image_path")]):
+            full_path = os.path.join(base_dir, image_path)
+            if os.path.exists(full_path):
+                try:
+                    img = cv2.imread(full_path) if has_cv2 else np.array(Image.open(full_path).convert("RGB"))
+                    if img is not None:
+                        reference_images[rice["type"]].append(img)
+                        logger.info(f"Loaded reference image: {full_path}")
+                    else:
+                        logger.warning(f"Could not load image {full_path}")
+                except Exception as e:
+                    logger.error(f"Failed to load {full_path}: {str(e)}")
+            else:
+                logger.warning(f"Image {full_path} not found")
+    if not any(len(imgs) > 0 for imgs in reference_images.values()):
+        logger.warning("No valid reference images found, using placeholders")
+        return {r["type"]: [np.zeros((100, 100, 3), dtype=np.uint8)] for r in RICE_TYPES}
+    return reference_images
+
+REFERENCE_IMAGES = load_reference_images()
+
+# Load model
+model = None
+if USE_MODEL:
+    try:
+        import tensorflow as tf
+        model = tf.keras.models.load_model(MODEL_PATH)
+        logger.info("Model loaded successfully")
+    except Exception as e:
+        logger.error(f"Model not loaded: {str(e)} with traceback: {traceback.format_exc()}")
+        USE_MODEL = False
+
+# Resize image to fit maximum width
+def resize_image(image, max_width=800, min_size=150):
+    try:
+        width, height = image.size
+        if width > max_width:
+            new_width = max_width
+            new_height = int(height * (new_width / width))
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            logger.info(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+        if image.size[0] < min_size or image.size[1] < min_size:
+            logger.warning(f"Resized image too small: {image.size}. Minimum required {min_size}x{min_size}")
+            return None
+        return image
+    except Exception as e:
+        logger.error(f"Image resize error: {str(e)} with traceback: {traceback.format_exc()}")
+        return None
+
+# Preprocess image (with fallback)
+def preprocess_image(image):
+    try:
+        img_array = np.array(image)
+        if has_cv2:
+            img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            img_gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+            img_eq = cv2.equalizeHist(img_gray)
+            img_blur = cv2.GaussianBlur(img_eq, (3, 3), 0)
+            return img_cv, img_gray
+        else:
+            logger.warning("OpenCV not available, using raw image")
+            return img_array, img_array
+    except Exception as e:
+        logger.error(f"Preprocessing error: {str(e)} with traceback: {traceback.format_exc()}")
+        return None, None
+
+# Quality checker
 def check_image_quality(image):
     try:
         img_array = np.array(image)
-        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-        brightness = np.mean(img_array)
-        if laplacian_var < 80:
-            return False, "Image is too blurry. Please use a clearer image."
-        if brightness < 100 or brightness > 200:
-            return False, "Inconsistent lighting. Use diffused LED light (5500K recommended)."
-        height, width = img_cv.shape[:2]
-        if height < 100 or width < 100:
-            return False, "Image is too small. Minimum size is 100x100 pixels."
-        if height * width > 4000 * 4000:
-            return False, "Image is too large. Maximum resolution is 4000x4000 pixels."
-        return True, "Image quality is sufficient."
+        if has_cv2:
+            img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            img_gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+            
+            laplacian_var = cv2.Laplacian(img_gray, cv2.CV_64F).var()
+            if laplacian_var < 30:
+                return False, "Image is too blurry. Please use a clearer image."
+            
+            height, width = img_cv.shape[:2]
+            if height < 150 or width < 150:
+                return False, "Image is too small. Minimum size is 150x150 pixels."
+            
+            mean_intensity = np.mean(img_gray)
+            if mean_intensity < 20 or mean_intensity > 230:
+                return False, "Image lighting is too dark or too bright."
+            
+            edges = cv2.Canny(img_gray, 30, 100)
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            rice_like = len(contours) > 0
+            if not rice_like:
+                return False, "Image does not appear to contain rice grains."
+            
+            return True, "Image quality is sufficient."
+        else:
+            logger.warning("OpenCV not available, skipping advanced quality check")
+            height, width, _ = img_array.shape
+            if height < 150 or width < 150:
+                return False, "Image is too small. Minimum size is 150x150 pixels."
+            return True, "Basic quality check passed (OpenCV unavailable)"
     except Exception as e:
+        logger.error(f"Quality check error: {str(e)} with traceback: {traceback.format_exc()}")
         return False, f"Error checking image quality: {str(e)}"
 
-def generate_image_hash(image):
-    img_array = np.array(image.resize((64, 64)))
-    return hashlib.sha256(img_array.tobytes()).hexdigest()
-
-def detect_husk_status(image):
-    try:
-        img_array = np.array(image)
-        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-        hsv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2HSV)
-        
-        husk_lower = np.array([10, 50, 50])
-        husk_upper = np.array([30, 255, 255])
-        rice_lower = np.array([0, 0, 150])
-        rice_upper = np.array([180, 50, 255])
-        
-        husk_mask = cv2.inRange(hsv, husk_lower, husk_upper)
-        rice_mask = cv2.inRange(hsv, rice_lower, rice_upper)
-        
-        husk_pixels = cv2.countNonZero(husk_mask)
-        rice_pixels = cv2.countNonZero(rice_mask)
-        
-        total_pixels = husk_pixels + rice_pixels
-        if total_pixels == 0:
-            return False, 0.0
-        
-        husk_ratio = husk_pixels / total_pixels
-        is_husked = husk_ratio < 0.5
-        confidence = 1.0 - abs(husk_ratio - 0.5) * 2
-        
-        return is_husked, round(confidence, 3)
-    except Exception as e:
-        logger.error(f"Error detecting husk status: {str(e)}")
-        return False, 0.0
-
-def detect_paddy_variety(image, is_husked):
-    try:
-        conn = sqlite3.connect('paddy_varieties.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT name, hsv_lower, hsv_upper, shape_factor, intensity_range, length_mm, width_mm, length_width_ratio FROM varieties")
-        varieties = cursor.fetchall()
-        conn.close()
-
-        img_array = np.array(image)
-        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-        hsv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2HSV)
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-        
-        gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 3)
-        
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        variety_counts = {v[0]: 0 for v in varieties}
-        total_grains = 0
-        
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if RICE_PARAMS["min_area"] <= area <= RICE_PARAMS["max_area"]:
-                total_grains += 1
-                x, y, w, h = cv2.boundingRect(contour)
-                hsv_grain = hsv[y:y+h, x:x+w]
-                gray_grain = gray[y:y+h, x:x+w]
-                perimeter = cv2.arcLength(contour, True)
-                circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
-                l_w_ratio = w / h if h > 0 else 0
-                intensity = np.mean(gray_grain)
-                max_score = 0
-                assigned_variety = None
-                for variety in varieties:
-                    name, hsv_lower_str, hsv_upper_str, v_shape_factor, intensity_range_str, v_length, v_width, v_l_w_ratio = variety
-                    hsv_lower = np.array(eval(hsv_lower_str))
-                    hsv_upper = np.array(eval(hsv_upper_str))
-                    intensity_range = eval(intensity_range_str)
-                    mask = cv2.inRange(hsv_grain, hsv_lower, hsv_upper)
-                    hsv_score = cv2.countNonZero(mask) / (w * h)
-                    shape_score = 1 - abs(circularity - v_shape_factor) / v_shape_factor if v_shape_factor > 0 else 0
-                    ratio_score = 1 - abs(l_w_ratio - v_l_w_ratio) / v_l_w_ratio if v_l_w_ratio > 0 else 0
-                    intensity_score = 1 if intensity_range[0] <= intensity <= intensity_range[1] else 0
-                    # Higher weight for ratio_score on long-grain varieties (ratio > 2.5)
-                    if v_l_w_ratio > 2.5:
-                        combined_score = 0.4 * hsv_score + 0.2 * shape_score + 0.3 * ratio_score + 0.1 * intensity_score
-                    else:
-                        combined_score = 0.5 * hsv_score + 0.2 * shape_score + 0.2 * ratio_score + 0.1 * intensity_score
-                    if combined_score > max_score:
-                        max_score = combined_score
-                        assigned_variety = name
-                if assigned_variety and max_score > 0.5:
-                    variety_counts[assigned_variety] += 1
-                else:
-                    pass
-        
-        if total_grains == 0:
-            return "Unknown (Mixed)", "Mixed", 0.5, 0.0, 1.0
-        
-        dominant_variety = max(variety_counts, key=variety_counts.get)
-        pure_paddy_percent = variety_counts[dominant_variety] / total_grains
-        mixed_percentage = 1 - pure_paddy_percent
-        
-        cnn_variety = None
-        cnn_confidence = 0.0
-        if CNN_MODEL:
-            img_resized = image.resize((224, 224))
-            img_array = img_to_array(img_resized) / 255.0
-            prediction = CNN_MODEL.predict(img_array[np.newaxis, ...])
-            cnn_variety = varieties[np.argmax(prediction)][0]
-            cnn_confidence = float(np.max(prediction))
-            logger.info(f"CNN prediction: {cnn_variety} with confidence {cnn_confidence}")
-
-        # Unified purity threshold for consistency
-        type = "Pure" if pure_paddy_percent >= 0.5 else "Mixed"
-        
-        hsv_confidence = pure_paddy_percent
-        
-        shape_confidence = 0.0
-        ratio_confidence = 0.0
-        valid_grains = [c for c in contours if RICE_PARAMS["min_area"] <= cv2.contourArea(c) <= RICE_PARAMS["max_area"]]
-        if valid_grains:
-            for variety in varieties:
-                if variety[0] == dominant_variety:
-                    shape_confidence = sum(1 for c in valid_grains if abs((4 * np.pi * cv2.contourArea(c) / (cv2.arcLength(c, True) ** 2) if cv2.arcLength(c, True) > 0 else 0) - variety[3]) < 0.15) / len(valid_grains)
-                    ratios = [cv2.boundingRect(c)[2] / cv2.boundingRect(c)[3] if cv2.boundingRect(c)[3] > 0 else 0 for c in valid_grains]
-                    avg_ratio = sum(ratios) / len(ratios) if ratios else 0
-                    ratio_confidence = 1 - abs(avg_ratio - variety[7]) / variety[7] if variety[7] > 0 else 0
-        
-        # Adjusted CNN weighting for Phka Malis (retained from previous)
-        if CNN_MODEL and cnn_variety == dominant_variety:
-            if dominant_variety == "Phka Malis" and cnn_confidence > 0.8:
-                confidence = (0.7 * cnn_confidence + 0.2 * hsv_confidence + 0.05 * shape_confidence + 0.05 * ratio_confidence)
-            else:
-                confidence = (0.6 * cnn_confidence + 0.3 * hsv_confidence + 0.05 * shape_confidence + 0.05 * ratio_confidence)
-        else:
-            confidence = (0.5 * hsv_confidence + 0.25 * shape_confidence + 0.25 * ratio_confidence)
-        final_variety = cnn_variety if CNN_MODEL and cnn_confidence > hsv_confidence and cnn_variety == dominant_variety else dominant_variety
-        
-        if type == "Mixed":
-            display_name = f"{final_variety} (Mixed)"
-        else:
-            display_name = final_variety
-            
-        logger.info(f"Detected paddy: {display_name} with confidence {confidence:.3f}, pure: {pure_paddy_percent:.3f}, mixed: {mixed_percentage:.3f}")
-        return display_name, type, round(confidence, 3), round(pure_paddy_percent, 3), round(mixed_percentage, 3)
-    except Exception as e:
-        logger.error(f"Error detecting paddy variety: {str(e)}")
-        return "Unknown (Mixed)", "Mixed", 0.5, 0.0, 1.0
-
-def is_rice_image(image):
-    try:
-        img_array = np.array(image)
-        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-        
-        gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 3)
-        
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        rice_grains = [c for c in contours if RICE_PARAMS["min_area"] <= cv2.contourArea(c) <= RICE_PARAMS["max_area"]]
-        if len(rice_grains) < 10:
-            return False, 0.0, "Image does not appear to contain rice"
-        
-        confidence = min(len(rice_grains) / 100.0, 1.0)
-        return True, confidence, "Paddy detected"
-    except Exception as e:
-        logger.error(f"Error detecting rice: {str(e)}")
-        return False, 0.0, f"Error detecting rice: {str(e)}"
-
-def detect_defects(image, contour):
-    try:
-        x, y, w, h = cv2.boundingRect(contour)
-        grain_roi = np.array(image)[y:y+h, x:x+w]
-        edges = cv2.Canny(grain_roi, 100, 200)
-        if np.sum(edges) > 1000:
-            return "Cracked"
-        gray_roi = cv2.cvtColor(grain_roi, cv2.COLOR_RGB2GRAY)
-        if np.mean(gray_roi) < 50:
-            return "Fungal"
-        return "Intact"
-    except Exception as e:
-        logger.error(f"Error detecting defects: {str(e)}")
-        return "Unknown"
-
-def analyze_rice_quantity_quality(image, is_husked=True):
-    try:
-        image_hash = generate_image_hash(image)
-        cache_key = f"rice_{is_husked}_{image_hash}"
-        if cache_key in QUANTITY_CACHE:
-            logger.info(f"Using cached quantity for rice (husked: {is_husked})")
-            return QUANTITY_CACHE[cache_key]
-
-        img_array = np.array(image)
-        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-
-        img_cv = cv2.convertScaleAbs(img_cv, alpha=1.3, beta=10)
-        gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 
-            15 if is_husked else 21, 3 if is_husked else 5
-        )
-
-        kernel = np.ones((3, 3), np.uint8)
-        thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2 if is_husked else 3)
-
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        total_area = img_cv.shape[0] * img_cv.shape[1]
-
-        min_area = RICE_PARAMS["min_area"] * (1.2 if not is_husked else 1.0)
-        max_area = RICE_PARAMS["max_area"] * (1.2 if not is_husked else 1.0)
-        shape_factor = RICE_PARAMS["shape_factor"]
-
-        rice_area = sum(cv2.contourArea(c) for c in contours if min_area <= cv2.contourArea(c) <= max_area)
-        quantity_percent = (rice_area / total_area) * 100 if total_area > 0 else 0.0
-
-        bad_grains = 0
-        total_grains = len([c for c in contours if min_area <= cv2.contourArea(c) <= max_area])
-        shape_uniformity = 0.0
-        valid_grains = []
-        grain_areas = []
-        defect_counts = {"Cracked": 0, "Fungal": 0, "Intact": 0}
-
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if min_area <= area <= max_area:
-                valid_grains.append(contour)
-                grain_areas.append(area)
-                perimeter = cv2.arcLength(contour, True)
-                circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
-                defect = detect_defects(image, contour)
-                defect_counts[defect] += 1
-                if defect != "Intact" or circularity < shape_factor * (0.85 if is_husked else 0.80) or circularity > shape_factor * (1.15 if is_husked else 1.20):
-                    bad_grains += 1
-                else:
-                    x, y, w, h = cv2.boundingRect(contour)
-                    grain_roi = gray[y:y+h, x:x+w]
-                    mean_intensity = np.mean(grain_roi)
-                    if mean_intensity < (70 if is_husked else 60) or mean_intensity > (210 if is_husked else 200):
-                        bad_grains += 1
-                shape_uniformity += abs(circularity - shape_factor)
-
-        if valid_grains:
-            shape_uniformity = 1 - (shape_uniformity / len(valid_grains)) / shape_factor if len(valid_grains) > 0 else 0.0
-            average_grain_area = sum(grain_areas) / len(grain_areas) if grain_areas else 0.0
-            grain_density = (total_grains / total_area) * 1000000 if total_area > 0 else 0.0
-        else:
-            shape_uniformity = 0.0
-            average_grain_area = 0.0
-            grain_density = 0.0
-
-        bad_percent = (bad_grains / total_grains) * 100 if total_grains > 0 else 0.0
-
-        result = {
-            "quantity_percent": round(quantity_percent, 2),
-            "bad_percent": round(bad_percent, 2),
-            "total_grains": total_grains,
-            "average_grain_area": round(average_grain_area, 2),
-            "grain_density": round(grain_density, 2),
-            "shape_uniformity": round(shape_uniformity * 100, 2),
-            "defect_counts": defect_counts
-        }
-
-        QUANTITY_CACHE[cache_key] = result
-        logger.info(f"Cached quantity for rice (husked: {is_husked}): {result}")
-        return result
-    except Exception as e:
-        logger.error(f"Error analyzing quantity/quality: {str(e)}")
+# ORB classification (with fallback)
+def classify_rice_orb(image):
+    logger.info("Starting ORB classification")
+    if not REFERENCE_IMAGES or all(len(imgs) == 0 for imgs in REFERENCE_IMAGES.values()):
+        logger.warning("No valid reference images available")
         return {
-            "quantity_percent": 0.0,
-            "bad_percent": 0.0,
-            "total_grains": 0,
-            "average_grain_area": 0.0,
-            "grain_density": 0.0,
-            "shape_uniformity": 0.0,
-            "defect_counts": {"Cracked": 0, "Fungal": 0, "Intact": 0}
+            "paddy_name": "Unknown",
+            "pure_paddy_percent": 0.0,
+            "mixed_paddy_percent": 100.0,
+            "good_paddy_score": 0.0,
+            "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "details": "No reference images available"
         }
 
-def verify_variety(variety, image_features):
+    is_good_quality, message = check_image_quality(image)
+    if not is_good_quality:
+        logger.info(f"Image rejected: {message}")
+        return {
+            "paddy_name": "Unknown",
+            "pure_paddy_percent": 0.0,
+            "mixed_paddy_percent": 100.0,
+            "good_paddy_score": 0.0,
+            "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "details": message
+        }
+
     try:
-        response = requests.post("https://mock-api.irri.org/verify", json=image_features, timeout=5)
-        return response.json().get("verified_variety", variety)
+        img_cv, img_gray = preprocess_image(image)
+        if not has_cv2:
+            logger.warning("OpenCV not available, skipping ORB classification")
+            return {
+                "paddy_name": "Unknown",
+                "pure_paddy_percent": 0.0,
+                "mixed_paddy_percent": 100.0,
+                "good_paddy_score": 0.0,
+                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "details": "ORB classification unavailable (OpenCV missing)"
+            }
+        orb = cv2.ORB_create(nfeatures=2000, scaleFactor=1.2, nlevels=8)
+        kp1, des1 = orb.detectAndCompute(img_gray, None)
+
+        if des1 is None or len(kp1) < 5:
+            logger.warning(f"Insufficient keypoints detected: {len(kp1)}")
+            return {
+                "paddy_name": "Unknown",
+                "pure_paddy_percent": 0.0,
+                "mixed_paddy_percent": 100.0,
+                "good_paddy_score": 0.0,
+                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "details": "Insufficient features detected"
+            }
+
+        best_match = {
+            "paddy_name": "Unknown",
+            "pure_paddy_percent": 0.0,
+            "mixed_paddy_percent": 100.0,
+            "good_paddy_score": 0.0,
+            "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "details": "No rice detected"
+        }
+        max_matches = 0
+        dynamic_threshold = max(15, len(kp1) * 0.03)
+
+        for rice_type, ref_imgs in REFERENCE_IMAGES.items():
+            for ref_img in ref_imgs:
+                try:
+                    ref_gray = cv2.cvtColor(ref_img, cv2.COLOR_BGR2GRAY)
+                    ref_gray = cv2.equalizeHist(ref_gray)
+                    kp2, des2 = orb.detectAndCompute(ref_gray, None)
+
+                    if des2 is None or len(kp2) < 5:
+                        continue
+
+                    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+                    matches = bf.match(des1, des2)
+                    num_matches = len(matches)
+                    logger.info(f"Matches for {rice_type}: {num_matches}")
+
+                    if num_matches > max_matches:
+                        max_matches = num_matches
+                        confidence = min(num_matches / 50.0, 0.99)
+                        if num_matches >= dynamic_threshold or num_matches > 0:
+                            best_match = {
+                                "paddy_name": rice_type,
+                                "pure_paddy_percent": round(confidence * 100, 2),
+                                "mixed_paddy_percent": round((1 - confidence) * 100, 2),
+                                "good_paddy_score": round(confidence * 100, 2),
+                                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "details": next(r["details"] for r in RICE_TYPES if r["type"] == rice_type)
+                            }
+                        else:
+                            best_match = {
+                                "paddy_name": rice_type,
+                                "pure_paddy_percent": 20.0,
+                                "mixed_paddy_percent": 80.0,
+                                "good_paddy_score": 20.0,
+                                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "details": next(r["details"] for r in RICE_TYPES if r["type"] == rice_type)
+                            }
+                except Exception as e:
+                    logger.error(f"Error in matching for {rice_type}: {str(e)} with traceback: {traceback.format_exc()}")
+                    continue
+
+        logger.info(f"Best match: {best_match['paddy_name']} with {max_matches} matches")
+        return best_match
     except Exception as e:
-        logger.error(f"Error verifying variety with external API: {str(e)}")
-        return variety
+        logger.error(f"ORB classification error: {str(e)} with traceback: {traceback.format_exc()}")
+        return {
+            "paddy_name": "Unknown",
+            "pure_paddy_percent": 0.0,
+            "mixed_paddy_percent": 100.0,
+            "good_paddy_score": 0.0,
+            "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "details": f"Classification error: {str(e)}"
+        }
 
-@app.route("/api/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok"}), 200
+# Model classification
+def classify_rice_model(image):
+    try:
+        img = image.resize((224, 224))
+        img_array = np.array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+        try:
+            import tensorflow as tf
+            predictions = model.predict(img_array, verbose=0)
+            class_idx = np.argmax(predictions[0])
+            confidence = float(predictions[0][class_idx])
+            
+            if confidence < 0.5:
+                return classify_rice_orb(image)
+            
+            rice_type = RICE_TYPES[class_idx % len(RICE_TYPES)]
+            return {
+                "paddy_name": rice_type["type"],
+                "pure_paddy_percent": round(confidence * 100, 2),
+                "mixed_paddy_percent": round((1 - confidence) * 100, 2),
+                "good_paddy_score": round(confidence * 100, 2),
+                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "details": rice_type["details"]
+            }
+        except ImportError:
+            logger.warning("TensorFlow not available, falling back to ORB")
+            return classify_rice_orb(image)
+        except Exception as e:
+            logger.error(f"Model error: {str(e)} with traceback: {traceback.format_exc()}")
+            return classify_rice_orb(image)
+    except Exception as e:
+        logger.error(f"Model error: {str(e)} with traceback: {traceback.format_exc()}")
+        return classify_rice_orb(image)
 
+# Ensemble classification
+def classify_rice_ensemble(image):
+    try:
+        model_result = classify_rice_model(image) if USE_MODEL and model else None
+        orb_result = classify_rice_orb(image)
+        
+        if not model_result:
+            return orb_result
+        
+        if model_result["paddy_name"] == orb_result["paddy_name"] and model_result["pure_paddy_percent"] > 70:
+            combined_confidence = (model_result["pure_paddy_percent"] * 0.7 + orb_result["pure_paddy_percent"] * 0.3) / 100
+            return {
+                "paddy_name": model_result["paddy_name"],
+                "pure_paddy_percent": round(combined_confidence * 100, 2),
+                "mixed_paddy_percent": round((1 - combined_confidence) * 100, 2),
+                "good_paddy_score": round(combined_confidence * 100, 2),
+                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "details": model_result["details"]
+            }
+        elif model_result["pure_paddy_percent"] > 80:
+            return model_result
+        elif orb_result["pure_paddy_percent"] > 20:
+            return orb_result
+        else:
+            return {
+                "paddy_name": "Unknown",
+                "pure_paddy_percent": 0.0,
+                "mixed_paddy_percent": 100.0,
+                "good_paddy_score": 0.0,
+                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "details": "Low confidence in classification"
+            }
+    except Exception as e:
+        logger.error(f"Ensemble classification error: {str(e)} with traceback: {traceback.format_exc()}")
+        return {
+            "paddy_name": "Unknown",
+            "pure_paddy_percent": 0.0,
+            "mixed_paddy_percent": 100.0,
+            "good_paddy_score": 0.0,
+            "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "details": f"Ensemble error: {str(e)}"
+        }
+
+# API endpoint for scanning rice
 @app.route("/api/scan-rice", methods=["POST"])
 def scan_rice():
-    request_id = str(uuid.uuid4())
-    extra = {"request_id": request_id}
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra)
-
     try:
-        if not request.is_json:
-            logger.error("Request is not JSON")
-            return jsonify({"success": False, "error": "Request must be JSON"}), 400
-
         data = request.get_json()
-        logger.info(f"Received request data: {data}")
         if not data or "image" not in data:
-            logger.error("No image provided in request")
-            return jsonify({"success": False, "error": "No image provided"}), 400
+            logger.warning("No image provided in request")
+            return jsonify({"error": "No image provided"}), 400
 
         base64_string = data["image"]
-        if base64_string.startswith("data:image/"):
-            try:
-                base64_string = base64_string.split(",")[1]
-            except IndexError:
-                logger.error("Invalid data URI format")
-                return jsonify({"success": False, "error": "Invalid data URI format. Expected format: data:image/jpeg;base64,..."}), 400
+        logger.debug(f"Received base64 string length: {len(base64_string)}")
+        if not base64_string.startswith("data:image/"):
+            logger.warning("Invalid image format in request")
+            return jsonify({"error": "Invalid image format. Use JPG or PNG."}), 400
 
+        # Validate and resize base64 string
         try:
-            base64_string = base64_string + "=" * (4 - len(base64_string) % 4) if len(base64_string) % 4 != 0 else base64_string
-            image_data = base64.b64decode(base64_string)
-        except (base64.binascii.Error, ValueError) as e:
-            logger.error(f"Invalid base64 string: {str(e)}")
-            return jsonify({"success": False, "error": f"Invalid base64 string: {str(e)}"}), 400
-
-        try:
+            base64_string = base64_string.split(",")[1]
+            if not base64_string:
+                raise ValueError("Empty base64 data")
+            image_data = base64.b64decode(base64_string, validate=True)
             image = Image.open(BytesIO(image_data)).convert("RGB")
-        except UnidentifiedImageError as e:
-            logger.error(f"Invalid or corrupted image data: {str(e)}")
-            return jsonify({"success": False, "error": "Invalid or corrupted image data. Use JPG or PNG."}), 400
+            image = resize_image(image)
+            if image is None:
+                return jsonify({"error": "Image resize failed or too small."}), 400
+            logger.info(f"Image size after resize: {image.size}")
+        except (base64.binascii.Error, UnidentifiedImageError, ValueError) as e:
+            logger.error(f"Image decoding error: {str(e)} with traceback: {traceback.format_exc()}")
+            return jsonify({"error": "Invalid or corrupted image data."}), 400
 
-        is_good_quality, quality_message = check_image_quality(image)
-        if not is_good_quality:
-            logger.error(f"Image quality check failed: {quality_message}")
-            return jsonify({"success": False, "error": quality_message}), 400
-
-        is_rice, rice_confidence, rice_message = is_rice_image(image)
-        if not is_rice:
-            logger.error(f"Rice detection failed: {rice_message}")
-            return jsonify({"success": False, "error": rice_message}), 400
-
-        is_husked, husk_confidence = detect_husk_status(image)
-        logger.info(f"Detected husk status: {'Husked' if is_husked else 'Unhusked'} with confidence {husk_confidence}")
-
-        paddy_name, type, confidence, pure_paddy_percent, mixed_paddy_percent = detect_paddy_variety(image, is_husked)
-
-        image_features = {
-            "hsv_histogram": np.histogram(np.array(image.convert("HSV"))[..., 0], bins=180)[0].tolist(),
-            "shape_factor": RICE_PARAMS["shape_factor"]
-        }
-        verified_paddy_name = verify_variety(paddy_name, image_features)
-
-        quantity_quality = analyze_rice_quantity_quality(image, is_husked)
-
-        bad_weight = 0.5
-        quantity_weight = 0.3
-        shape_weight = 0.2
-        good_paddy_score = (
-            (100 - min(quantity_quality["bad_percent"], 100)) * bad_weight +
-            min(quantity_quality["quantity_percent"], 100) * quantity_weight +
-            quantity_quality["shape_uniformity"] * shape_weight
-        )
-
-        last_scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        result = {
-            "success": True,
-            "paddy_name": verified_paddy_name,
-            "mixed_paddy_percent": round(mixed_paddy_percent * 100, 2),
-            "pure_paddy_percent": round(pure_paddy_percent * 100, 2),
-            "good_paddy_score": round(good_paddy_score, 2),
-            "last_scan_time": last_scan_time
-        }
-
+        result = classify_rice_ensemble(image)
         logger.info(f"Scan result: {result}")
         return jsonify(result), 200
-
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({"success": False, "error": f"Failed to process image: {str(e)}"}), 500
+        logger.error(f"Error processing image: {str(e)} with traceback: {traceback.format_exc()}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+# API endpoint for feedback
+@app.route("/api/feedback", methods=["POST"])
+def feedback():
+    data = request.get_json()
+    logger.info(f"Feedback received: {data}")
+    with open("feedback.log", "a") as f:
+        f.write(f"{datetime.now()}: {data}\n")
+    return jsonify({"status": "Feedback received"}), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    logger.info("Server starting on http://0.0.0.0:5000")
+    app.run(host="0.0.0.0", port=5000, debug=True)  
