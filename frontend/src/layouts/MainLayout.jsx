@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useLocation } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, Menu, Globe, User, ChevronDown, Settings, LogOut, MessageCircle } from "lucide-react"
 import { Link } from "react-router-dom"
 import Navigation from "../components/Navigation"
@@ -11,6 +11,7 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
   const [showMenu, setShowMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -81,7 +82,7 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
               <MessageCircle className="h-5 w-5" />
             </button>
 
-            <button className="p-2 hover:bg-green-700 rounded-lg transition-colors">
+            <button onClick={() => navigate("/tasks")} className="p-2 hover:bg-green-700 rounded-lg transition-colors">
               <Bell className="h-5 w-5" />
             </button>
 
