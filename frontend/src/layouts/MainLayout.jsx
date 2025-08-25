@@ -5,13 +5,52 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, Menu, Globe, User, ChevronDown, Settings, LogOut, MessageCircle } from "lucide-react"
 import { Link } from "react-router-dom"
 import Navigation from "../components/Navigation"
+import axios from "axios"
 
 const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
-  // const [isOnline, setIsOnline] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [notificationCount, setNotificationCount] = useState(0)
   const location = useLocation()
   const navigate = useNavigate()
+  const TASKS_API_URL = "http://127.0.0.1:8000/api/tasks"
+  const AUTH_TOKEN = localStorage.getItem("token")
+
+  // Fetch notification count (pending tasks)
+  const fetchNotificationCount = async () => {
+    try {
+      const response = await axios.get(TASKS_API_URL, {
+        headers: {
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+          Accept: "application/json",
+        },
+      })
+      const pendingTasks = response.data.filter(task => !task.is_completed).length
+      setNotificationCount(pendingTasks)
+      localStorage.setItem("notificationCount", pendingTasks)
+    } catch (error) {
+      console.error("Error fetching notification count:", error)
+    }
+  }
+
+  // Initialize notification count from localStorage or fetch
+  useEffect(() => {
+    const savedCount = localStorage.getItem("notificationCount")
+    if (savedCount) {
+      setNotificationCount(parseInt(savedCount, 10))
+    }
+    if (AUTH_TOKEN) fetchNotificationCount()
+  }, [])
+
+  // Listen for notification updates
+  useEffect(() => {
+    const handleNotificationUpdate = () => {
+      fetchNotificationCount()
+    }
+    window.addEventListener("notificationUpdate", handleNotificationUpdate)
+    return () => window.removeEventListener("notificationUpdate", handleNotificationUpdate)
+  }, [])
+
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -82,9 +121,16 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
               <MessageCircle className="h-5 w-5" />
             </button>
 
-            <button onClick={() => navigate("/tasks")} className="p-2 hover:bg-green-700 rounded-lg transition-colors">
-              <Bell className="h-5 w-5" />
-            </button>
+            <div className="relative">
+              <button onClick={() => navigate("/tasks")} className="p-2 hover:bg-green-700 rounded-lg transition-colors">
+                <Bell className="h-5 w-5" />
+                {notificationCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {notificationCount}
+                  </span>
+                )}
+              </button>
+            </div>
 
             {/* User Dropdown */}
             <div className="relative">
