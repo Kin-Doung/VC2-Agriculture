@@ -32,6 +32,7 @@ const Support = ({ language }) => {
           "Manage tasks and schedules for your team",
         ],
         link: "Download the User Guide",
+        fileUrl: "/files/user-guide-en.pdf",
       },
       faq: {
         title: "Frequently Asked Questions (FAQs)",
@@ -78,14 +79,18 @@ const Support = ({ language }) => {
         link: "Troubleshooting Guide",
       },
       contact: {
-        title: "Contact Support",
-        description: "Our support team is available to help with any questions or technical issues. Use the form below to send a message:",
+        title: "Contact Us",
+        description: "Our support team is ready to assist you with any questions or technical issues. Reach out via the form below, call us, or join our Telegram help group for quick support.",
         form: {
           name: "Name",
           email: "Email",
           message: "Message",
           submit: "Send Message",
         },
+        email: "Email: support@farmmanager.com",
+        phone: "Phone: +855 97 996 4862 (Monday & Friday, 9 AM to 5 PM)",
+        telegram: "Join our Telegram Help Group",
+        telegramLink: "https://t.me/sok_leap_SL",
       },
       community: {
         title: "Community Forum",
@@ -112,6 +117,7 @@ const Support = ({ language }) => {
           "គ្រប់គ្រងកិច្ចការ និងកាលវិភាគសម្រាប់ក្រុមរបស់អ្នក",
         ],
         link: "ទាញយកការណែនាំអ្នកប្រើប្រាស់",
+        fileUrl: "/files/user-guide-kh.pdf",
       },
       faq: {
         title: "សំណួរដែលសួរញឹកញាប់",
@@ -135,7 +141,7 @@ const Support = ({ language }) => {
       selling: {
         title: "ការលក់ផលិតផល",
         description: "របៀបបន្ថែមនិងលក់ផលិតផល។",
-        paragraph: "ដើម្បីបន្ថែមផលិតផល សូមចូលទៅកាន់ផ្នែក \"ផលិតផល\" ចុច \"បន្ថែមផលិតផលថ្មី\" បញ្ចូលព័ត៌មានដូចជាឈ្មោះ តម្លៃ បរិមាណ និងរក្សាទុក។ ដើម្បីលក់ ចូលទៅ \"ការលក់\" ជ្រើសរើសផលិតផល បញ្ចូលព័ត៌មានអ្នកទិញ និងកត់ត្រាការលក់។",
+        paragraph: "ដើម្បីបន្ថែមផលិតផល ចូលទៅកាន់ផ្នែក \"ផលិតផល\" ចុច \"បន្ថែមផលិតផលថ្មី\" បញ្ចូលព័ត៌មានដូចជាឈ្មោះ តម្លៃ បរិមាណ និងរក្សាទុក។ ដើម្បីលក់ ចូលទៅ \"ការលក់\" ជ្រើសរើសផលិតផល បញ្ចូលព័ត៌មានអ្នកទិញ និងកត់ត្រាការលក់។",
       },
       cropTracking: {
         title: "ការតាមដានដំណាំ",
@@ -158,14 +164,18 @@ const Support = ({ language }) => {
         link: "ការណែនាំការដោះស្រាយបញ្ហា",
       },
       contact: {
-        title: "ទំនាក់ទំនងជំនួយ",
-        description: "ក្រុមជំនួយរបស់យើងត្រៀមជួយអ្នកជាមួយសំណួរ ឬបញ្ហាបច្ចេកទេស។ ប្រើទម្រង់ខាងក្រោមដើម្បីផ្ញើសារ:",
+        title: "ត្រូវការជំនួយបន្ថែម? ទំនាក់ទំនងមកយើង",
+        description: "ក្រុមជំនួយរបស់យើងត្រៀមជួយអ្នកជាមួយសំណួរ ឬបញ្ហាបច្ចេកទេស។ ទាក់ទងតាមទម្រង់ខាងក្រោម ទូរស័ព្ទ ឬចូលរួមក្រុមជំនួយតេឡេក្រាមរបស់យើងសម្រាប់ការគាំទ្ររហ័ស។",
         form: {
           name: "ឈ្មោះ",
           email: "អ៊ីមែល",
           message: "សារ",
           submit: "ផ្ញើសារ",
         },
+        email: "អ៊ីមែល: support@farmmanager.com",
+        phone: "ទូរស័ព្ទ: +1-800-123-4567 (ច័ន្ទ-សុក្រ, ៩ ព្រឹក-៥ ល្ងាច)",
+        telegram: "ចូលរួមក្រុមជំនួយតេឡេក្រាមរបស់យើង",
+        telegramLink: "https://t.me/farmmanagerhelp",
       },
       community: {
         title: "វេទិកាសហគមន៍",
@@ -197,7 +207,13 @@ const Support = ({ language }) => {
             <li key={index}>{item}</li>
           ))}
         </ul>
-        <a href="#" className="text-green-600 hover:underline">{data.gettingStarted.link}</a>
+        <a
+          href={data.gettingStarted.fileUrl}
+          download
+          className="text-green-600 hover:underline"
+        >
+          {data.gettingStarted.link}
+        </a>
       </section>
 
       {/* Selling Products */}
@@ -250,47 +266,15 @@ const Support = ({ language }) => {
       <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
         <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.contact.title}</h2>
         <p className="text-gray-600 mb-4">{data.contact.description}</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-600">{data.contact.form.name}</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded-md"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-gray-600">{data.contact.form.email}</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded-md"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-gray-600">{data.contact.form.message}</label>
-            <textarea
-              name="message"
-              value={formData.message}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded-md"
-              rows="4"
-              required
-            ></textarea>
-          </div>
-          <button
-            type="submit"
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
-          >
-            {data.contact.form.submit}
-          </button>
-        </form>
+        <div className="text-gray-600 mb-4">
+          <p>{data.contact.email}</p>
+          <p>{data.contact.phone}</p>
+          <p>
+            <a href={data.contact.telegramLink} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">
+              {data.contact.telegram}
+            </a>
+          </p>
+        </div>
       </section>
 
       {/* Community Forum */}
