@@ -183,7 +183,72 @@ const Support = ({ language }) => {
 
   const data = content[language] || content.en; // Fallback to English
 
-  
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-green-800 mb-4">{data.title}</h1>
+      <p className="text-gray-600 mb-8">{data.welcome}</p>
+
+      {/* Getting Started */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.gettingStarted.title}</h2>
+        <p className="text-gray-600 mb-4">{data.gettingStarted.description}</p>
+        <ul className="list-disc list-inside text-gray-600 mb-4">
+          {data.gettingStarted.list.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+        <a href="#" className="text-green-600 hover:underline">{data.gettingStarted.link}</a>
+      </section>
+
+      {/* Selling Products */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.selling.title}</h2>
+        <p className="text-gray-600 mb-4">{data.selling.description}</p>
+        <p className="text-gray-600">{data.selling.paragraph}</p>
+      </section>
+
+      {/* Crop Tracking */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.cropTracking.title}</h2>
+        <p className="text-gray-600 mb-4">{data.cropTracking.description}</p>
+        <p className="text-gray-600">{data.cropTracking.paragraph}</p>
+      </section>
+
+      {/* Fertilizer Reminder */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.fertilizerReminder.title}</h2>
+        <p className="text-gray-600 mb-4">{data.fertilizerReminder.description}</p>
+        <p className="text-gray-600">{data.fertilizerReminder.paragraph}</p>
+      </section>
+
+      {/* FAQs */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.faq.title}</h2>
+        <p className="text-gray-600 mb-4">{data.faq.description}</p>
+        {data.faq.items.map((faq, index) => (
+          <div key={index} className="mb-4">
+            <p className="font-semibold text-gray-700">{faq.question}</p>
+            <p className="text-gray-600">{faq.answer}</p>
+          </div>
+        ))}
+        <a href="#" className="text-green-600 hover:underline">{data.faq.link}</a>
+      </section>
+
+      {/* Troubleshooting */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.troubleshooting.title}</h2>
+        <p className="text-gray-600 mb-4">{data.troubleshooting.description}</p>
+        <ul className="list-disc list-inside text-gray-600 mb-4">
+          {data.troubleshooting.items.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+        <a href="#" className="text-green-600 hover:underline">{data.troubleshooting.link}</a>
+      </section>
+
+      
+    </div>
+  );
 };
 
 export default Support;
