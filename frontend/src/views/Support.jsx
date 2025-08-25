@@ -246,7 +246,71 @@ const Support = ({ language }) => {
         <a href="#" className="text-green-600 hover:underline">{data.troubleshooting.link}</a>
       </section>
 
-      
+      {/* Contact Support */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.contact.title}</h2>
+        <p className="text-gray-600 mb-4">{data.contact.description}</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-600">{data.contact.form.name}</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded-md"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-600">{data.contact.form.email}</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded-md"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-600">{data.contact.form.message}</label>
+            <textarea
+              name="message"
+              value={formData.message}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded-md"
+              rows="4"
+              required
+            ></textarea>
+          </div>
+          <button
+            type="submit"
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+          >
+            {data.contact.form.submit}
+          </button>
+        </form>
+      </section>
+
+      {/* Community Forum */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.community.title}</h2>
+        <p className="text-gray-600 mb-4">{data.community.description}</p>
+        <a href="#" className="text-green-600 hover:underline">{data.community.link}</a>
+      </section>
+
+      {/* Feedback */}
+      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
+        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.feedback.title}</h2>
+        <p className="text-gray-600 mb-4">{data.feedback.description}</p>
+        <a href="#" className="text-green-600 hover:underline">{data.feedback.link}</a>
+      </section>
+
+      {/* Footer */}
+      <footer className="text-center text-gray-500 mt-8">
+        <p>{data.footer}</p>
+      </footer>
     </div>
   );
 };
