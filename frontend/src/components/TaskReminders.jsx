@@ -1,7 +1,10 @@
 import { Clock, AlertCircle, Sprout } from "lucide-react"
 import { Link } from "react-router-dom"
+import { useState, useEffect } from "react"
 
 const TaskReminders = ({ language }) => {
+  const [tasks, setTasks] = useState([]);
+
   const translations = {
     en: {
       title: "Today's Tasks & Reminders",
@@ -31,11 +34,27 @@ const TaskReminders = ({ language }) => {
 
   const t = translations[language]
 
-  const tasks = [
-    { id: 1, task: t.fertilizer, status: "overdue", icon: Sprout },
-    { id: 2, task: t.watering, status: "today", icon: Clock },
-    { id: 3, task: t.harvest, status: "today", icon: AlertCircle },
-  ]
+  // Load notifications from localStorage on mount
+  useEffect(() => {
+    const notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+    const mappedTasks = notifications.filter((n) => n.status !== "completed").map((n) => ({
+      id: n.id,
+      task: n.message,
+      status: n.status,
+      icon: AlertCircle, // Default icon for out-of-stock
+    }));
+    setTasks(mappedTasks);
+  }, []);
+
+  // Function to mark task as done and update localStorage
+  const handleMarkDone = (taskId) => {
+    const notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+    const updatedNotifications = notifications.map((n) => 
+      n.id === taskId ? { ...n, status: "completed" } : n
+    );
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+    setTasks(tasks.filter((task) => task.id !== taskId));
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -87,7 +106,7 @@ const TaskReminders = ({ language }) => {
                 </span>
               </div>
             </div>
-            <button className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button onClick={() => handleMarkDone(task.id)} className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               {t.markDone}
             </button>
           </div>
