@@ -35,6 +35,7 @@ const TasksView = ({ language }) => {
       delete: "Delete",
       confirmDelete: "Are you sure you want to delete this task?",
       cancel: "Cancel",
+      loading: "Loading...", // Added
     },
     km: {
       title: "កិច្ចការ និងការរំលឹក",
@@ -53,6 +54,7 @@ const TasksView = ({ language }) => {
       delete: "លុប",
       confirmDelete: "តើអ្នកប្រាកដថាចង់លុបកិច្ចការនេះទេ?",
       cancel: "បោះបង់",
+      loading: "កំពុងផ្ទុក...", // Added
     },
   }
 
@@ -196,7 +198,10 @@ const TasksView = ({ language }) => {
       {/* Tasks List */}
       <div className="space-y-4">
         {loading ? (
-          <div className="text-center">Loading...</div>
+          <div className="text-center py-12">
+            <div className="text-gray-600 text-lg">{t.loading}</div>
+            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
+          </div>
         ) : filteredTasks.length > 0 ? (
           filteredTasks.map((task) => (
             <div key={task.id} className="bg-white rounded-lg p-6 shadow-lg">
