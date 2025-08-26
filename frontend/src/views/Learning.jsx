@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { Search } from "lucide-react";
 import RiceCard from "../components/RiceCard";
 import riceData from "../services/riceData";
 
@@ -54,30 +55,43 @@ const Learning = ({ language }) => {
   );
 
   return (
-    <div className="p-6 max-w-[1200px] mx-auto">
+
+    <div className="p-6 max-w-[1400px] mx-auto">
       {/* Header */}
-      <h1 className="text-3xl font-bold text-green-800 mb-4">
+      <h1 className="text-3xl font-bold text-green-800 mb-2 text-center">
         {language === "en" ? "Rice Varieties Information" : "ព័ត៌មានអំពីពូជស្រូវ"}
       </h1>
-      <p className="text-green-600 mb-8">
-        {language === "en" ? "Explore different rice varieties and their characteristics" : "ស្វែងយល់ពីពូជស្រូវផ្សេងៗ និងលក្ខណៈរបស់ពួកវា"}
+      <p className="text-green-600 mb-8 text-lg text-center">
+        {language === "en"
+          ? "Explore different rice varieties and their characteristics"
+          : "ស្វែងយល់ពីពូជស្រូវផ្សេងៗ និងលក្ខណៈរបស់ពួកវា"}
       </p>
 
-
       {/* Rice Varieties */}
-      <div className="bg-white rounded-lg p-8 shadow-lg">
-        <h2 className="text-xl font-bold text-green-800 mb-4">
+      <div className="bg-white rounded-xl p-3 mx-auto mp-6">
+        <div className="flex gap-8">
+             {/* Title */}
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-green-800 mb-6 text-center sm:text-left">
           {language === "en" ? "Rice Varieties" : "ពូជស្រូវ"}
         </h2>
-        <div className="mb-6 text-center">
+
+        {/* Search */}
+        <div className="relative mb-8 max-w-[400px] mx-auto sm:mx-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder={language === "en" ? "Search rice varieties..." : "ស្វែងរកពូជស្រូវ..."}
+            placeholder={
+              language === "en"
+                ? "Search rice varieties..."
+                : "ស្វែងរកពូជស្រូវ..."
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="p-2 w-full max-w-[400px] text-base rounded-md border border-gray-300 focus:outline-none focus:border-green-600"
+            className="w-80 p-3 pl-10 rounded-lg border border-gray-300 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
           />
         </div>
+        </div>
+        {/* Rice Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVarieties.length > 0 ? (
             filteredVarieties.map((variety) => (
@@ -90,12 +104,16 @@ const Learning = ({ language }) => {
             ))
           ) : (
             <p className="text-gray-500 text-center col-span-full">
-              {language === "en" ? "No rice varieties found." : "រកមិនឃើញពូជស្រូវទេ។"}
+              {language === "en"
+                ? "No rice varieties found."
+                : "រកមិនឃើញពូជស្រូវទេ។"}
             </p>
           )}
         </div>
       </div>
+
     </div>
+
   );
 };
 

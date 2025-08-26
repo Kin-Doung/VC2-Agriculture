@@ -15,7 +15,7 @@ const PublicLayout = ({ children, language, setLanguage }) => {
       home: "Home",
       about: "About",
       products: "Products",
-      training: "Training",
+      // training: "Traini",
       login: "Login",
       register: "Register",
       menu: "Menu",
@@ -39,7 +39,7 @@ const PublicLayout = ({ children, language, setLanguage }) => {
     { path: "/", label: t.home, icon: Leaf },
     { path: "/about", label: t.about, icon: Users },
     { path: "/products", label: t.products, icon: ShoppingBag },
-    { path: "/training", label: t.training, icon: Video },
+    // { path: "/training", label: t.training, icon: Video },
   ]
 
   const isActiveRoute = (path) => {

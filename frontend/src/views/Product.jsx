@@ -4,7 +4,7 @@ import { Plus, Search, Filter, X, Upload, MoreVertical, Eye, Edit, Trash2, Chevr
 import { useState, useEffect } from "react";
 
 const Product = ({ language = "en" }) => {
-  // State declarations
+  // State declarations (unchanged)
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCrop, setSelectedCrop] = useState("");
@@ -57,7 +57,7 @@ const Product = ({ language = "en" }) => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const itemsPerPage = 10;
 
-  // Translations for English and Khmer
+  // Translations (added outOfStockNotification)
   const translations = {
     en: {
       title: "My Product",
@@ -118,6 +118,7 @@ const Product = ({ language = "en" }) => {
       enterExpirationDate: "Enter expiration date",
       invalidDate: "Invalid date format",
       invalidImage: "Please upload a valid image (JPEG, JPG, PNG, max 10MB)",
+      outOfStockNotification: "Product out of stock, please set more",
     },
     km: {
       title: "ផលិតផលរបស់ខ្ញុំ",
@@ -178,6 +179,11 @@ const Product = ({ language = "en" }) => {
       enterExpirationDate: "បញ្ចូលកាលបរិច្ឆេទផុតកំណត់",
       invalidDate: "ទម្រង់កាលបរិច្ឆេទមិនត្រឹមត្រូវ",
       invalidImage: "សូមផ្ទុករូបភាពត្រឹមត្រូវ (JPEG, JPG, PNG, អតិបរមា ១០ មេហ្គាបៃ)",
+      outOfStockTaskTitle: "ផលិតផលអស់ស្តុក",
+      outOfStockTaskDescription: "បំពេញស្តុកផលិតផល",
+      outOfStockNotification: "ផលិតផលអស់ស្តុក សូមបន្ថែមបរិមាណ",
+      taskAddError: "បរាជ័យក្នុងការបន្ថែមកិច្ចការអស់ស្តុក៖ ",
+      taskFetchError: "បរាជ័យក្នុងការទាញយកកិច្ចការសម្រាប់ពិនិត្យស្ទួន៖ ",
     },
   };
 
@@ -244,6 +250,12 @@ const Product = ({ language = "en" }) => {
         setProducts(transformedProducts);
         setCategories(categoryData.map((item) => ({ id: item.id, name: item.name || "Uncategorized" })));
         setCrops(cropData.map((item) => ({ id: item.id, name: item.name || "No Crop" })));
+        // Check for out-of-stock products and add notifications
+        transformedProducts.forEach((product) => {
+          if (product.stock === t.outOfStock) {
+            addOutOfStockNotification(product);
+          }
+        });
       } catch (err) {
         console.error("Fetch error:", err);
         setError(`${t.error}: ${err.message}`);
@@ -364,6 +376,10 @@ const Product = ({ language = "en" }) => {
         throw new Error(errorMessage);
       }
       setProducts(products.filter((p) => p.id !== productToDelete.id));
+      // Remove associated notifications from localStorage
+      const notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+      const updatedNotifications = notifications.filter((n) => n.productId !== productToDelete.id);
+      localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
       setShowDeleteModal(false);
       alert(t.deleteSuccess);
     } catch (err) {
@@ -481,6 +497,24 @@ const Product = ({ language = "en" }) => {
     return errors;
   };
 
+  // Function to add out-of-stock notification to localStorage
+  const addOutOfStockNotification = (product) => {
+    const notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+    const notificationId = `notification-${product.id}-${Date.now()}`;
+    const newNotification = {
+      id: notificationId,
+      message: `${t.outOfStockNotification} ${product.name}`,
+      status: "today",
+      createdAt: new Date().toISOString(),
+      productId: product.id,
+    };
+    // Check if similar notification exists
+    if (!notifications.some((n) => n.productId === product.id && n.message === newNotification.message)) {
+      notifications.push(newNotification);
+      localStorage.setItem("notifications", JSON.stringify(notifications));
+    }
+  };
+
   // Add new product
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -546,6 +580,9 @@ const Product = ({ language = "en" }) => {
       };
 
       setProducts((prev) => [transformedProduct, ...prev]);
+      if (transformedProduct.stock === t.outOfStock) {
+        addOutOfStockNotification(transformedProduct);
+      }
       setNewProduct({
         name: "",
         price: "",
@@ -639,6 +676,14 @@ const Product = ({ language = "en" }) => {
       };
 
       setProducts(products.map((p) => (p.id === updatedProduct.id ? transformedProduct : p)));
+      if (transformedProduct.stock === t.outOfStock) {
+        addOutOfStockNotification(transformedProduct);
+      } else {
+        // Remove notification if restocked
+        const notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+        const updatedNotifications = notifications.filter((n) => n.productId !== transformedProduct.id);
+        localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+      }
       setEditProduct({
         id: null,
         name: "",

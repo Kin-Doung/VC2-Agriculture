@@ -294,9 +294,8 @@ const Marketplace = ({ language = "en" }) => {
           >
             <div className="absolute top-2 right-2 z-10">
               <span
-                className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                  product.stock === t.inStock ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
-                }`}
+                className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${product.stock === t.inStock ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
+                  }`}
               >
                 {product.stock}
               </span>
@@ -527,68 +526,77 @@ const Marketplace = ({ language = "en" }) => {
                       />
                     </div>
                   </div>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.productName}</label>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">{t.productName}</label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-2xl font-bold text-gray-900">{selectedProduct.name}</p>
                     </div>
+
                     {selectedProduct.category && (
-                      <div>
-                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.productCategory}</label>
+                      <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                        <label className="text-lg font-medium text-gray-700">{t.productCategory}</label>
+                        <span className="text-gray-700">:</span>
                         <p className="text-xl text-gray-900">{selectedProduct.category}</p>
                       </div>
                     )}
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.productPrice}</label>
-                      <p className="text-3xl font-bold text-green-600">
+
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">{t.productPrice}</label>
+                      <span className="text-gray-700">:</span>
+                      <p className="text-2xl font-bold text-green-600">
                         {selectedProduct.priceDisplay}
-                        <span className="text-lg text-gray-500 font-normal">{t.perKg}</span>
+                        <span className="text-lg text-gray-500 font-normal"> {t.perKg}</span>
                       </p>
                     </div>
+
                     {selectedProduct.seller && (
-                      <div>
-                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.seller}</label>
+                      <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                        <label className="text-lg font-medium text-gray-700">{t.seller}</label>
+                        <span className="text-gray-700">:</span>
                         <p className="text-xl text-gray-900">{selectedProduct.seller}</p>
                       </div>
                     )}
+
                     {selectedProduct.sellerPhone && (
-                      <div>
-                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.sellerPhone}</label>
+                      <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                        <label className="text-lg font-medium text-gray-700">{t.sellerPhone}</label>
+                        <span className="text-gray-700">:</span>
                         <p className="text-xl text-gray-900">{selectedProduct.sellerPhone}</p>
                       </div>
                     )}
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.productStock}</label>
+
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">{t.productStock}</label>
+                      <span className="text-gray-700">:</span>
                       <span
-                        className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
-                          selectedProduct.stock === t.inStock
+                        className={`inline-block px-4 py-1.5 text-sm font-medium rounded-full ${selectedProduct.stock === t.inStock
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {selectedProduct.stock}
                       </span>
                     </div>
+
                     {selectedProduct.expiration_date && (
-                      <div>
-                        <label className="block text-lg font-medium text-gray-700 mb-2">{t.expirationDate}</label>
+                      <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                        <label className="text-lg font-medium text-gray-700">{t.expirationDate}</label>
+                        <span className="text-gray-700">:</span>
                         <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
                       </div>
                     )}
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.productDescription}</label>
-                      <p className="text-lg text-gray-900 leading-relaxed">{selectedProduct.description}</p>
+
+                    <div className="grid grid-cols-[200px_20px_1fr] gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">{t.productDescription}</label>
+                      <span className="text-gray-700">:</span>
+                      <p className="text-lg text-green-900 leading-relaxed">{selectedProduct.description}</p>
                     </div>
                   </div>
+
                 </div>
                 <div className="pt-8 mt-8 border-t">
                   <div className="flex gap-4">
-                    <button
-                      onClick={() => setShowViewModal(false)}
-                      className="w-full px-6 py-3 text-lg bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      {t.close}
-                    </button>
                   </div>
                 </div>
               </div>

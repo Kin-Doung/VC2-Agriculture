@@ -607,7 +607,7 @@ const removeAlert = (alertId) => {
         <div className="mb-4 sm:mb-6">
           <h3 className="text-lg sm:text-xl font-semibold text-green-800 mb-2 flex items-center gap-2">
             <span>📰</span>
-            <span className="break-words leading-tight">View Products History</span>
+            <span className="break-words leading-tight">View details to get more information on market prices.</span>
           </h3>
           <p className="text-sm sm:text-base text-green-600 mb-3 sm:mb-4 leading-relaxed">
             Historical price movements for Cambodia's products. Updated: 07:16 PM +07, Friday, August 15, 2025.
@@ -623,10 +623,10 @@ const removeAlert = (alertId) => {
               </div>
               <div className="space-y-2 text-xs text-green-600">
                 <h4 className="font-medium text-green-800 text-xs sm:text-sm leading-tight truncate">
-                  Malice Rice
+                  Categories
                 </h4>
-                <p className="text-xs text-green-700">Category: Rice</p>
-                <p className="text-xs text-green-700">Current Price: reil3500.50 / kg</p>
+                <p className="text-xs text-green-700">Rice</p>
+                <p className="text-xs text-green-700">Fruit, ...</p>
                 <button
                   onClick={goToHistory}
                   className="ml-auto px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors"

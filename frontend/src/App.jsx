@@ -14,6 +14,7 @@ import LandMeasurement from "./views/LandMeasurement"
 import MeasurementHistory from "./views/MeasurementHistory"
 import CropTrackerView from "./views/CropTrackerView"
 import TasksView from "./views/TasksView"
+import PageWeather from "./views/pageWeather"
 import Marketplace from "./views/Marketplace"
 import CropManagement from "./views/CropManagement" 
 import Product from "./views/Product"
@@ -22,7 +23,7 @@ import MarketPricesView from "./views/MarketPrice/MarketPricesView"
 import SeedScanner from "./views/SeedScanner"
 import Messages from "./views/Messages"
 import Learning from "./views/Learning"
-import Finances from "./views/Finances"
+// import Finances from "./views/Finances"
 import Support from "./views/Support"
 import Profile from "./views/Profile"
 import Settings from "./views/Settings"
@@ -127,6 +128,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       />
       <Route path="/crops" element={<CropTrackerView language={language} />} />
       <Route path="/tasks" element={<TasksView language={language} />} />
+      <Route path="/Weather" element={<PageWeather language={language} />} />
       <Route path="/cropmanagement" element={<CropManagement language={language} />} />
       <Route path="/category" element={<Category language={language} />} />
       <Route path="/product" element={<Product language={language} />} />
@@ -137,7 +139,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       <Route path="/scanner" element={<SeedScanner language={language} />} />
       <Route path="/messages" element={<Messages language={language} />} />
       <Route path="/learning" element={<Learning language={language} />} />
-      <Route path="/finances" element={<Finances language={language} />} />
+      {/* <Route path="/finances" element={<Finances language={language} />} /> */}
       <Route path="/support" element={<Support language={language} />} />
       <Route path="/profile" element={<Profile language={language} />} />
       <Route path="/settings" element={<Settings language={language} />} />
