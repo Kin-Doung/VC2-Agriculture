@@ -35,7 +35,7 @@ const TasksView = ({ language }) => {
       delete: "Delete",
       confirmDelete: "Are you sure you want to delete this task?",
       cancel: "Cancel",
-      loading: "Loading...", // Added
+      loading: "Loading tasks...", // Added
     },
     km: {
       title: "កិច្ចការ និងការរំលឹក",
