@@ -34,7 +34,7 @@ const Navigation = ({ isOpen, language, role }) => {
       scanner: "Seed Scanner",
       chat: "Messages",
       learning: "Learning",
-      finances: "Income & Expenses",
+      // finances: "Income & Expenses",
       support: "Help & Support",
       profile: "Profile",
       settings: "Settings",
@@ -42,7 +42,7 @@ const Navigation = ({ isOpen, language, role }) => {
     },
     km: {
       dashboard: "ផ្ទាំងគ្រប់គ្រង",
-      myFarm: "កសិដ្ឋានរបស់ខ្ញុំ",
+      // myFarm: "កសិដ្ឋានរបស់ខ្ញុំ",
       landMeasure: "វាស់ដី",
       cropTracker: "តាមដានដំណាំ",
       tasks: "កិច្ចការ និងការរំលឹក",
@@ -53,8 +53,8 @@ const Navigation = ({ isOpen, language, role }) => {
       prices: "តម្លៃទីផ្សារ",
       scanner: "ស្កេនគ្រាប់ពូជ",
       chat: "សារ",
-      learn: "សិក្សា",
-      finances: "ចំណូល និងចំណាយ",
+      learning: "ការសិក្សា",
+      // finances: "ចំណូល និងចំណាយ",
       support: "ជំនួយ",
       profile: "ប្រវត្តិរូប",
       settings: "ការកំណត់",
@@ -66,7 +66,7 @@ const Navigation = ({ isOpen, language, role }) => {
 
   const menuItems = [
     { icon: Home, label: t.dashboard, path: "/" },
-    { icon: MapPin, label: t.myFarm, path: "/farm" },
+    // { icon: MapPin, label: t.myFarm, path: "/farm" },
     { icon: MapPin, label: t.landMeasure, path: "/measure" },
     { icon: Sprout, label: t.cropTracker, path: "/crops" },
     // { icon: Calendar, label: t.tasks, path: "/tasks" },
@@ -77,7 +77,7 @@ const Navigation = ({ isOpen, language, role }) => {
     { icon: TrendingUp, label: t.prices, path: "/prices" },
     { icon: Camera, label: t.scanner, path: "/scanner" },
     { icon: GraduationCap, label: t.learning, path: "/learning" },
-    { icon: DollarSign, label: t.finances, path: "/finances" },
+    // { icon: DollarSign, label: t.finances, path: "/finances" },
     { icon: HelpCircle, label: t.support, path: "/support" },
     // { icon: User, label: t.userList, path: "/admin/user-logins" },
   ]

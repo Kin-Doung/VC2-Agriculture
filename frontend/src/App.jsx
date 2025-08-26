@@ -23,7 +23,7 @@ import MarketPricesView from "./views/MarketPrice/MarketPricesView"
 import SeedScanner from "./views/SeedScanner"
 import Messages from "./views/Messages"
 import Learning from "./views/Learning"
-import Finances from "./views/Finances"
+// import Finances from "./views/Finances"
 import Support from "./views/Support"
 import Profile from "./views/Profile"
 import Settings from "./views/Settings"
@@ -139,7 +139,7 @@ function AuthenticatedRoutes({ language, measurements, setMeasurements }) {
       <Route path="/scanner" element={<SeedScanner language={language} />} />
       <Route path="/messages" element={<Messages language={language} />} />
       <Route path="/learning" element={<Learning language={language} />} />
-      <Route path="/finances" element={<Finances language={language} />} />
+      {/* <Route path="/finances" element={<Finances language={language} />} /> */}
       <Route path="/support" element={<Support language={language} />} />
       <Route path="/profile" element={<Profile language={language} />} />
       <Route path="/settings" element={<Settings language={language} />} />
