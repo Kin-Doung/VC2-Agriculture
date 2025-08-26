@@ -15,7 +15,7 @@ const PublicLayout = ({ children, language, setLanguage }) => {
       home: "Home",
       about: "About",
       products: "Products",
-      training: "Training",
+      training: "Traini",
       login: "Login",
       register: "Register",
       menu: "Menu",

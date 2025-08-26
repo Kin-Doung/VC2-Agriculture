@@ -58,7 +58,7 @@ const RiceCard = ({ variety, fullRiceData, language }) => {
           onClick={() => setIsDetailsOpen(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto relative transform transition-all duration-300 scale-100"
+            className="bg-white rounded-lg shadow-xl max-w-6xl w-full p-6 max-h-[80vh] overflow-y-auto relative transform transition-all duration-300 scale-100"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
