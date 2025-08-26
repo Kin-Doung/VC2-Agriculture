@@ -9,7 +9,7 @@ class Task extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'user_id',
+        'farm_id',
         'crop_id',  
         'task_type',
         'description',
@@ -17,7 +17,7 @@ class Task extends Model
         'is_completed',
 
     ];
-    public function user()
+    public function farm()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
