@@ -1,76 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
-import { Bell, Menu, Globe, User, ChevronDown, Settings, LogOut, MessageCircle } from "lucide-react"
+import React, { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
+import { Bell, Menu, Globe, User, ChevronDown, Settings, LogOut } from "lucide-react"
 import { Link } from "react-router-dom"
 import Navigation from "../components/Navigation"
-import axios from "axios"
 
 const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
   const [showMenu, setShowMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [notificationCount, setNotificationCount] = useState(0)
+  const [outOfStockCount, setOutOfStockCount] = useState(0)
+  const [outOfStockProducts, setOutOfStockProducts] = useState([])
   const location = useLocation()
-  const navigate = useNavigate()
-  const TASKS_API_URL = "http://127.0.0.1:8000/api/tasks"
-  const AUTH_TOKEN = localStorage.getItem("token")
-
-  // Fetch notification count (pending tasks)
-  const fetchNotificationCount = async () => {
-    try {
-      const response = await axios.get(TASKS_API_URL, {
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
-      })
-      const pendingTasks = response.data.filter(task => !task.is_completed).length
-      setNotificationCount(pendingTasks)
-      localStorage.setItem("notificationCount", pendingTasks)
-    } catch (error) {
-      console.error("Error fetching notification count:", error)
-    }
-  }
-
-  // Initialize notification count from localStorage or fetch
-  useEffect(() => {
-    const savedCount = localStorage.getItem("notificationCount")
-    if (savedCount) {
-      setNotificationCount(parseInt(savedCount, 10))
-    }
-    if (AUTH_TOKEN) fetchNotificationCount()
-  }, [])
-
-  // Listen for notification updates
-  useEffect(() => {
-    const handleNotificationUpdate = () => {
-      fetchNotificationCount()
-    }
-    window.addEventListener("notificationUpdate", handleNotificationUpdate)
-    return () => window.removeEventListener("notificationUpdate", handleNotificationUpdate)
-  }, [])
-
-  // Close menus when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showUserMenu && !event.target.closest(".relative")) {
-        setShowUserMenu(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [showUserMenu])
-
-  // Close menu when route changes
-  useEffect(() => {
-    setShowMenu(false)
-    setShowUserMenu(false)
-  }, [location.pathname])
-
   const translations = {
     en: {
       title: "Farm Manager",
@@ -91,6 +32,78 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
   }
 
   const t = translations[language]
+  const API_URL = "http://127.0.0.1:8000/api/products?only_mine=true"
+  const AUTH_TOKEN = localStorage.getItem("token")
+
+  // Fetch out-of-stock products
+  useEffect(() => {
+    const fetchOutOfStockProducts = async () => {
+      try {
+        if (!AUTH_TOKEN) {
+          console.warn("No AUTH_TOKEN found in localStorage")
+          setOutOfStockCount(0)
+          setOutOfStockProducts([])
+          return
+        }
+
+        const response = await fetch(API_URL, {
+          headers: {
+            Authorization: `Bearer ${AUTH_TOKEN}`,
+            Accept: "application/json",
+          },
+        })
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`)
+        }
+        const productData = await response.json()
+        console.log("API Response:", productData) // Debug log
+        if (!Array.isArray(productData)) {
+          throw new Error("Products API response is not an array")
+        }
+
+        const today = new Date()
+        const outOfStockProducts = productData.filter((item) => {
+          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null
+          const isExpired = expirationDate && expirationDate < today
+          return isExpired || item.quantity === 0
+        })
+        console.log("Out-of-stock products:", outOfStockProducts) // Debug log
+        setOutOfStockProducts(outOfStockProducts)
+        setOutOfStockCount(outOfStockProducts.length)
+      } catch (err) {
+        console.error("Fetch out-of-stock products error:", err)
+        setOutOfStockCount(0)
+        setOutOfStockProducts([])
+      }
+    }
+    fetchOutOfStockProducts()
+  }, [AUTH_TOKEN])
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showUserMenu && !event.target.closest(".relative")) {
+        setShowUserMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [showUserMenu])
+
+  // Close menu when route changes
+  useEffect(() => {
+    setShowMenu(false)
+    setShowUserMenu(false)
+  }, [location.pathname])
+
+  // Clone children with outOfStockProducts prop
+  const childrenWithProps = React.Children.map(children, (child) => {
+    if (React.isValidElement(child)) {
+      console.log("Passing props to child:", { outOfStockProducts, outOfStockCount }) // Debug log
+      return React.cloneElement(child, { outOfStockProducts, outOfStockCount })
+    }
+    return child
+  })
 
   return (
     <div className="min-h-screen bg-green-50">
@@ -106,7 +119,6 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
             </button>
             <h1 className="text-xl font-bold">{t.title}</h1>
           </div>
-
           <div className="flex items-center gap-2">
             <button
               onClick={() => setLanguage(language === "en" ? "km" : "en")}
@@ -114,25 +126,16 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
             >
               <Globe className="h-5 w-5" />
             </button>
-            <button
-              onClick={() => setLanguage(language === "en" ? "km" : "en")}
-              className="p-2 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </button>
-
-            <div className="relative">
-              <button onClick={() => navigate("/tasks")} className="p-2 hover:bg-green-700 rounded-lg transition-colors">
-                <Bell className="h-5 w-5" />
-                {notificationCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                    {notificationCount}
+            <div className="relative p-2 hover:bg-green-700 rounded-lg transition-colors">
+              <Link to="/tasks">
+                {outOfStockCount > 0 && (
+                  <span className="absolute top-2 right-2 inline-flex items-center justify-center px-1.5 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">
+                    {outOfStockCount}
                   </span>
                 )}
-              </button>
+                <Bell className="h-6 w-6" />
+              </Link>
             </div>
-
-            {/* User Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -144,7 +147,6 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
                 <span className="hidden md:block text-sm">{user?.name || "User"}</span>
                 <ChevronDown className="h-4 w-4" />
               </button>
-
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                   <Link
@@ -180,11 +182,9 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
           </div>
         </div>
       </header>
-
       <div className="flex">
         <Navigation isOpen={showMenu} language={language} currentPath={location.pathname} role={user?.role} />
-
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">{childrenWithProps}</main>
       </div>
     </div>
   )

@@ -1,22 +1,17 @@
 "use client"
 
-import { Calendar, Clock, X } from "lucide-react"
+import { Calendar, Clock, CheckCircle, Bell } from "lucide-react"
 import { useState, useEffect } from "react"
-import axios from "axios"
 
-const TasksView = ({ language }) => {
+const TasksView = ({ language, outOfStockProducts = [], outOfStockCount = 0 }) => {
   const [filter, setFilter] = useState("all")
   const [tasks, setTasks] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [availableCrops, setAvailableCrops] = useState([])
-  const [deleteTaskId, setDeleteTaskId] = useState(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [currentTask, setCurrentTask] = useState(null)
+  const [editForm, setEditForm] = useState({ title: "", description: "", dueDate: "", priority: "" })
+  const [error, setError] = useState(null)
 
-  // API URLs
-  const TASKS_API_URL = "http://localhost:8000/api/tasks"
-  const CROPS_API_URL = "http://127.0.0.1:8000/api/crops"
-  const AUTH_TOKEN = localStorage.getItem("token")
-
-  // Translations
   const translations = {
     en: {
       title: "Tasks & Reminders",
@@ -24,101 +19,87 @@ const TasksView = ({ language }) => {
       all: "All Tasks",
       today: "Today",
       overdue: "Overdue",
-      upcoming: "Upcoming",
-      completed: "Completed",
+      markDone: "Mark as Done",
+      edit: "Edit",
+      delete: "Delete",
       noTasks: "No tasks found",
       priority: "Priority",
       high: "High",
       medium: "Medium",
       low: "Low",
-      crop: "Crop",
-      delete: "Delete",
-      confirmDelete: "Are you sure you want to delete this task?",
+      save: "Save",
       cancel: "Cancel",
-      loading: "Loading tasks...", // Added
+      confirmDelete: "Are you sure you want to delete this task?",
+      editTask: "Edit Task",
+      outOfStockMessage: "Your product is out of stock, please try again.",
+      restockTaskTitle: "Restock Product",
     },
     km: {
       title: "កិច្ចការ និងការរំលឹក",
       subtitle: "គ្រប់គ្រងសកម្មភាពកសិកម្មរបស់អ្នក និងកុំឱ្យខកខានកិច្ចការសំខាន់ៗ",
       all: "កិច្ចការទាំងអស់",
       today: "ថ្ងៃនេះ",
-      overdue: "ហួសកាលកំណត់",
-      upcoming: "នាពេលខាងមុខ",
-      completed: "បានបញ្ចប់",
+      overdue: "ហួសកំណត់",
+      markDone: "សម្គាល់ថាបានធ្វើ",
+      edit: "កែប្រែ",
+      delete: "លុប",
       noTasks: "រកមិនឃើញកិច្ចការ",
       priority: "អាទិភាព",
       high: "ខ្ពស់",
       medium: "មធ្យម",
       low: "ទាប",
-      crop: "ដំណាំ",
-      delete: "លុប",
-      confirmDelete: "តើអ្នកប្រាកដថាចង់លុបកិច្ចការនេះទេ?",
+      save: "រក្សាទុក",
       cancel: "បោះបង់",
-      loading: "កំពុងផ្ទុក...", // Added
+      confirmDelete: "តើអ្នកប្រាកដជាចង់លុបកិច្ចការនេះមែនទេ?",
+      editTask: "កែប្រែកិច្ចការ",
+      outOfStockMessage: "ផលិតផលរបស់អ្នកអស់ស្តុក សូមព្យាយាមម្តងទៀត។",
+      restockTaskTitle: "បំពេញស្តុកផលិតផល",
     },
   }
 
-  const t = translations[language] || translations.en
+  const t = translations[language]
 
-  // Fetch available crops
+  // Load tasks from localStorage on component mount
   useEffect(() => {
-    const fetchCrops = async () => {
-      try {
-        const response = await axios.get(CROPS_API_URL, {
-          headers: {
-            Authorization: `Bearer ${AUTH_TOKEN}`,
-            Accept: "application/json",
-          },
-        })
-        setAvailableCrops(response.data)
-      } catch (error) {
-        console.error("Error fetching crops:", error)
-      }
-    }
-    if (AUTH_TOKEN) fetchCrops()
+    const storedTasks = JSON.parse(localStorage.getItem("tasks") || "[]")
+    setTasks(storedTasks)
+    console.log("Loaded tasks from localStorage:", storedTasks) // Debug log
   }, [])
 
-  // Fetch tasks from the database
+  // Save tasks to localStorage whenever tasks change
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setLoading(true)
-        const response = await axios.get(TASKS_API_URL, {
-          headers: {
-            Authorization: `Bearer ${AUTH_TOKEN}`,
-            Accept: "application/json",
-          },
-        })
-        const mappedTasks = response.data.map((task) => ({
-          id: task.id,
-          title: task.task_type,
-          description: task.description || "",
-          dueDate: task.due_date,
-          priority: task.priority || "medium",
-          status: getTaskStatus(task.due_date, task.is_completed),
-          category: task.task_type,
-          crop_id: task.crop_id || null,
-          crop_name: task.crop ? task.crop.name : "No Crop",
-        }))
-        setTasks(mappedTasks)
-      } catch (error) {
-        console.error("Error fetching tasks:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    if (AUTH_TOKEN) fetchTasks()
-    else console.error("Authentication token not found")
-  }, [])
+    localStorage.setItem("tasks", JSON.stringify(tasks))
+    console.log("Saved tasks to localStorage:", tasks) // Debug log
+  }, [tasks])
 
-  // Calculate task status
-  const getTaskStatus = (dueDate, isCompleted) => {
-    if (isCompleted) return "completed"
-    const today = new Date().toISOString().split("T")[0]
-    if (dueDate < today) return "overdue"
-    if (dueDate === today) return "today"
-    return "upcoming"
-  }
+  // Create tasks for out-of-stock products
+  useEffect(() => {
+    console.log("TasksView props:", { outOfStockProducts, outOfStockCount }) // Debug log
+    if (!Array.isArray(outOfStockProducts) || outOfStockProducts.length === 0) {
+      console.log("No valid outOfStockProducts to process")
+      return
+    }
+
+    const storedTasks = JSON.parse(localStorage.getItem("tasks") || "[]")
+    const existingTaskIds = storedTasks.map((task) => task.productId).filter(Boolean)
+
+    const newTasks = outOfStockProducts
+      .filter((product) => !existingTaskIds.includes(product.id)) // Avoid duplicates
+      .map((product) => ({
+        id: `task-${product.id}-${Date.now()}`, // Unique ID for task
+        productId: product.id, // Track product to prevent duplicates
+        title: t.restockTaskTitle,
+        description: `${t.outOfStockMessage} (Product: ${product.name || "Unknown"})`,
+        dueDate: new Date().toISOString().split("T")[0], // Today’s date
+        priority: "high",
+        status: "today",
+      }))
+
+    if (newTasks.length > 0) {
+      setTasks((prevTasks) => [...prevTasks, ...newTasks])
+      console.log("Created new out-of-stock tasks:", newTasks) // Debug log
+    }
+  }, [outOfStockProducts, t])
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -148,19 +129,44 @@ const TasksView = ({ language }) => {
     }
   }
 
-  const handleDeleteTask = async (id) => {
-    try {
-      await axios.delete(`${TASKS_API_URL}/${id}`, {
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          Accept: "application/json",
-        },
-      })
-      setTasks(tasks.filter((task) => task.id !== id))
-      setDeleteTaskId(null)
-    } catch (error) {
-      console.error("Error deleting task:", error)
-    }
+  const handleEditClick = (task) => {
+    setCurrentTask(task)
+    setEditForm({
+      title: task.title,
+      description: task.description,
+      dueDate: task.dueDate,
+      priority: task.priority,
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const handleDeleteClick = (task) => {
+    setCurrentTask(task)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleEditSubmit = () => {
+    setTasks(tasks.map((task) =>
+      task.id === currentTask.id
+        ? { ...task, ...editForm }
+        : task
+    ))
+    setIsEditModalOpen(false)
+    setCurrentTask(null)
+  }
+
+  const handleDeleteConfirm = () => {
+    setTasks(tasks.filter((task) => task.id !== currentTask.id))
+    setIsDeleteModalOpen(false)
+    setCurrentTask(null)
+  }
+
+  const handleMarkDone = (task) => {
+    setTasks(tasks.map((t) =>
+      t.id === task.id
+        ? { ...t, status: "completed" }
+        : t
+    ))
   }
 
   const filteredTasks = filter === "all" ? tasks : tasks.filter((task) => task.status === filter)
@@ -174,55 +180,44 @@ const TasksView = ({ language }) => {
         </div>
       </div>
 
+      {/* Out-of-Stock Notification */}
+      {outOfStockCount > 0 && (
+        <div className="bg-red-100 text-red-800 p-4 rounded-lg shadow-lg mb-6 flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          <p className="text-sm">{t.outOfStockMessage}</p>
+        </div>
+      )}
+
       {/* Filter Tabs */}
       <div className="bg-white rounded-lg p-4 shadow-lg">
         <div className="flex flex-wrap gap-2">
-          {["all", "today", "overdue", "upcoming", "completed"].map(
-            (filterOption) => (
-              <button
-                key={filterOption}
-                onClick={() => setFilter(filterOption)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  filter === filterOption
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {t[filterOption]}
-              </button>
-            )
-          )}
+          {["all", "today", "overdue"].map((filterOption) => (
+            <button
+              key={filterOption}
+              onClick={() => setFilter(filterOption)}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filter === filterOption ? "bg-green-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {t[filterOption]}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Tasks List */}
       <div className="space-y-4">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="text-gray-600 text-lg">{t.loading}</div>
-            <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto"></div>
-          </div>
-        ) : filteredTasks.length > 0 ? (
+        {filteredTasks.length > 0 ? (
           filteredTasks.map((task) => (
             <div key={task.id} className="bg-white rounded-lg p-6 shadow-lg">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {task.title}
-                    </h3>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
-                        task.status
-                      )}`}
-                    >
+                    <h3 className="text-lg font-semibold text-gray-800">{task.title}</h3>
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)}`}>
                       {t[task.status]}
                     </span>
-                    <span
-                      className={`text-sm font-medium ${getPriorityColor(
-                        task.priority
-                      )}`}
-                    >
+                    <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
                       {t[task.priority]} {t.priority}
                     </span>
                   </div>
@@ -231,14 +226,27 @@ const TasksView = ({ language }) => {
                     <Calendar className="h-4 w-4" />
                     <span>{task.dueDate}</span>
                   </div>
-                  <p className="text-sm text-gray-500">
-                    {t.crop}: {task.crop_name}
-                  </p>
                 </div>
+
                 <div className="flex items-center gap-2">
+                  {task.status !== "completed" && (
+                    <button
+                      onClick={() => handleMarkDone(task)}
+                      className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      {t.markDone}
+                    </button>
+                  )}
                   <button
-                    onClick={() => setDeleteTaskId(task.id)}
-                    className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    onClick={() => handleEditClick(task)}
+                    className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    {t.edit}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(task)}
+                    className="px-3 py-1 text-sm bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors"
                   >
                     {t.delete}
                   </button>
@@ -254,21 +262,84 @@ const TasksView = ({ language }) => {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteTaskId && (
+      {/* Edit Task Modal */}
+      {isEditModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">{t.delete}</h2>
-            <p className="text-gray-600 mb-6">{t.confirmDelete}</p>
-            <div className="flex justify-end gap-2">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t.editTask}</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Due Date</label>
+                <input
+                  type="date"
+                  value={editForm.dueDate}
+                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Priority</label>
+                <select
+                  value={editForm.priority}
+                  onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+                >
+                  <option value="high">{t.high}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="low">{t.low}</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
               <button
-                onClick={() => setDeleteTaskId(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >
                 {t.cancel}
               </button>
               <button
-                onClick={() => handleDeleteTask(deleteTaskId)}
+                onClick={handleEditSubmit}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                {t.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t.delete}</h2>
+            <p className="text-gray-600 mb-6">{t.confirmDelete}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 {t.delete}
