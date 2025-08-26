@@ -16,7 +16,7 @@ MODEL_PATH = "rice_model.h5"
 
 # Initialize Flask
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://localhost:5173", "*"]}})
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -53,13 +53,19 @@ RICE_TYPES = [
     {"type": "Neang Am", "details": "Fragrant rice used in Thai cuisine", "image_paths": ["images/neang_am1.png"]},
 ]
 
+# Create images directory if it doesn't exist
+base_dir = os.path.dirname(os.path.abspath(__file__))
+images_dir = os.path.join(base_dir, "images")
+if not os.path.exists(images_dir):
+    os.makedirs(images_dir)
+    logger.warning(f"Created images directory at {images_dir}. Please add reference images.")
+
 # Load reference images
 def load_reference_images():
     reference_images = {}
-    base_dir = os.path.dirname(os.path.abspath(__file__))
     for rice in RICE_TYPES:
         reference_images[rice["type"]] = []
-        for image_path in rice.get("image_paths", [rice.get("image_path")]):
+        for image_path in rice.get("image_paths", []):
             full_path = os.path.join(base_dir, image_path)
             if os.path.exists(full_path):
                 try:
@@ -73,6 +79,9 @@ def load_reference_images():
                     logger.error(f"Failed to load {full_path}: {str(e)}")
             else:
                 logger.warning(f"Image {full_path} not found")
+                # Create a placeholder image
+                placeholder = np.zeros((100, 100, 3), dtype=np.uint8)
+                reference_images[rice["type"]].append(placeholder)
     if not any(len(imgs) > 0 for imgs in reference_images.values()):
         logger.warning("No valid reference images found, using placeholders")
         return {r["type"]: [np.zeros((100, 100, 3), dtype=np.uint8)] for r in RICE_TYPES}
@@ -190,6 +199,15 @@ def classify_rice_orb(image):
 
     try:
         img_cv, img_gray = preprocess_image(image)
+        if img_cv is None or img_gray is None:
+            return {
+                "paddy_name": "Unknown",
+                "pure_paddy_percent": 0.0,
+                "mixed_paddy_percent": 100.0,
+                "good_paddy_score": 0.0,
+                "last_scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "details": "Image preprocessing failed"
+            }
         if not has_cv2:
             logger.warning("OpenCV not available, skipping ORB classification")
             return {
@@ -204,7 +222,7 @@ def classify_rice_orb(image):
         kp1, des1 = orb.detectAndCompute(img_gray, None)
 
         if des1 is None or len(kp1) < 5:
-            logger.warning(f"Insufficient keypoints detected: {len(kp1)}")
+            logger.warning(f"Insufficient keypoints detected: {len(kp1) if kp1 else 0}")
             return {
                 "paddy_name": "Unknown",
                 "pure_paddy_percent": 0.0,
@@ -360,6 +378,7 @@ def classify_rice_ensemble(image):
 def scan_rice():
     try:
         data = request.get_json()
+        logger.debug(f"Received request body: {data}")
         if not data or "image" not in data:
             logger.warning("No image provided in request")
             return jsonify({"error": "No image provided"}), 400
@@ -379,11 +398,11 @@ def scan_rice():
             image = Image.open(BytesIO(image_data)).convert("RGB")
             image = resize_image(image)
             if image is None:
-                return jsonify({"error": "Image resize failed or too small."}), 400
+                return jsonify({"error": "Image resize failed or too small. Minimum size is 150x150 pixels."}), 400
             logger.info(f"Image size after resize: {image.size}")
         except (base64.binascii.Error, UnidentifiedImageError, ValueError) as e:
             logger.error(f"Image decoding error: {str(e)} with traceback: {traceback.format_exc()}")
-            return jsonify({"error": "Invalid or corrupted image data."}), 400
+            return jsonify({"error": f"Invalid or corrupted image data: {str(e)}"}), 400
 
         result = classify_rice_ensemble(image)
         logger.info(f"Scan result: {result}")
@@ -403,4 +422,4 @@ def feedback():
 
 if __name__ == "__main__":
     logger.info("Server starting on http://0.0.0.0:5000")
-    app.run(host="0.0.0.0", port=5000, debug=True)  
+    app.run(host="0.0.0.0", port=5000, debug=True)
