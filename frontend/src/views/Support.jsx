@@ -184,7 +184,7 @@ const Support = ({ language }) => {
     },
   };
 
-  const data = content[language] || content.en; // Fallback to English
+  const data = content[language] || content.en; 
 
   return (
     <div className="p-6">
