@@ -994,11 +994,10 @@ const Product = ({ language = "en" }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          product.stock === t.inStock
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${product.stock === t.inStock
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {product.stock}
                       </span>
@@ -1106,9 +1105,8 @@ const Product = ({ language = "en" }) => {
                 </button>
                 <button
                   onClick={confirmDeleteProduct}
-                  className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${
-                    isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? t.deleting : t.delete}
@@ -1141,9 +1139,8 @@ const Product = ({ language = "en" }) => {
                     value={newProduct.name}
                     onChange={handleInputChange}
                     placeholder={t.enterProductName}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.name ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.name ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                   />
                   {formErrors.name && (
@@ -1162,9 +1159,8 @@ const Product = ({ language = "en" }) => {
                     placeholder={t.enterPrice}
                     step="0.01"
                     min="0"
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.price ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.price ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                   />
                   {formErrors.price && (
@@ -1181,9 +1177,8 @@ const Product = ({ language = "en" }) => {
                     onChange={handleInputChange}
                     placeholder={t.enterDescription}
                     rows={3}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.description ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.description ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                   />
                   {formErrors.description && (
@@ -1198,9 +1193,8 @@ const Product = ({ language = "en" }) => {
                     name="category_id"
                     value={newProduct.category_id}
                     onChange={handleCategoryChange}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.category_id ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.category_id ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                   >
                     <option value="">{t.selectCategory}</option>
@@ -1222,9 +1216,8 @@ const Product = ({ language = "en" }) => {
                     name="crop_id"
                     value={newProduct.crop_id}
                     onChange={handleCropChange}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.crop_id ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                   >
                     <option value="">{t.selectCrop}</option>
@@ -1249,9 +1242,8 @@ const Product = ({ language = "en" }) => {
                     onChange={handleInputChange}
                     placeholder={t.enterQuantity}
                     min="0"
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.quantity ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.quantity ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                   />
                   {formErrors.quantity && (
@@ -1267,9 +1259,8 @@ const Product = ({ language = "en" }) => {
                     name="creation_date"
                     value={newProduct.creation_date}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.creation_date ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.creation_date ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required
                   />
                   {formErrors.creation_date && (
@@ -1286,9 +1277,8 @@ const Product = ({ language = "en" }) => {
                     value={newProduct.expiration_date}
                     onChange={handleInputChange}
                     placeholder={t.enterExpirationDate}
-                    className={`w-full px-3 py-2 border ${
-                      formErrors.expiration_date ? "border-red-500" : "border-gray-300"
-                    } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                    className={`w-full px-3 py-2 border ${formErrors.expiration_date ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                     required={newProduct.quantity === "0"}
                   />
                   {formErrors.expiration_date && (
@@ -1346,79 +1336,76 @@ const Product = ({ language = "en" }) => {
         )}
         {/* Edit Product Modal */}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-8 border-b">
-                <h2 className="text-2xl font-bold text-gray-800">{t.editProduct}</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-2">
+            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[85vh] overflow-y-auto">
+
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-800">{t.editProduct}</h2>
                 <button
                   onClick={() => setShowEditModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 transition"
                 >
-                  <X className="h-8 w-8" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-              <form onSubmit={handleUpdateProduct} className="p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-4">
-                        {t.uploadImage}
-                      </label>
-                      <div className="space-y-4">
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/jpg,image/png"
-                          onChange={handleEditImageUpload}
-                          className="hidden"
-                          id="edit-image-upload"
+
+              {/* Form */}
+              <form onSubmit={handleUpdateProduct} className="p-4 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                  {/* Image Upload */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-gray-600">{t.uploadImage}</label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handleEditImageUpload}
+                      className="hidden"
+                      id="edit-image-upload"
+                    />
+                    <label
+                      htmlFor="edit-image-upload"
+                      className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer flex flex-col items-center justify-center gap-2 min-h-[160px] transition"
+                    >
+                      <Upload className="h-6 w-6 text-gray-400" />
+                      <span className="text-sm text-gray-600">{t.chooseImage || "Choose Image or Drag & Drop"}</span>
+                      <span className="text-xs text-gray-400">PNG, JPG, GIF up to 10MB</span>
+                    </label>
+                    {editProduct.image && (
+                      <div className="mt-2">
+                        <img
+                          src={editProduct.image}
+                          alt="Preview"
+                          className="w-full h-40 object-cover rounded-lg border shadow-sm"
                         />
-                        <label
-                          htmlFor="edit-image-upload"
-                          className="w-full px-6 py-4 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer flex flex-col items-center justify-center gap-3 min-h-[200px]"
-                        >
-                          <Upload className="h-8 w-8 text-gray-400" />
-                          <span className="text-lg text-gray-600">Choose Image or Drag & Drop</span>
-                          <span className="text-sm text-gray-400">PNG, JPG, GIF up to 10MB</span>
-                        </label>
-                        {editProduct.image && (
-                          <div className="mt-4">
-                            <img
-                              src={editProduct.image}
-                              alt="Preview"
-                              className="w-full h-64 object-cover rounded-lg border"
-                            />
-                          </div>
-                        )}
                       </div>
-                      {formErrors.image && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.image}</p>
-                      )}
-                    </div>
+                    )}
+                    {formErrors.image && (
+                      <p className="text-red-500 text-xs">{formErrors.image}</p>
+                    )}
                   </div>
-                  <div className="space-y-6">
+
+                  {/* Product Info */}
+                  <div className="space-y-4">
+                    {/* Name */}
                     <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.productName} *
-                      </label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{t.productName} *</label>
                       <input
                         type="text"
                         name="name"
                         value={editProduct.name}
                         onChange={handleEditInputChange}
                         placeholder={t.enterProductName}
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.name ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        className={`w-full px-2 py-1 rounded border ${formErrors.name ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition`}
                         required
                       />
-                      {formErrors.name && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
-                      )}
+                      {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
                     </div>
+
+                    {/* Price */}
                     <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.productPrice} *
-                      </label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{t.productPrice} *</label>
                       <input
                         type="number"
                         name="price"
@@ -1427,86 +1414,67 @@ const Product = ({ language = "en" }) => {
                         placeholder={t.enterPrice}
                         step="0.01"
                         min="0"
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.price ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        className={`w-full px-2 py-1 rounded border ${formErrors.price ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition`}
                         required
                       />
-                      {formErrors.price && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.price}</p>
-                      )}
+                      {formErrors.price && <p className="text-red-500 text-xs mt-1">{formErrors.price}</p>}
                     </div>
+
+                    {/* Description */}
                     <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.productDescription} *
-                      </label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{t.productDescription} *</label>
                       <textarea
                         name="description"
                         value={editProduct.description}
                         onChange={handleEditInputChange}
                         placeholder={t.enterDescription}
-                        rows={6}
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.description ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none`}
+                        rows={3}
+                        className={`w-full px-2 py-1 rounded border ${formErrors.description ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition resize-none`}
                         required
                       />
-                      {formErrors.description && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.description}</p>
-                      )}
+                      {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.productCategory} *
-                      </label>
-                      <select
-                        name="category_id"
-                        value={editProduct.category_id}
-                        onChange={handleEditCategoryChange}
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.category_id ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                        required
-                      >
-                        <option value="">{t.selectCategory}</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                      {formErrors.category_id && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.category_id}</p>
-                      )}
+
+                    {/* Category & Crop */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t.productCategory} *</label>
+                        <select
+                          name="category_id"
+                          value={editProduct.category_id}
+                          onChange={handleEditCategoryChange}
+                          className={`w-full px-2 py-1 rounded border ${formErrors.category_id ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition`}
+                          required
+                        >
+                          <option value="">{t.selectCategory}</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id}>{category.name}</option>
+                          ))}
+                        </select>
+                        {formErrors.category_id && <p className="text-red-500 text-xs mt-1">{formErrors.category_id}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t.productCrop} *</label>
+                        <select
+                          name="crop_id"
+                          value={editProduct.crop_id}
+                          onChange={handleEditCropChange}
+                          className={`w-full px-2 py-1 rounded border ${formErrors.crop_id ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition`}
+                          required
+                        >
+                          <option value="">{t.selectCrop}</option>
+                          {crops.map((crop) => (
+                            <option key={crop.id} value={crop.id}>{crop.name}</option>
+                          ))}
+                        </select>
+                        {formErrors.crop_id && <p className="text-red-500 text-xs mt-1">{formErrors.crop_id}</p>}
+                      </div>
                     </div>
+
+                    {/* Quantity */}
                     <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.productCrop} *
-                      </label>
-                      <select
-                        name="crop_id"
-                        value={editProduct.crop_id}
-                        onChange={handleEditCropChange}
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.crop_id ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                        required
-                      >
-                        <option value="">{t.selectCrop}</option>
-                        {crops.map((crop) => (
-                          <option key={crop.id} value={crop.id}>
-                            {crop.name}
-                          </option>
-                        ))}
-                      </select>
-                      {formErrors.crop_id && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.crop_id}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.enterQuantity} *
-                      </label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{t.enterQuantity} *</label>
                       <input
                         type="number"
                         name="quantity"
@@ -1514,65 +1482,57 @@ const Product = ({ language = "en" }) => {
                         onChange={handleEditInputChange}
                         placeholder={t.enterQuantity}
                         min="0"
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.quantity ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+                        className={`w-full px-2 py-1 rounded border ${formErrors.quantity ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition`}
                         required
                       />
-                      {formErrors.quantity && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.quantity}</p>
-                      )}
+                      {formErrors.quantity && <p className="text-red-500 text-xs mt-1">{formErrors.quantity}</p>}
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.creationDate} *
-                      </label>
-                      <input
-                        type="date"
-                        name="creation_date"
-                        value={editProduct.creation_date}
-                        onChange={handleEditInputChange}
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.creation_date ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                        required
-                      />
-                      {formErrors.creation_date && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.creation_date}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-3">
-                        {t.expirationDate} {editProduct.quantity === "0" ? "*" : ""}
-                      </label>
-                      <input
-                        type="date"
-                        name="expiration_date"
-                        value={editProduct.expiration_date}
-                        onChange={handleEditInputChange}
-                        placeholder={t.enterExpirationDate}
-                        className={`w-full px-4 py-3 text-lg border ${
-                          formErrors.expiration_date ? "border-red-500" : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                        required={editProduct.quantity === "0"}
-                      />
-                      {formErrors.expiration_date && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.expiration_date}</p>
-                      )}
+
+                    {/* Dates */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t.creationDate} *</label>
+                        <input
+                          type="date"
+                          name="creation_date"
+                          value={editProduct.creation_date}
+                          onChange={handleEditInputChange}
+                          className={`w-full px-2 py-1 rounded border ${formErrors.creation_date ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition`}
+                          required
+                        />
+                        {formErrors.creation_date && <p className="text-red-500 text-xs mt-1">{formErrors.creation_date}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          {t.expirationDate} {editProduct.quantity === "0" ? "*" : ""}
+                        </label>
+                        <input
+                          type="date"
+                          name="expiration_date"
+                          value={editProduct.expiration_date}
+                          onChange={handleEditInputChange}
+                          className={`w-full px-2 py-1 rounded border ${formErrors.expiration_date ? "border-red-500" : "border-gray-300"} focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm transition`}
+                          required={editProduct.quantity === "0"}
+                        />
+                        {formErrors.expiration_date && <p className="text-red-500 text-xs mt-1">{formErrors.expiration_date}</p>}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-4 pt-8 mt-8 border-t">
+
+                {/* Footer */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 mt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="flex-1 px-6 py-3 text-lg border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    className="flex-1 px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 text-lg bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="flex-1 px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition"
                   >
                     {t.update}
                   </button>
@@ -1581,6 +1541,9 @@ const Product = ({ language = "en" }) => {
             </div>
           </div>
         )}
+
+
+
         {/* View Product Modal */}
         {showViewModal && selectedProduct && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1605,64 +1568,69 @@ const Product = ({ language = "en" }) => {
                       />
                     </div>
                   </div>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
-                        {t.productName}
-                      </label>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">{t.productName}</label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-2xl font-bold text-gray-900">{selectedProduct.name}</p>
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
-                        {t.productCategory}
-                      </label>
-                      <p className="text-xl text-gray-900">{selectedProduct.category}</p>
-                    </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
+                    {selectedProduct.category && (
+                      <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                        <label className="text-lg font-medium text-gray-700">{t.productCategory}</label>
+                        <span className="text-gray-700">:</span>
+                        <p className="text-xl text-gray-900">{selectedProduct.category}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">
                         {t.productCrop}
                       </label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-xl text-gray-900">{selectedProduct.crop}</p>
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
+
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">
                         {t.price}
                       </label>
-                      <p className="text-3xl font-bold text-green-600">
+                      <span className="text-gray-700">:</span>
+                      <p className="text-2xl font-bold text-green-600">
                         {selectedProduct.price}
                         <span className="text-lg text-gray-500 font-normal">{t.perKg}</span>
                       </p>
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
-                        {t.productStock}
-                      </label>
+
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">{t.productStock}</label>
+                      <span className="text-gray-700">:</span>
                       <span
-                        className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
-                          selectedProduct.stock === t.inStock
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                        className={`inline-block px-4 py-1.5 text-sm font-medium rounded-full ${selectedProduct.stock === t.inStock
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                          }`}
                       >
                         {selectedProduct.stock}
                       </span>
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">
                         {t.creationDate}
                       </label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-xl text-gray-900">{selectedProduct.creation_date}</p>
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">
                         {t.expirationDate}
                       </label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
                     </div>
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">
+                    <div className="grid grid-cols-[200px_20px_1fr] items-center gap-x-6">
+                      <label className="text-lg font-medium text-gray-700">
                         {t.productDescription}
                       </label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-lg text-gray-900 leading-relaxed">
                         {selectedProduct.description}
                       </p>
@@ -1671,12 +1639,6 @@ const Product = ({ language = "en" }) => {
                 </div>
                 <div className="pt-8 mt-8 border-t">
                   <div className="flex gap-4">
-                    <button
-                      onClick={() => setShowViewModal(false)}
-                      className="w-full px-6 py-3 text-lg bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                    >
-                      {t.close}
-                    </button>
                   </div>
                 </div>
               </div>
