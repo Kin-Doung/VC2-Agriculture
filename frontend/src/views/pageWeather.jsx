@@ -101,7 +101,7 @@ export default function FarmerDashboard({ language }) {
             </Button>
 
             <div className="text-center space-y-3">
-              <h1 className="text-5xl font-bold text-green-800 flex items-center justify-center gap-3">
+              <h1 className="text-2xl font-bold text-green-800 flex items-center justify-center gap-3">
                 <Sprout className="h-10 w-10 text-green-600" />
                 Farm Weather Dashboard
               </h1>
