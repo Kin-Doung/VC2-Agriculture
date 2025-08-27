@@ -23,7 +23,7 @@ class TaskController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'user_id' => 'required|integer',
+            'farm_id' => 'required|integer',
             'crop_id' => 'nullable|integer',
             'task_type' => 'nullable|string',
             'description' => 'nullable|string',
@@ -57,7 +57,7 @@ class TaskController extends Controller
             $task = Task::findOrFail($id);
 
             $validatedData = $request->validate([
-                'user_id' => 'required|integer',
+                'farm_id' => 'required|integer',
                 'crop_id' => 'nullable|integer',
                 'task_type' => 'nullable|string',
                 'description' => 'nullable|string',

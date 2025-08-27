@@ -78,7 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
-Route::apiResource("task", TaskController::class);
+Route::apiResource("tasks", TaskController::class);
 Route::apiResource("crops", CropController::class);
 // Route::apiResource("croptypes", CropTypeController::class);
 Route::apiResource("farms", FarmController::class);
