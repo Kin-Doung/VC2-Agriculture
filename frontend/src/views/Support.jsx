@@ -1,40 +1,18 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 
 const Support = ({ language }) => {
-  // State for contact form
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [showMore, setShowMore] = useState({
+    gettingStarted: false,
+    helpAndTroubleshooting: false,
+    farmManagementTools: false,
+    communityAndFeedback: false,
+  });
 
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(''); // Clear error on input change
+  const toggleShowMore = (section) => {
+    setShowMore((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Handle form submission with mock API call
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-    try {
-      // Mock API call (replace with actual endpoint)
-      const response = await fetch('https://api.farmmanager.com/support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) throw new Error('Submission failed');
-      alert(language === 'kh' ? 'សារត្រូវបានផ្ញើដោយជោគជ័យ!' : 'Message sent successfully!');
-      setFormData({ name: '', email: '', message: '' });
-    } catch (err) {
-      setError(language === 'kh' ? 'មានបញ្ហាក្នុងការផ្ញើសារ។ សូមព្យាយាមម្តងទៀត!' : 'Error sending message. Please try again!');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Content object for bilingual support
   const content = {
     en: {
       title: "Farm Manager Help & Support Center",
@@ -49,65 +27,91 @@ const Support = ({ language }) => {
           "Assign and track tasks to streamline team workflows and ensure timely operations.",
         ],
       },
-      faq: {
-        title: "Frequently Asked Questions (FAQs)",
-        description: "Find quick answers to common questions about Farm Manager’s features and functionality. Explore our knowledge base for in-depth guides, troubleshooting tips, and video walkthroughs to enhance your experience.",
-        items: [
+      helpAndTroubleshooting: {
+        title: "Help and Troubleshooting",
+        description: "Find quick answers to common questions and solutions to technical issues with Farm Manager. Explore our FAQs and troubleshooting tips to enhance your experience and resolve problems efficiently.",
+        content: [
           {
-            question: "How do I add a new crop or livestock entry?",
-            answer: "Navigate to the 'Inventory' section, click 'Add New,' and input details such as crop type, planting date, or livestock health records. Use the 'Notes' feature to log observations like soil conditions or animal behavior for better tracking.",
+            subtitle: "Frequently Asked Questions (FAQs)",
+            description: "Get answers to common questions about Farm Manager’s features and functionality.",
+            items: [
+              {
+                question: "How do I add a new crop or livestock entry?",
+                answer: "Navigate to the 'Inventory' section, click 'Add New,' and input details such as crop type, planting date, or livestock health records. Use the 'Notes' feature to log observations like soil conditions or animal behavior for better tracking.",
+              },
+              {
+                question: "Can I use Farm Manager offline?",
+                answer: "Yes, features like data entry, task management, and viewing saved records work offline. Sync your data when you reconnect to the internet to update records across all devices seamlessly.",
+              },
+              {
+                question: "How do I generate a financial report?",
+                answer: "Go to the 'Reports' tab, select 'Financial Overview,' and choose a date range and metrics like revenue or expenses. Export your report as a PDF or CSV for accounting or sharing with stakeholders.",
+              },
+            ],
           },
           {
-            question: "Can I use Farm Manager offline?",
-            answer: "Yes, features like data entry, task management, and viewing saved records work offline. Sync your data when you reconnect to the internet to update records across all devices seamlessly.",
-          },
-          {
-            question: "How do I generate a financial report?",
-            answer: "Go to the 'Reports' tab, select 'Financial Overview,' and choose a date range and metrics like revenue or expenses. Export your report as a PDF or CSV for accounting or sharing with stakeholders.",
+            subtitle: "Troubleshooting Common Issues",
+            description: "Encountering technical issues? Our troubleshooting guide offers quick solutions to common problems.",
+            items: [
+              "App not syncing? Ensure a stable internet connection and update to the latest app version in your app store.",
+              "Data not displaying correctly? Clear the app cache from the settings menu and refresh the dashboard.",
+              "Login issues? Use the 'Forgot Password' link on the login page or contact support for account recovery.",
+            ],
           },
         ],
       },
-      selling: {
-        title: "Selling Your Farm Products",
-        description: "Effortlessly manage and sell your farm products with Farm Manager’s intuitive tools. Create professional listings, track sales, and connect with local markets or online platforms to grow your business.",
-        paragraph: "To add a product, go to the 'Products' section, click 'Add New Product,' and enter details like name, price, quantity, and high-resolution images. Use the 'Analytics' tab to analyze market trends and set competitive prices. To sell, navigate to 'Sales,' select the product, input buyer details, and record the transaction. Integrate with payment gateways or export sales data for accounting purposes.",
-      },
-      cropTracking: {
-        title: "Precision Crop Tracking",
-        description: "Monitor your crops with precision using Farm Manager’s advanced tools. Track growth stages, integrate weather data, and analyze performance to optimize yields and reduce risks.",
-        paragraph: "In the 'Crops' tab, add a new crop with details like planting date, crop type, and field area. Update growth stages, log pest or disease issues, and set harvest dates. Use the 'Weather' tab to integrate forecasts for irrigation or pest control planning. Visualize crop performance with charts in the 'Analytics' section to make informed decisions.",
-      },
-      fertilizerReminder: {
-        title: "Smart Fertilizer Reminders",
-        description: "Stay on top of fertilization schedules with customizable reminders tailored to each crop. Ensure optimal growth and soil health with timely alerts.",
-        paragraph: "In the 'Reminders' section, select 'Fertilizer,' choose a crop, and set the date, fertilizer type, and application method. Enable push notifications or email alerts for timely reminders. Review application history in the 'Logs' tab to track soil health and improve yields over time.",
-      },
-      troubleshooting: {
-        title: "Troubleshooting Common Issues",
-        description: "Encountering technical issues? Our troubleshooting guide offers quick solutions to common problems. Reach out to our support team for personalized assistance if needed.",
-        items: [
-          "App not syncing? Ensure a stable internet connection and update to the latest app version in your app store.",
-          "Data not displaying correctly? Clear the app cache from the settings menu and refresh the dashboard.",
-          "Login issues? Use the 'Forgot Password' link on the login page or contact support for account recovery.",
+      farmManagementTools: {
+        title: "Farm Management Tools",
+        description: "Leverage Farm Manager’s powerful tools to sell your farm products, track crops with precision, and stay on top of fertilization schedules. These features help you optimize yields, manage sales, and ensure sustainable growth.",
+        content: [
+          {
+            subtitle: "Selling Your Farm Products",
+            description: "Effortlessly manage and sell your farm products with Farm Manager’s intuitive tools. Create professional listings, track sales, and connect with local markets or online platforms to grow your business.",
+            paragraph: "To add a product, go to the 'Products' section, click 'Add New Product,' and enter details like name, price, quantity, and high-resolution images. Use the 'Analytics' tab to analyze market trends and set competitive prices. To sell, navigate to 'Sales,' select the product, input buyer details, and record the transaction. Integrate with payment gateways or export sales data for accounting purposes.",
+          },
+          {
+            subtitle: "Precision Crop Tracking",
+            description: "Monitor your crops with precision using Farm Manager’s advanced tools. Track growth stages, integrate weather data, and analyze performance to optimize yields and reduce risks.",
+            paragraph: "In the 'Crops' tab, add a new crop with details like planting date, crop type, and field area. Update growth stages, log pest or disease issues, and set harvest dates. Use the 'Weather' tab to integrate forecasts for irrigation or pest control planning. Visualize crop performance with charts in the 'Analytics' section to make informed decisions.",
+          },
+          {
+            subtitle: "Smart Fertilizer Reminders",
+            description: "Stay on top of fertilization schedules with customizable reminders tailored to each crop. Ensure optimal growth and soil health with timely alerts.",
+            paragraph: "In the 'Reminders' section, select 'Fertilizer,' choose a crop, and set the date, fertilizer type, and application method. Enable push notifications or email alerts for timely reminders. Review application history in the 'Logs' tab to track soil health and improve yields over time.",
+          },
         ],
       },
       contact: {
         title: "Contact Our Support Team",
-        description: "Our friendly support team is here to assist with any questions or technical issues. Use the form below, call us, or join our Telegram group for real-time help from our team and farming community.",
-        email: "Email: support@farmmanager.com",
-        phone: "Phone: +855 97 996 4862 (Monday to Friday, 9 AM to 5 PM)",
-        telegram: "Join Our Telegram Help Group",
-        telegramLink: "https://t.me/sok_leap_SL",
+        description: "Our friendly support team is here to assist with any questions or technical issues. Call us or join our Telegram group for real-time help from our team and farming community.",
+        details: [
+          "Email: support@farmmanager.com",
+          "Phone: +855 97 996 4862 (Monday to Friday, 9 AM to 5 PM)",
+          {
+            text: "Join Our Telegram Help Group",
+            link: "https://t.me/sok_leap_SL",
+          },
+        ],
       },
-      community: {
-        title: "Join Our Community Forum",
-        description: "Connect with farmers worldwide in the Farm Manager Community Forum. Share tips, discuss sustainable practices, and learn from experienced users to grow your farm smarter.",
-      },
-      feedback: {
-        title: "Share Your Feedback",
-        description: "Your feedback drives Farm Manager’s growth! Share suggestions, feature requests, or report issues to help us improve your experience and support your farming goals.",
+      communityAndFeedback: {
+        title: "Community and Feedback",
+        description: "Join our vibrant Farm Manager Community Forum to connect with farmers worldwide and share your feedback to help us improve the platform. Engage in discussions, exchange tips, and contribute to our growth.",
+        content: [
+          {
+            subtitle: "Join Our Community Forum",
+            description: "Connect with farmers worldwide in the Farm Manager Community Forum. Share tips, discuss sustainable practices, and learn from experienced users to grow your farm smarter.",
+            paragraph: "Our community forum is a vibrant space to exchange ideas, ask questions, and collaborate with other farmers. Join discussions on crop management, sustainable practices, and the latest agricultural trends to enhance your farming journey.",
+          },
+          {
+            subtitle: "Share Your Feedback",
+            description: "Your feedback drives Farm Manager’s growth! Share suggestions, feature requests, or report issues to help us improve your experience and support your farming goals.",
+            paragraph: "We value your input to make Farm Manager better. Whether it’s a new feature idea, a bug report, or a suggestion for improving usability, your feedback helps us prioritize updates and enhance the platform for all users.",
+          },
+        ],
       },
       footer: "Thank you for choosing Farm Manager to empower your agricultural journey. We’re committed to helping you grow smarter, stronger, and more sustainably!",
+      showMore: "Show More",
+      showLess: "Show Less",
     },
     kh: {
       title: "មជ្ឈមណ្ឌលជំនួយ និងការគាំទ្ររបស់ Farm Manager",
@@ -122,169 +126,351 @@ const Support = ({ language }) => {
           "កំណត់ និងតាមដានកិច្ចការដើម្បីសម្រួលលំហូរការងារក្រុម។",
         ],
       },
-      faq: {
-        title: "សំណួរដែលសួរញឹកញាប់",
-        description: "ស្វែងរកចម្លើយរហ័សសម្រាប់សំណួរទូទៅអំពីមុខងាររបស់ Farm Manager។ ស្វែងយល់ពីមូលដ្ឋានចំណេះដឹងរបស់យើងសម្រាប់ការណែនាំលម្អិត និងវីដេអូណែនាំ។",
-        items: [
+      helpAndTroubleshooting: {
+        title: "ជំនួយ និងការដោះស្រាយបញ្ហា",
+        description: "ស្វែងរកចម្លើយរហ័សសម្រាប់សំណួរទូទៅ និងដំណោះស្រាយសម្រាប់បញ្ហាបច្ចេកទេសជាមួយ Farm Manager។ ស្វែងយល់ពីសំណួរដែលសួរញឹកញាប់ និងគន្លឹះដោះស្រាយបញ្ហាដើម្បីបង្កើនបទពិសោធន៍ និងដោះស្រាយបញ្ហាបានយ៉ាងឆាប់រហ័ស។",
+        content: [
           {
-            question: "តើខ្ញុំបន្ថែមដំណាំ ឬសត្វចិញ្ចឹមថ្មីដោយរបៀបណា?",
-            answer: "ចូលទៅផ្នែក 'ស្តុក' ចុច 'បន្ថែមថ្មី' ហើយបញ្ចូលព័ត៌មានដូចជាប្រភេទដំណាំ កាលបរិច្ឆេទដាំ ឬកំណត់ត្រាសុខភាពសត្វ។ ប្រើមុខងារ 'កំណត់ចំណាំ' ដើម្បីកត់ត្រាការសង្កេត។",
+            subtitle: "សំណួរដែលសួរញឹកញាប់",
+            description: "ទទួលបានចម្លើយចំពោះសំណួរទូទៅអំពីមុខងារនិងប្រតិបត្តិការនៃ Farm Manager។",
+            items: [
+              {
+                question: "តើខ្ញុំបន្ថែមដំណាំ ឬសត្វចិញ្ចឹមថ្មីដោយរបៀបណា?",
+                answer: "ចូលទៅផ្នែក 'ស្តុក' ចុច 'បន្ថែមថ្មី' ហើយបញ្ចូលព័ត៌មានដូចជាប្រភេទដំណាំ កាលបរិច្ឆេទដាំ ឬកំណត់ត្រាសុខភាពសត្វ។ ប្រើមុខងារ 'កំណត់ចំណាំ' ដើម្បីកត់ត្រាការសង្កេត។",
+              },
+              {
+                question: "តើ Farm Manager អាចប្រើដោយគ្មានអ៊ីនធឺណិតបានទេ?",
+                answer: "បាទ មុខងារដូចជាការបញ្ចូលទិន្នន័យ និងការគ្រប់គ្រងកិច្ចការដំណើរការដោយគ្មានអ៊ីនធឺណិត។ ធ្វើសមកាលកម្មទិន្នន័យនៅពេលភ្ជាប់អ៊ីនធឺណិត។",
+              },
+              {
+                question: "តើខ្ញុំបង្កើតរបាយការណ៍ហិរញ្ញវត្ថុដោយរបៀបណា?",
+                answer: "ចូលទៅផ្ទាំង 'របាយការណ៍' ជ្រើស 'ទិដ្ឋភាពហិរញ្ញវត្ថុ' កំណត់ជួរកាលបរិច្ឆេទ និងនាំចេញជា PDF ឬ CSV។",
+              },
+            ],
           },
           {
-            question: "តើ Farm Manager អាចប្រើដោយគ្មានអ៊ីនធឺណិតបានទេ?",
-            answer: "បាទ មុខងារដូចជាការបញ្ចូលទិន្នន័យ និងការគ្រប់គ្រងកិច្ចការដំណើរការដោយគ្មានអ៊ីនធឺណិត។ ធ្វើសមកាលកម្មទិន្នន័យនៅពេលភ្ជាប់អ៊ីនធឺណិត។",
-          },
-          {
-            question: "តើខ្ញុំបង្កើតរបាយការណ៍ហិរញ្ញវត្ថុដោយរបៀបណា?",
-            answer: "ចូលទៅផ្ទាំង 'របាយការណ៍' ជ្រើស 'ទិដ្ឋភាពហិរញ្ញវត្ថុ' កំណត់ជួរកាលបរិច្ឆេទ និងនាំចេញជា PDF ឬ CSV។",
+            subtitle: "ការដោះស្រាយបញ្ហាទូទៅ",
+            description: "ជួបបញ្ហាបច្ចេកទេស? ការណែនាំរបស់យើងផ្តល់នូវដំណោះស្រាយរហ័សសម្រាប់បញ្ហាទូទៅ។",
+            items: [
+              "កម្មវិធីមិនធ្វើសមកាលកម្ម? ពិនិត្យអ៊ីនធឺណិត និងធ្វើបច្ចុប្បន្នភាពកម្មវិធី។",
+              "ទិន្នន័យបង្ហាញមិនត្រឹមត្រូវ? សម្អាតឃ្លាំងសម្ងាត់នៅក្នុងការកំណត់។",
+              "បញ្ហាចូលប្រើ? ប្រើ 'ភ្លេចលេខសម្ងាត់' ឬទាក់ទងជំនួយ។",
+            ],
           },
         ],
       },
-      selling: {
-        title: "ការលក់ផលិតផលកសិដ្ឋាន",
-        description: "គ្រប់គ្រង និងលក់ផលិតផលកសិដ្ឋានបានយ៉ាងងាយស្រួលជាមួយឧបករណ៍វិចារណញាណ។ បង្កើតបញ្ជីផលិតផល និងភ្ជាប់ជាមួយទីផ្សារក្នុងស្រុក ឬវេទិកាអនឡាញ។",
-        paragraph: "នៅផ្នែក 'ផលិតផល' ចុច 'បន្ថែមផលិតផលថ្មី' ហើយបញ្ចូលព័ត៌មានដូចជាឈ្មោះ តម្លៃ បរិមាណ និងរូបភាពគុណភាពខ្ពស់។ ប្រើផ្ទាំង 'វិភាគ' ដើម្បីកំណត់តម្លៃប្រកួតប្រជែង។ ដើម្បីលក់ ចូលទៅ 'ការលក់' ជ្រើសរើសផលិតផល បញ្ចូលព័ត៌មានអ្នកទិញ និងកត់ត្រាប្រតិបត្តិការ។",
-      },
-      cropTracking: {
-        title: "ការតាមដានដំណាំប្រកបដោយភាពជាក់លាក់",
-        description: "តាមដានដំណាំរបស់អ្នកជាមួយឧបករណ៍កម្រិតខ្ពស់។ កត់ត្រាដំណាក់កាលលូតលាស់ និងបញ្ចូលទិន្នន័យអាកាសធាតុដើម្បីបង្កើនទិន្នផល។",
-        paragraph: "នៅផ្ទាំង 'ដំណាំ' បន្ថែមដំណាំថ្មីជាមួយកាលបរិច្ឆេទដាំ ប្រភេទ និងផ្ទៃដី។ ធ្វើបច្ចុប្បន្នភាពដំណាក់កាលលូតលាស់ កត់ត្រាសត្វល្អិត ឬជំងឺ និងកំណត់កាលបរិច្ឆេទប្រមូលផល។ ប្រើផ្ទាំង 'អាកាសធាតុ' សម្រាប់ផែនការស្រោចស្រព និងមើលការអនុវត្តដំណាំនៅ 'វិភាគ'។",
-      },
-      fertilizerReminder: {
-        title: "ការរំលឹកជីឆ្លាតវៃ",
-        description: "រក្សាកាលវិភាគជីជាមួយការជូនដំណឹងដែលអាចកំណត់បានសម្រាប់ដំណាំនីមួយៗ ដើម្បីធានាការលូតលាស់ល្អបំផុត។",
-        paragraph: "នៅផ្នែក 'ការរំលឹក' ជ្រើស 'ជី' កំណត់ដំណាំ កាលបរិច្ឆេទ ប្រភេទជី និងវិធីប្រើប្រាស់។ បើកការជូនដំណឹងតាមទូរស័ព្ទ ឬអ៊ីមែល។ ពិនិត្យប្រវត្តិការប្រើប្រាស់នៅ 'កំណត់ហេតុ'។",
-      },
-      troubleshooting: {
-        title: "ការដោះស្រាយបញ្ហា",
-        description: "ជួបបញ្ហាបច្ចេកទេស? ការណែនាំរបស់យើងផ្តល់នូវដំណោះស្រាយរហ័ស។ ទាក់ទងក្រុមជំនួយសម្រាប់ជំនួយផ្ទាល់ខ្លួន។",
-        items: [
-          "កម្មវិធីមិនធ្វើសមកាលកម្ម? ពិនិត្យអ៊ីនធឺណិត និងធ្វើបច្ចុប្បន្នភាពកម្មវិធី។",
-          "ទិន្នន័យបង្ហាញមិនត្រឹមត្រូវ? សម្អាតឃ្លាំងសម្ងាត់នៅក្នុងការកំណត់។",
-          "បញ្ហាចូលប្រើ? ប្រើ 'ភ្លេចលេខសម្ងាត់' ឬទាក់ទងជំនួយ។",
+      farmManagementTools: {
+        title: "ឧបករណ៍គ្រប់គ្រងកសិដ្ឋាន",
+        description: "ប្រើប្រាស់ឧបករណ៍ដ៏មានអានុភាពរបស់ Farm Manager ដើម្បីលក់ផលិតផលកសិដ្ឋាន តាមដានដំណាំប្រកបដោយភាពជាក់លាក់ និងរក្សាកាលវិភាគជី។ មុខងារទាំងនេះជួយអ្នកបង្កើនទិន្នផល គ្រប់គ្រងការលក់ និងធានាការរីកចម្រើនប្រកបដោយនិរន្តរភាព�।",
+        content: [
+          {
+            subtitle: "ការលក់ផលិតផលកសិដ្ឋាន",
+            description: "គ្រប់គ្រង និងលក់ផលិតផលកសិដ្ឋានបានយ៉ាងងាយស្រួលជាមួយឧបករណ៍វិចារណញាណ។ បង្កើតបញ្ជីផលិតផល និងភ្ជាប់ជាមួយទីផ្សារក្នុងស្រុក ឬវេទិកាអនឡាញ។",
+            paragraph: "នៅផ្នែក 'ផលិតផល' ចុច 'បន្ថែមផលិតផលថ្មី' ហើយបញ្ចូលព័ត៌មានដូចជាឈ្មោះ តម្លៃ បរិមាណ និងរូបភាពគុណភាពខ្ពស់។ ប្រើផ្ទាំង 'វិភាគ' ដើម្បីកំណត់តម្លៃប្រកួតប្រជែង។ ដើម្បីលក់ ចូលទៅ 'ការលក់' ជ្រើសរើសផលិតផល បញ្ចូលព័ត៌មានអ្នកទិញ និងកត់ត្រាប្រតិបត្តិការ។",
+          },
+          {
+            subtitle: "ការតាមដានដំណាំប្រកបដោយភាពជាក់លាក់",
+            description: "តាមដានដំណាំរបស់អ្នកជាមួយឧបករណ៍កម្រិតខ្ពស់។ កត់ត្រាដំណាក់កាលលូតលាស់ និងបញ្ចូលទិន្នន័យអាកាសធាតុដើម្បីបង្កើនទិន្នផល។",
+            paragraph: "នៅផ្ទាំង 'ដំណាំ' បន្ថែមដំណាំថ្មីជាមួយកាលបរិច្ឆេទដាំ ប្រភេទ និងផ្ទៃដី។ ធ្វើបច្ចុប្បន្នភាពដំណាក់កាលលូតលាស់ កត់ត្រាសត្វល្អិត ឬជំងឺ និងកំណត់កាលបរិច្ឆេទប្រមូលផល។ ប្រើផ្ទាំង 'អាកាសធាតុ' សម្រាប់ផែនការស្រោចស្រព និងមើលការអនុវត្តដំណាំនៅ 'វិភាគ'។",
+          },
+          {
+            subtitle: "ការរំលឹកជីឆ្លាតវៃ",
+            description: "រក្សាកាលវិភាគជីជាមួយការជូនដំណឹងដែលអាចកំណត់បានសម្រាប់ដំណាំនីមួយៗ ដើម្បីធានាការលូតលាស់ល្អបំផុត។",
+            paragraph: "នៅផ្នែក 'ការរំលឹក' ជ្រើស 'ជី' កំណត់ដំណាំ កាលបរិច្ឆេទ ប្រភេទជី និងវិធីប្រើប្រាស់។ បើកការជូនដំណឹងតាមទូរស័ព្ទ ឬអ៊ីមែល។ ពិនិត្យប្រវត្តិការប្រើប្រាស់នៅ 'កំណត់ហេតុ'។",
+          },
         ],
       },
       contact: {
         title: "ទាក់ទងក្រុមជំនួយរបស់យើង",
-        description: "ក្រុមជំនួយរបស់យើងត្រៀមជួយអ្នកជាមួយសំណួរ ឬបញ្ហាបច្ចេកទេស។ ប្រើទម្រង់ខាងក្រោម ទូរស័ព្ទ ឬចូលរួមក្រុមតេឡេក្រាមសម្រាប់ជំនួយរហ័ស។",
-        email: "អ៊ីមែល: support@farmmanager.com",
-        phone: "ទូរស័ព្ទ: +855 97 996 4862 (ច័ន្ទ–សុក្រ, ៩ ព្រឹក–៥ ល្ងាច)",
-        telegram: "ចូលរួមក្រុមជំនួយតេឡេក្រាម",
-        telegramLink: "https://t.me/sok_leap_SL",
+        description: "ក្រុមជំនួយរបស់យើងត្រៀមជួយអ្នកជាមួយសំណួរ ឬបញ្ហាបច្ចេកទេស។ ទូរស័ព្ទ ឬចូលរួមក្រុមតេឡេក្រាមសម្រាប់ជំនួយរហ័ស។",
+        details: [
+          "អ៊ីមែល: support@farmmanager.com",
+          "ទូរស័ព្ទ: +855 97 996 4862 (ច័ន្ទ–សុក្រ, ៩ ព្រឹក–៥ ល្ងាច)",
+          {
+            text: "ចូលរួមក្រុមជំនួយតេឡេក្រាម",
+            link: "https://t.me/sok_leap_SL",
+          },
+        ],
       },
-      community: {
-        title: "ចូលរួមវេទិកាសហគមន៍",
-        description: "ភ្ជាប់ជាមួយកសិករទូទាំងពិភពលោកនៅក្នុងវេទិកាសហគមន៍ Farm Manager។ ចែករំលែកគន្លឹះ ពិភាក្សាការអនុវត្តប្រកបដោយនិរន្តរភាព និងរៀនពីអ្នកប្រើប្រាស់ដែលមានបទពិសោធន៍។",
+      communityAndFeedback: {
+        title: "សហគមន៍ និងមតិយោបល់",
+        description: "ចូលរួមជាមួយវេទិកាសហគមន៍ Farm Manager ដ៏រស់រវើកដើម្បីភ្ជាប់ទំនាក់ទំនងជាមួយកសិករទូទាំងពិភពលោក និងចែករំលែកមតិយោបល់របស់អ្នកដើម្បីជួយយើងកែលម្អវេទិកា។ ចូលរួមក្នុងការពិភាក្សា ផ្លាស់ប្តូរគន្លឹះ និងរួមចំណែកដល់ការរីកចម្រើនរបស់យើង។",
+        content: [
+          {
+            subtitle: "ចូលរួមវេទិកាសហគមន៍",
+            description: "ភ្ជាប់ជាមួយកសិករទូទាំងពិភពលោកនៅក្នុងវេទិកាសហគមន៍ Farm Manager�। ចែករំលែកគន្លឹះ ពិភាក្សាការអនុវត្តប្រកបដោយនិរន្តរភាព និងរៀនពីអ្នកប្រើប្រាស់ដែលមានបទពិសោធន៍។",
+            paragraph: "វេទិកាសហគមន៍របស់យើងជាកន្លែងសម្រាប់ផ្លាស់ប្តូរគំនិត សួរសំណួរ និងសហការជាមួយកសិករដទៃទៀត។ ចូលរួមការពិភាក្សាលើការគ្រប់គ្រងដំណាំ ការអនុវត្តប្រកបដោយនិរន្តរភាព និងនិន្នាការកសិកម្មចុងក្រោយ។",
+          },
+          {
+            subtitle: "ផ្តល់មតិយោបល់",
+            description: "មតិរបស់អ្នកជួយឱ្យ Farm Manager រីកចម្រើន! ចែករំលែកយោបល់ សំណើមុខងារ ឬរាយការណ៍បញ្ហាដើម្បីកែលម្អបទពិសោធន៍របស់អ្នក។",
+            paragraph: "យើងឱ្យតម្លៃលើមតិរបស់អ្នកដើម្បីធ្វើឱ្យ Farm Manager កាន់តែប្រសើរ។ មិនថាជាគំនិតថ្មី ការរាយការណ៍កំហុស ឬការផ្តល់យោបល់សម្រាប់ការកែលម្អទេ មតិរបស់អ្នកជួយយើងផ្តល់អាទិភាពដល់ការអាប់ដេត។",
+          },
+        ],
       },
-      feedback: {
-        title: "ផ្តល់មតិយោបល់",
-        description: "មតិរបស់អ្នកជួយឱ្យ Farm Manager រីកចម្រើន! ចែករំលែកយោបល់ សំណើមុខងារ ឬរាយការណ៍បញ្ហាដើម្បីកែលម្អបទពិសោធន៍របស់អ្នក។",
-      },
-      footer: "សូមអរគុណសម្រាប់ការជ្រើសរើស Farm Manager។ យើងប្តេជ្ញាជួយអ្នករីកចម្រើនប្រកបដោយភាពឆ្លាតវៃ និងនិរន្តរភាព!",
+      footer: "សូមអរគុណសម្រាប់ការជ្រើសរើស Farm Manager ដើម្បីផ្តល់អំណាចដល់ដំណើរកសិកម្មរបស់អ្នក។ យើងប្តេជ្ញាជួយអ្នករីកចម្រើនប្រកបដោយភាពឆ្លាតវៃ ខ្លាំងក្លា និងនិរន្តរភាព!",
+      showMore: "បង្ហាញបន្ថែម",
+      showLess: "បង្ហាញតិច",
     },
   };
 
-  const data = content[language] || content.en; // Fallback to English
+  if (!['en', 'kh'].includes(language)) {
+    console.warn(`Invalid language prop: ${language}. Falling back to English.`);
+  }
+
+  const data = content[language] || content.en;
+
+  if (!data || !data.title) {
+    console.error('Content data is invalid or missing title:', data);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="p-6 bg-red-50 text-red-600 rounded-lg shadow-md text-sm">
+          Error: Unable to load support content. Please try again later.
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-green-800 mb-6">{data.title}</h1>
-      <p className="text-gray-600 mb-8 leading-relaxed">{data.welcome}</p>
-
-      {/* Getting Started */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.gettingStarted.title}</h2>
-        <p className="text-gray-600 mb-4">{data.gettingStarted.description}</p>
-        <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-          {data.gettingStarted.list.map((item, index) => (
-            <li key={index}>{item}</li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Selling Products */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.selling.title}</h2>
-        <p className="text-gray-600 mb-4">{data.selling.description}</p>
-        <p className="text-gray-600">{data.selling.paragraph}</p>
-      </section>
-
-      {/* Crop Tracking */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.cropTracking.title}</h2>
-        <p className="text-gray-600 mb-4">{data.cropTracking.description}</p>
-        <p className="text-gray-600">{data.cropTracking.paragraph}</p>
-      </section>
-
-      {/* Fertilizer Reminder */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.fertilizerReminder.title}</h2>
-        <p className="text-gray-600 mb-4">{data.fertilizerReminder.description}</p>
-        <p className="text-gray-600">{data.fertilizerReminder.paragraph}</p>
-      </section>
-
-      {/* FAQs */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.faq.title}</h2>
-        <p className="text-gray-600 mb-4">{data.faq.description}</p>
-        {data.faq.items.map((faq, index) => (
-          <div key={index} className="mb-4">
-            <p className="font-semibold text-gray-700">{faq.question}</p>
-            <p className="text-gray-600">{faq.answer}</p>
-          </div>
-        ))}
-      </section>
-
-      {/* Troubleshooting */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.troubleshooting.title}</h2>
-        <p className="text-gray-600 mb-4">{data.troubleshooting.description}</p>
-        <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-          {data.troubleshooting.items.map((item, index) => (
-            <li key={index}>{item}</li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Contact Support */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.contact.title}</h2>
-        <p className="text-gray-600 mb-4">{data.contact.description}</p>
-        <div className="text-gray-600 mb-6 space-y-2">
-          <p>{data.contact.email}</p>
-          <p>{data.contact.phone}</p>
-          <p>
-            <a
-              href={data.contact.telegramLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-green-600 hover:underline"
-              aria-label={data.contact.telegram}
-            >
-              {data.contact.telegram}
-            </a>
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <header className="text-center mb-12">
+          <h1 className="text-2xl font-bold text-green-800 sm:text-3xl bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            {data.title}
+          </h1>
+          <p className="mt-4 text-sm text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            {data.welcome}
           </p>
-        </div>
-      </section>
+        </header>
 
-      {/* Community Forum */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.community.title}</h2>
-        <p className="text-gray-600 mb-4">{data.community.description}</p>
-      </section>
+        {/* Main Content */}
+        <main className="space-y-8">
+          {/* Getting Started */}
+          <section className="bg-white rounded-xl p-6 sm:p-8 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <h2 className="text-xl font-semibold text-green-700 mb-4">
+              {data.gettingStarted.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {data.gettingStarted.description}
+            </p>
+            {showMore.gettingStarted ? (
+              <ul className="list-disc list-inside text-sm text-gray-600 mb-6 space-y-2">
+                {data.gettingStarted.list.map((item, index) => (
+                  <li key={index} className="leading-relaxed">{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <ul className="list-disc list-inside text-sm text-gray-600 mb-6 space-y-2">
+                <li className="leading-relaxed">{data.gettingStarted.list[0]}</li>
+              </ul>
+            )}
+            <button
+              onClick={() => toggleShowMore('gettingStarted')}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors text-sm"
+              aria-expanded={showMore.gettingStarted}
+            >
+              {showMore.gettingStarted ? data.showLess : data.showMore}
+              <svg
+                className={`ml-2 h-4 w-4 transform ${showMore.gettingStarted ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </section>
 
-      {/* Feedback */}
-      <section className="bg-white rounded-lg p-6 mb-6 shadow-lg">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">{data.feedback.title}</h2>
-        <p className="text-gray-600 mb-4">{data.feedback.description}</p>
-      </section>
+          {/* Farm Management Tools */}
+          <section className="bg-white rounded-xl p-6 sm:p-8 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <h2 className="text-xl font-semibold text-green-700 mb-4">
+              {data.farmManagementTools.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {data.farmManagementTools.description}
+            </p>
+            {showMore.farmManagementTools && (
+              <div className="space-y-6">
+                {data.farmManagementTools.content.map((item, index) => (
+                  <div key={index}>
+                    <h3 className="text-lg font-semibold text-green-600 mb-2">
+                      {item.subtitle}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {item.description}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {item.paragraph}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => toggleShowMore('farmManagementTools')}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors mt-4 text-sm"
+              aria-expanded={showMore.farmManagementTools}
+            >
+              {showMore.farmManagementTools ? data.showLess : data.showMore}
+              <svg
+                className={`ml-2 h-4 w-4 transform ${showMore.farmManagementTools ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </section>
 
-      {/* Footer */}
-      <footer className="text-center text-gray-500 mt-8">
-        <p>{data.footer}</p>
-      </footer>
+          {/* Help and Troubleshooting */}
+          <section className="bg-white rounded-xl p-6 sm:p-8 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <h2 className="text-xl font-semibold text-green-700 mb-4">
+              {data.helpAndTroubleshooting.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {data.helpAndTroubleshooting.description}
+            </p>
+            {showMore.helpAndTroubleshooting && (
+              <div className="space-y-6">
+                {data.helpAndTroubleshooting.content.map((section, index) => (
+                  <div key={index}>
+                    <h3 className="text-lg font-semibold text-green-600 mb-2">
+                      {section.subtitle}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {section.description}
+                    </p>
+                    <div className="space-y-4">
+                      {section.items.map((item, idx) => (
+                        <div key={idx}>
+                          {section.subtitle === "Frequently Asked Questions (FAQs)" ||
+                          section.subtitle === "សំណួរដែលសួរញឹកញាប់" ? (
+                            <>
+                              <p className="font-semibold text-gray-700 text-sm">
+                                {item.question}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {item.answer}
+                              </p>
+                            </>
+                          ) : (
+                            <li className="list-disc list-inside text-sm text-gray-600">
+                              {item}
+                            </li>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => toggleShowMore('helpAndTroubleshooting')}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors mt-4 text-sm"
+              aria-expanded={showMore.helpAndTroubleshooting}
+            >
+              {showMore.helpAndTroubleshooting ? data.showLess : data.showMore}
+              <svg
+                className={`ml-2 h-4 w-4 transform ${showMore.helpAndTroubleshooting ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </section>
+
+          {/* Contact Support */}
+          <section className="bg-white rounded-xl p-6 sm:p-8 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <h2 className="text-xl font-semibold text-green-700 mb-4">
+              {data.contact.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {data.contact.description}
+            </p>
+            <div className="space-y-2">
+              {data.contact.details.map((item, index) => (
+                <p key={index} className="text-sm text-gray-600">
+                  {typeof item === 'string' ? (
+                    item
+                  ) : (
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 hover:underline focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      aria-label={item.text}
+                    >
+                      {item.text}
+                    </a>
+                  )}
+                </p>
+              ))}
+            </div>
+          </section>
+
+          {/* Community and Feedback */}
+          <section className="bg-white rounded-xl p-6 sm:p-8 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <h2 className="text-xl font-semibold text-green-700 mb-4">
+              {data.communityAndFeedback.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {data.communityAndFeedback.description}
+            </p>
+            {showMore.communityAndFeedback && (
+              <div className="space-y-6">
+                {data.communityAndFeedback.content.map((item, index) => (
+                  <div key={index}>
+                    <h3 className="text-lg font-semibold text-green-600 mb-2">
+                      {item.subtitle}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {item.description}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {item.paragraph}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => toggleShowMore('communityAndFeedback')}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors mt-4 text-sm"
+              aria-expanded={showMore.communityAndFeedback}
+            >
+              {showMore.communityAndFeedback ? data.showLess : data.showMore}
+              <svg
+                className={`ml-2 h-4 w-4 transform ${showMore.communityAndFeedback ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </section>
+        </main>
+
+        {/* Footer */}
+        <footer className="text-center mt-12 text-gray-500 text-sm">
+          <p>{data.footer}</p>
+        </footer>
+      </div>
     </div>
   );
+};
+
+Support.propTypes = {
+  language: PropTypes.oneOf(['en', 'kh']),
+};
+
+Support.defaultProps = {
+  language: 'en',
 };
 
 export default Support;
