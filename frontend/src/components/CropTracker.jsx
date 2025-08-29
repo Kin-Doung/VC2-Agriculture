@@ -33,7 +33,7 @@ const CropTracker = ({ language = "en" }) => {
       growing: "ដំណាក់កាលលូតលាស់",
       ready: "ត្រៀមច្រូត",
       planted: "បានដាំ",
-      days: "ថ្ងៃមុន",
+      days: "ថ্঄ៃមុន",
       viewAll: "មើលដំណាំទាំងអស់",
       loading: "កំពុងផ្ទុកដំណាំ...",
       error: "បរាជ័យក្នុងការផ្ទុកដំណាំ។ សូមព្យាយាមម្តងទៀត។",
@@ -214,16 +214,9 @@ const CropTracker = ({ language = "en" }) => {
         </Link>
       </div>
 
-      {loading ? (
-        <div className="text-center py-4">
-          <div className="text-gray-600">{t.loading}</div>
-          <div className="mt-2 animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-600 mx-auto"></div>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="text-center py-4 text-red-500">{error}</div>
-      ) : crops.length === 0 ? (
-        <div className="text-center py-4 text-gray-600">No crops available.</div>
-      ) : (
+      ) : crops.length > 0 ? (
         <div className="space-y-6">
           <div className="flex flex-row-reverse gap-6">
             {/* Pie Chart */}
@@ -281,7 +274,7 @@ const CropTracker = ({ language = "en" }) => {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
