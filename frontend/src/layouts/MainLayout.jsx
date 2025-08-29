@@ -11,6 +11,7 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [outOfStockCount, setOutOfStockCount] = useState(0)
   const [outOfStockProducts, setOutOfStockProducts] = useState([])
+  const [viewedProductIds, setViewedProductIds] = useState([])
   const location = useLocation()
   const translations = {
     en: {
@@ -35,6 +36,14 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
   const API_URL = "http://127.0.0.1:8000/api/products?only_mine=true"
   const AUTH_TOKEN = localStorage.getItem("token")
 
+  // Load viewed product IDs from localStorage on mount
+  useEffect(() => {
+    const storedViewedIds = localStorage.getItem("viewedOutOfStockProductIds")
+    if (storedViewedIds) {
+      setViewedProductIds(JSON.parse(storedViewedIds))
+    }
+  }, [])
+
   // Fetch out-of-stock products
   useEffect(() => {
     const fetchOutOfStockProducts = async () => {
@@ -56,7 +65,7 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
           throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`)
         }
         const productData = await response.json()
-        console.log("API Response:", productData) // Debug log
+        console.log("API Response:", productData)
         if (!Array.isArray(productData)) {
           throw new Error("Products API response is not an array")
         }
@@ -67,9 +76,14 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
           const isExpired = expirationDate && expirationDate < today
           return isExpired || item.quantity === 0
         })
-        console.log("Out-of-stock products:", outOfStockProducts) // Debug log
+        console.log("Out-of-stock products:", outOfStockProducts)
+
+        // Calculate new out-of-stock products (not previously viewed)
+        const newOutOfStockProducts = outOfStockProducts.filter(
+          (product) => !viewedProductIds.includes(product.id)
+        )
         setOutOfStockProducts(outOfStockProducts)
-        setOutOfStockCount(outOfStockProducts.length)
+        setOutOfStockCount(newOutOfStockProducts.length)
       } catch (err) {
         console.error("Fetch out-of-stock products error:", err)
         setOutOfStockCount(0)
@@ -77,7 +91,17 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
       }
     }
     fetchOutOfStockProducts()
-  }, [AUTH_TOKEN])
+  }, [AUTH_TOKEN, viewedProductIds])
+
+  // Update viewed products when visiting /tasks
+  useEffect(() => {
+    if (location.pathname === "/tasks") {
+      const currentProductIds = outOfStockProducts.map((product) => product.id)
+      setViewedProductIds(currentProductIds)
+      localStorage.setItem("viewedOutOfStockProductIds", JSON.stringify(currentProductIds))
+      setOutOfStockCount(0) // Reset notification count after viewing
+    }
+  }, [location.pathname, outOfStockProducts])
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -99,7 +123,7 @@ const MainLayout = ({ children, language, setLanguage, user, onLogout }) => {
   // Clone children with outOfStockProducts prop
   const childrenWithProps = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
-      console.log("Passing props to child:", { outOfStockProducts, outOfStockCount }) // Debug log
+      console.log("Passing props to child:", { outOfStockProducts, outOfStockCount })
       return React.cloneElement(child, { outOfStockProducts, outOfStockCount })
     }
     return child
