@@ -10,6 +10,8 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
   const [currentTask, setCurrentTask] = useState(null)
   const [openMenuId, setOpenMenuId] = useState(null)
   const [slideTasks, setSlideTasks] = useState(new Set())
+  const [successMessage, setSuccessMessage] = useState(null)
+  const [outOfStockMessage, setOutOfStockMessage] = useState(null)
 
   const translations = {
     en: {
@@ -27,11 +29,12 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
       low: "Low",
       cancel: "Cancel",
       confirmDelete: "Are you sure you want to delete this task?",
-      outOfStockMessage: "Your product is out of stock, please try again.",
+      outOfStockMessage: "Product out of stock, please set more",
       restockTaskTitle: "Restock Product",
       sortByDueDate: "Sort by Due Date",
       sortByPriority: "Sort by Priority",
       sortByStatus: "Sort by Status",
+      successMessage: "Task deleted successfully",
     },
     km: {
       title: "កិច្ចការ និងការរំលឹក",
@@ -48,11 +51,12 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
       low: "ទាប",
       cancel: "បោះបង់",
       confirmDelete: "តើអ្នកប្រាកដជាចង់លុបកិច្ចការនេះមែនទេ?",
-      outOfStockMessage: "ផលិតផលរបស់អ្នកអស់ស្តុក សូមព្យាយាមម្តងទៀត។",
+      outOfStockMessage: "ផលិតផលអស់ស្តុក សូមបន្ថែមបរិមាណ",
       restockTaskTitle: "បំពេញស្តុកផលិតផល",
       sortByDueDate: "តម្រៀបតាមកាលបរិច្ឆេទផុតកំណត់",
       sortByPriority: "តម្រៀបតាមអាទិភាព",
       sortByStatus: "តម្រៀបតាមស្ថានភាព",
+      successMessage: "កិច្ចការត្រូវបានលុបដោយជោគជ័យ",
     },
   }
 
@@ -66,7 +70,8 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
       .filter((n) => n.status !== "completed")
       .map((n) => ({
         id: n.id,
-        title: n.message,
+        productId: n.productId,
+        title: t.restockTaskTitle,
         description: n.message,
         dueDate: new Date().toISOString().split("T")[0],
         priority: "medium",
@@ -74,12 +79,23 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
       }))
     const combinedTasks = [...storedTasks, ...notificationTasks.filter(nt => !storedTasks.some(st => st.id === nt.id))]
     setTasks(combinedTasks)
-  }, [])
+  }, [t.restockTaskTitle])
 
   // Save tasks to localStorage whenever tasks change
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks))
   }, [tasks])
+
+  // Clear success message or out-of-stock message after 3 seconds
+  useEffect(() => {
+    if (successMessage || outOfStockMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null)
+        setOutOfStockMessage(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [successMessage, outOfStockMessage])
 
   // Create tasks for out-of-stock products
   useEffect(() => {
@@ -89,6 +105,7 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
 
     const storedTasks = JSON.parse(localStorage.getItem("tasks") || "[]")
     const existingTaskIds = storedTasks.map((task) => task.productId).filter(Boolean)
+    const hasShownOutOfStockMessage = localStorage.getItem("hasShownOutOfStockMessage") === "true"
 
     const newTasks = outOfStockProducts
       .filter((product) => !existingTaskIds.includes(product.id))
@@ -104,8 +121,13 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
 
     if (newTasks.length > 0) {
       setTasks((prevTasks) => [...prevTasks, ...newTasks])
+      // Show out-of-stock message only if not previously shown
+      if (!hasShownOutOfStockMessage) {
+        setOutOfStockMessage(t.outOfStockMessage)
+        localStorage.setItem("hasShownOutOfStockMessage", "true")
+      }
     }
-  }, [outOfStockProducts, t])
+  }, [outOfStockProducts, t.outOfStockMessage, t.restockTaskTitle])
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -143,9 +165,22 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
   }
 
   const handleDeleteConfirm = () => {
+    // Filter out the task from the state
     const updatedTasks = tasks.filter((task) => task.id !== currentTask.id)
     setTasks(updatedTasks)
-    localStorage.setItem("tasks", JSON.stringify(updatedTasks)) // Update localStorage
+    
+    // Update tasks in localStorage by removing the task
+    localStorage.setItem("tasks", JSON.stringify(updatedTasks))
+
+    // Remove the corresponding notification from localStorage
+    const notifications = JSON.parse(localStorage.getItem("notifications") || "[]")
+    const updatedNotifications = notifications.filter((n) => n.id !== currentTask.id)
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifications))
+
+    // Set success message
+    setSuccessMessage(t.successMessage)
+
+    // Close modal and reset current task
     setIsDeleteModalOpen(false)
     setCurrentTask(null)
   }
@@ -199,8 +234,24 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
         </div>
       </div>
 
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-100 text-green-800 p-4 rounded-lg shadow-lg mb-6 flex items-center gap-2 border border-gray-200">
+          <CheckCircle className="h-5 w-5" />
+          <p className="text-sm">{successMessage}</p>
+        </div>
+      )}
+
+      {/* Out-of-Stock Message */}
+      {outOfStockMessage && (
+        <div className="bg-red-100 text-red-800 p-4 rounded-lg shadow-lg mb-6 flex items-center gap-2 border border-gray-200">
+          <Bell className="h-5 w-5" />
+          <p className="text-sm">{outOfStockMessage}</p>
+        </div>
+      )}
+
       {/* Filter Tabs */}
-      <div className="flex items-center justify-between bg-white rounded-lg p-4 shadow-lg mb-6">
+      <div className="flex items-center justify-between bg-white rounded-lg p-4 shadow-lg mb-6 border border-gray-200">
         <div className="flex flex-wrap gap-2">
           {[
             { key: "all", label: t.all, icon: <CheckCircle className="h-5 w-5" /> },
@@ -265,18 +316,10 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
         </div>
       </div>
 
-      {/* Out-of-Stock Notification */}
-      {outOfStockCount > 0 && (
-        <div className="bg-red-100 text-red-800 p-4 rounded-lg shadow-lg mb-6 flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          <p className="text-sm">{t.outOfStockMessage}</p>
-        </div>
-      )}
-
       {/* Task List */}
       <div className="space-y-4">
         {filteredTasks.length === 0 ? (
-          <div className="bg-white rounded-lg p-12 shadow-lg text-center">
+          <div className="bg-white rounded-lg p-12 shadow-lg text-center border border-gray-200">
             <Clock className="h-16 w-16 mx-auto mb-4 text-gray-300" />
             <p className="text-gray-600 text-lg">{t.noTasks}</p>
           </div>
@@ -285,7 +328,7 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
             const isSliding = slideTasks.has(task.id)
 
             return (
-              <div key={task.id} className="bg-white rounded-lg shadow-md transition-all overflow-hidden relative">
+              <div key={task.id} className="bg-white rounded-lg shadow-md transition-all overflow-hidden relative border border-gray-200">
                 <div
                   className={`transition-transform duration-300 ease-in-out p-4 ${
                     isSliding ? "transform -translate-x-20" : ""
@@ -297,10 +340,10 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
                       <p className="text-gray-500 text-sm mb-2">{task.description}</p>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500">📅 {new Date(task.dueDate).toLocaleDateString()}</span>
-                        <span className={`text-xs px-2 py-1 rounded ${getStatusColor(task.status)}`}>
+                        <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(task.status)}`}>
                           {t[task.status] || task.status}
                         </span>
-                        <span className={`text-xs px-2 py-1 rounded bg-orange-100 text-orange-800`}>
+                        <span className={`text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-800`}>
                           {t[task.priority] || task.priority} {t.priority}
                         </span>
                       </div>
@@ -342,7 +385,7 @@ const TasksView = ({ language = "en", outOfStockProducts = [], outOfStockCount =
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm border border-gray-200">
             <h2 className="text-xl font-bold text-gray-800 mb-4">{t.delete}</h2>
             <p className="text-gray-600 mb-6">{t.confirmDelete}</p>
             <div className="flex justify-end gap-2">
