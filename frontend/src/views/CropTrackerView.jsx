@@ -604,6 +604,42 @@ const CropTrackerView = ({ language = "en" }) => {
       const margin = 10;
       let yPosition = 20;
 
+      // Logo moved up slightly with Farm Manager title on the same line
+      const logoUrl = '/logoApp.jpg'; // Existing logo
+      try {
+        const imgElement = document.createElement("img");
+        imgElement.src = logoUrl;
+        imgElement.crossOrigin = "anonymous";
+        document.body.appendChild(imgElement);
+        await new Promise((resolve, reject) => {
+          imgElement.onload = resolve;
+          imgElement.onerror = () => reject(new Error("Failed to load logo"));
+        });
+        const canvas = await html2canvas(imgElement, { scale: 1, useCORS: true });
+        const imgData = canvas.toDataURL("image/jpeg");
+        document.body.removeChild(imgElement);
+        doc.addImage(imgData, "JPEG", margin, yPosition - 10, 15, 15); // Logo position unchanged
+      } catch (logoError) {
+        console.error(`Logo Error: ${logoError.message}`);
+        doc.setFontSize(12);
+        doc.text("Farm Manager Logo not available", margin, yPosition - 10);
+        yPosition += 10;
+      }
+
+      // Farm Manager title moved down more
+      doc.setFontSize(18);
+      doc.setTextColor(50, 150, 50); // Green for farm theme
+      doc.text("Farm Manager", margin + 20, yPosition, { align: "left" });
+      doc.setTextColor(0, 0, 0); // Reset to black
+      yPosition += 10; // Adjusted spacing
+
+      // Add "Crop Tracker Details" line with cut line
+      // doc.setFontSize(14);
+      doc.setLineWidth(0.1);
+      doc.line(margin, yPosition, 200, yPosition); // Horizontal line from x=10 to x=200
+      yPosition += 10;
+
+      // Existing crop report content
       doc.setFontSize(18);
       doc.text(`${t.viewCrop}: ${crop.name}`, margin, yPosition);
       yPosition += 10;
@@ -642,7 +678,7 @@ const CropTrackerView = ({ language = "en" }) => {
         try {
           const imgElement = document.createElement("img");
           const resolvedImageSrc = crop.image_path.startsWith("http") ? crop.image_path : `http://127.0.0.1:8000${crop.image_path.startsWith("/") ? crop.image_path : `/${crop.image_path}`}`;
-          console.log(`PDF Image URL: ${resolvedImageSrc}`); // Debug log
+          console.log(`PDF Image URL: ${resolvedImageSrc}`);
           imgElement.src = resolvedImageSrc;
           imgElement.crossOrigin = "anonymous";
           document.body.appendChild(imgElement);
