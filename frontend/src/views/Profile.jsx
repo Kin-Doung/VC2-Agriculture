@@ -1,22 +1,35 @@
 "use client"
 
-import { useState, useEffect  } from "react"
+import { useState, useEffect } from "react"
 import { User } from "lucide-react"
+import axios from "axios"
+import { format, parseISO } from "date-fns"
+import { enUS, km } from "date-fns/locale"
 
 const Profile = ({ language = "en" }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [photo, setPhoto] = useState(null)
+  const [isPhotoLoading, setIsPhotoLoading] = useState(false)
+  const [photoError, setPhotoError] = useState(null)
   const [profileData, setProfileData] = useState({
-    fullName: "John Doe",
-    email: "john.doe@example.com",
+    fullName: "",
+    email: "",
     password: "",
     confirmPassword: "",
-    farmName: "Green Valley Farm",
-    phone: "+855 12 345 678",
-    location: "Siem Reap, Cambodia",
+    farmName: "",
+    phone: "",
+    location: "",
+    role: "",
+    latitude: "",
+    longitude: "",
+    area: "",
+    created_at: "",
+    updated_at: "",
   })
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
 
   const translations = {
     en: {
@@ -32,13 +45,17 @@ const Profile = ({ language = "en" }) => {
       farmName: "Farm Name",
       phone: "Phone Number",
       location: "Location",
+      latitude: "Latitude",
+      longitude: "Longitude",
+      area: "Area (hectares)",
+      role: "Role",
+      selectRole: "Select Role",
       showPassword: "Show password",
       hidePassword: "Hide password",
       edit: "Edit Profile",
       save: "Save Changes",
       cancel: "Cancel",
       changePassword: "Change Password",
-      currentPassword: "Current Password",
       newPassword: "New Password",
       confirmNewPassword: "Confirm New Password",
       profilePicture: "Profile Picture",
@@ -58,9 +75,19 @@ const Profile = ({ language = "en" }) => {
       enterFarmName: "Enter your farm name",
       enterPhone: "Enter your phone number",
       enterLocation: "Enter your location",
-      enterCurrentPassword: "Enter current password",
+      enterLatitude: "Enter latitude",
+      enterLongitude: "Enter longitude",
+      enterArea: "Enter area",
       enterNewPassword: "Enter new password",
       confirmNewPasswordPlaceholder: "Confirm your new password",
+      errorFetching: "Error fetching profile data",
+      errorUpdating: "Error updating profile",
+      errorUploadingPhoto: "Error uploading photo",
+      errorPhotoSize: "Photo size exceeds 2MB limit",
+      errorPhotoType: "Only JPEG, PNG, or JPG files are allowed",
+      errorPhotoLoad: "Failed to load profile image",
+      errorUnauthorized: "Please log in again",
+      errorServer: "Server error, please try again later",
     },
     kh: {
       profile: "ប្រវត្តិរូប",
@@ -75,13 +102,17 @@ const Profile = ({ language = "en" }) => {
       farmName: "ឈ្មោះកសិដ្ឋាន",
       phone: "លេខទូរស័ព្ទ",
       location: "ទីតាំង",
+      latitude: "រយៈទទឹង",
+      longitude: "រយៈបណ្តោយ",
+      area: "ផ្ទៃដី (ហិកតា)",
+      role: "តួនាទី",
+      selectRole: "ជ្រើសរើសតួនាទី",
       showPassword: "បង្ហាញពាក្យសម្ងាត់",
       hidePassword: "លាក់ពាក្យសម្ងាត់",
       edit: "កែសម្រួលប្រវត្តិរូប",
       save: "រក្សាទុកការផ្លាស់ប្តូរ",
       cancel: "បោះបង់",
       changePassword: "ផ្លាស់ប្តូរពាក្យសម្ងាត់",
-      currentPassword: "ពាក្យសម្ងាត់បច្ចុប្បន្ន",
       newPassword: "ពាក្យសម្ងាត់ថ្មី",
       confirmNewPassword: "បញ្ជាក់ពាក្យសម្ងាត់ថ្មី",
       profilePicture: "រូបភាពប្រវត្តិរូប",
@@ -101,52 +132,130 @@ const Profile = ({ language = "en" }) => {
       enterFarmName: "បញ្ចូលឈ្មោះកសិដ្ឋានរបស់អ្នក",
       enterPhone: "បញ្ចូលលេខទូរស័ព្ទរបស់អ្នក",
       enterLocation: "បញ្ចូលទីតាំងរបស់អ្នក",
-      enterCurrentPassword: "បញ្ចូលពាក្យសម្ងាត់បច្ចុប្បន្ន",
+      enterLatitude: "បញ្ចូលរយៈទទឹង",
+      enterLongitude: "បញ្ចូលរយៈបណ្តោយ",
+      enterArea: "បញ្ចូលផ្ទៃដី",
       enterNewPassword: "បញ្ចូលពាក្យសម្ងាត់ថ្មី",
       confirmNewPasswordPlaceholder: "បញ្ជាក់ពាក្យសម្ងាត់ថ្មីរបស់អ្នក",
+      errorFetching: "Error fetching profile data",
+      errorUpdating: "Error updating profile",
+      errorUploadingPhoto: "Error uploading photo",
+      errorPhotoSize: "Photo size exceeds 2MB limit",
+      errorPhotoType: "Only JPEG, PNG, or JPG files are allowed",
+      errorPhotoLoad: "Failed to load profile image",
+      errorUnauthorized: "Please log in again",
+      errorServer: "Server error, please try again later",
     },
   }
 
-  useEffect(() => {
-  const user = localStorage.getItem("user")
-  if (user) {
-    setProfileData(prev => ({
-      ...prev,
-      fullName: JSON.parse(user).name,
-      email: JSON.parse(user).email,
-      farmName: JSON.parse(user).farm_name || "N/A",
-      phone: JSON.parse(user).phone || "N/A",
-      location: JSON.parse(user).location || "N/A",
-    }))
+  const t = translations[language] || translations.en
+
+  // 📅 Format date based on language
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"
+    try {
+      const date = parseISO(dateString)
+      return format(date, "MMMM d, yyyy, h:mm a", {
+        locale: language === "kh" ? km : enUS,
+      })
+    } catch (error) {
+      console.error("Error formatting date:", error)
+      return "N/A"
+    }
   }
 
-    // load saved photo
-    const savedPhoto = localStorage.getItem("profilePhoto")
-    if (savedPhoto) {
-      setPhoto(savedPhoto)
-    }
-}, [])
+    
 
-// 📤 Upload photo
-  const handleUpload = (e) => {
+  // 📤 Upload photo
+  const handleUpload = async (e) => {
     const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPhoto(reader.result)
-        localStorage.setItem("profilePhoto", reader.result) // save in localStorage
+    if (!file) return
+
+    // Validate file size (2MB = 2 * 1024 * 1024 bytes)
+    if (file.size > 2 * 1024 * 1024) {
+      setError(t.errorPhotoSize)
+      return
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"]
+    if (!allowedTypes.includes(file.type)) {
+      setError(t.errorPhotoType)
+      return
+    }
+
+    setIsPhotoLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    const formData = new FormData()
+    formData.append("profile_image", file)
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/profile/image",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      )
+      setPhoto(response.data.user.profile_image)
+      setSuccess(t.profileUpdated)
+      setPhotoError(null)
+    } catch (error) {
+      console.error("Error uploading photo:", error)
+      if (error.response?.status === 422) {
+        setError(error.response.data.message || t.errorUploadingPhoto)
+      } else if (error.response?.status === 401) {
+        setError(t.errorUnauthorized)
+      } else {
+        setError(t.errorServer)
       }
-      reader.readAsDataURL(file)
+    } finally {
+      setIsPhotoLoading(false)
     }
   }
 
   // ❌ Remove photo
-  const handleRemove = () => {
-    setPhoto(null)
-    localStorage.removeItem("profilePhoto")
+  const handleRemove = async () => {
+    setIsPhotoLoading(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      await axios.post(
+        "http://127.0.0.1:8000/api/profile/image",
+        { profile_image: null },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      )
+      setPhoto(null)
+      setSuccess(t.profileUpdated)
+      setPhotoError(null)
+    } catch (error) {
+      console.error("Error removing photo:", error)
+      if (error.response?.status === 401) {
+        setError(t.errorUnauthorized)
+      } else {
+        setError(t.errorUploadingPhoto)
+      }
+    } finally {
+      setIsPhotoLoading(false)
+    }
   }
 
-  const t = translations[language] || translations.en
+  // Handle image load error
+  const handleImageError = (e) => {
+    console.error("Image load error:", {
+      src: e.target.src,
+      status: e.target.status,
+      message: e.message || "Unknown error",
+    })
+    setPhotoError(t.errorPhotoLoad)
+    setPhoto(null)
+  }
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({
@@ -155,18 +264,110 @@ const Profile = ({ language = "en" }) => {
     }))
   }
 
-  const handleSave = () => {
-    // Here you would typically make an API call to save the profile data
-    console.log("Saving profile data:", profileData)
-    setIsEditing(false)
-    // Show success message (you could use a toast notification)
-    alert(t.profileUpdated)
+  const handleSave = async () => {
+    try {
+      const payload = {
+        name: profileData.fullName,
+        email: profileData.email,
+        phone: profileData.phone,
+        farm_name: profileData.farmName,
+        location: profileData.location,
+        role: profileData.role,
+        latitude: profileData.latitude || null,
+        longitude: profileData.longitude || null,
+        area: profileData.area || null,
+      }
+      if (profileData.password && profileData.password === profileData.confirmPassword) {
+        payload.password = profileData.password
+        payload.password_confirmation = profileData.confirmPassword
+      } else if (profileData.password !== profileData.confirmPassword) {
+        setError(t.errorUpdating)
+        return
+      }
+      const response = await axios.put(
+        "http://127.0.0.1:8000/api/user",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      )
+      setProfileData((prev) => ({
+        ...prev,
+        password: "",
+        confirmPassword: "",
+        created_at: response.data.user.created_at,
+        updated_at: response.data.user.updated_at,
+      }))
+      setSuccess(t.profileUpdated)
+      setError(null)
+      setIsEditing(false)
+    } catch (error) {
+      console.error("Error updating user:", error)
+      if (error.response?.status === 401) {
+        setError(t.errorUnauthorized)
+      } else if (error.response?.status === 422) {
+        setError(error.response.data.message || t.errorUpdating)
+      } else {
+        setError(t.errorServer)
+      }
+    }
   }
 
   const handleCancel = () => {
-    // Reset form data to original values
     setIsEditing(false)
-    // You might want to reset profileData to original values here
+    setError(null)
+    setSuccess(null)
+    // Refetch user data only if edited
+    if (isEditing) {
+      const fetchUser = async () => {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          console.error("No token found in localStorage")
+          setError(t.errorUnauthorized)
+          return
+        }
+        try {
+          console.log("Fetching user with token:", token.substring(0, 10) + "...")
+          const response = await axios.get("http://127.0.0.1:8000/api/user", {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          console.log("User data received:", response.data)
+          const user = response.data.user
+          setProfileData({
+            fullName: user.name || "",
+            email: user.email || "",
+            password: "",
+            confirmPassword: "",
+            farmName: user.farm_name || "",
+            phone: user.phone || "",
+            location: user.location || "",
+            role: user.role || "",
+            latitude: user.farm?.[0]?.location_at_latitude || "",
+            longitude: user.farm?.[0]?.location_longitude || "",
+            area: user.farm?.[0]?.area || "",
+            created_at: user.created_at || "",
+            updated_at: user.updated_at || "",
+          })
+          setPhoto(user.profile_image || null)
+          setPhotoError(null)
+        } catch (error) {
+          console.error("Error fetching user:", {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            url: error.config?.url,
+          })
+          if (error.response?.status === 401) {
+            setError(t.errorUnauthorized)
+          } else if (error.response?.status >= 500) {
+            setError(t.errorServer)
+          } else {
+            setError(error.response?.data?.message || t.errorFetching)
+          }
+        }
+      }
+      fetchUser()
+    }
   }
 
   const togglePasswordVisibility = () => {
@@ -191,22 +392,53 @@ const Profile = ({ language = "en" }) => {
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Feedback Messages */}
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {success && <p className="text-green-600 text-sm">{success}</p>}
+        {photoError && <p className="text-red-600 text-sm">{photoError}</p>}
+
         {/* Profile Picture Section */}
         <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-green-200">
           <h2 className="text-lg sm:text-xl font-semibold text-green-800 mb-4">{t.profilePicture}</h2>
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-green-100 rounded-full flex items-center justify-center overflow-hidden">
-              {photo ? (
-                <img src={photo} alt="Profile" className="w-full h-full object-cover" />
+            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-green-100 rounded-full flex items-center justify-center overflow-hidden relative">
+              {isPhotoLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : photo && !photoError ? (
+                <img
+                  src={photo}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  onError={handleImageError}
+                />
               ) : (
                 <User className="h-12 w-12 text-black" />
               )}
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base">
+              <label
+                className={`px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base cursor-pointer ${
+                  isPhotoLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
                 {t.uploadPhoto}
-              </button>
-              <button className="px-4 py-2 border border-green-600 text-green-600 rounded-md hover:bg-green-50 transition-colors text-sm sm:text-base">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  onChange={handleUpload}
+                  className="hidden"
+                  disabled={isPhotoLoading}
+                />
+              </label>
+              <button
+                onClick={handleRemove}
+                className={`px-4 py-2 border border-green-600 text-green-600 rounded-md hover:bg-green-50 transition-colors text-sm sm:text-base ${
+                  isPhotoLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={isPhotoLoading}
+              >
                 {t.removePhoto}
               </button>
             </div>
@@ -306,6 +538,25 @@ const Profile = ({ language = "en" }) => {
                 <p className="text-green-700 py-2 text-sm sm:text-base">{profileData.location}</p>
               )}
             </div>
+
+            {/* Role */}
+            <div>
+              <label className="block text-sm font-medium text-green-800 mb-2">{t.role}</label>
+              {isEditing ? (
+                <select
+                  value={profileData.role}
+                  onChange={(e) => handleInputChange("role", e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base"
+                >
+                  <option value="">{t.selectRole}</option>
+                  <option value="admin">Admin</option>
+                  <option value="farmer">Farmer</option>
+                  <option value="user">User</option>
+                </select>
+              ) : (
+                <p className="text-green-700 py-2 text-sm sm:text-base">{profileData.role}</p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -329,10 +580,64 @@ const Profile = ({ language = "en" }) => {
               )}
             </div>
 
+            {/* Latitude */}
+            <div>
+              <label className="block text-sm font-medium text-green-800 mb-2">{t.latitude}</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  value={profileData.latitude}
+                  onChange={(e) => handleInputChange("latitude", e.target.value)}
+                  placeholder={t.enterLatitude}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base"
+                />
+              ) : (
+                <p className="text-green-700 py-2 text-sm sm:text-base">{profileData.latitude || "N/A"}</p>
+              )}
+            </div>
+
+            {/* Longitude */}
+            <div>
+              <label className="block text-sm font-medium text-green-800 mb-2">{t.longitude}</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  value={profileData.longitude}
+                  onChange={(e) => handleInputChange("longitude", e.target.value)}
+                  placeholder={t.enterLongitude}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base"
+                />
+              ) : (
+                <p className="text-green-700 py-2 text-sm sm:text-base">{profileData.longitude || "N/A"}</p>
+              )}
+            </div>
+
+            {/* Area */}
+            <div>
+              <label className="block text-sm font-medium text-green-800 mb-2">{t.area}</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  value={profileData.area}
+                  onChange={(e) => handleInputChange("area", e.target.value)}
+                  placeholder={t.enterArea}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base"
+                />
+              ) : (
+                <p className="text-green-700 py-2 text-sm sm:text-base">{profileData.area || "N/A"}</p>
+              )}
+            </div>
+
             {/* Member Since */}
             <div>
               <label className="block text-sm font-medium text-green-800 mb-2">{t.memberSince}</label>
-              <p className="text-green-700 py-2 text-sm sm:text-base">January 2024</p>
+              <p className="text-green-700 py-2 text-sm sm:text-base">{formatDate(profileData.created_at)}</p>
+            </div>
+
+            {/* Last Updated */}
+            <div>
+              <label className="block text-sm font-medium text-green-800 mb-2">{t.lastUpdated}</label>
+              <p className="text-green-700 py-2 text-sm sm:text-base">{formatDate(profileData.updated_at)}</p>
             </div>
           </div>
         </div>
@@ -342,15 +647,15 @@ const Profile = ({ language = "en" }) => {
           <h2 className="text-lg sm:text-xl font-semibold text-green-800 mb-4">{t.accountSecurity}</h2>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Current Password */}
+              {/* New Password */}
               <div>
-                <label className="block text-sm font-medium text-green-800 mb-2">{t.currentPassword}</label>
+                <label className="block text-sm font-medium text-green-800 mb-2">{t.newPassword}</label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={profileData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
-                    placeholder={t.enterCurrentPassword}
+                    placeholder={t.enterNewPassword}
                     className="w-full px-3 py-2 pr-10 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base"
                   />
                   <button
@@ -363,20 +668,10 @@ const Profile = ({ language = "en" }) => {
                 </div>
               </div>
 
-              {/* New Password */}
-              <div>
-                <label className="block text-sm font-medium text-green-800 mb-2">{t.newPassword}</label>
-                <input
-                  type="password"
-                  placeholder={t.enterNewPassword}
-                  className="w-full px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base"
-                />
-              </div>
-
               {/* Confirm New Password */}
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-green-800 mb-2">{t.confirmNewPassword}</label>
-                <div className="relative max-w-md">
+                <div className="relative">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     value={profileData.confirmPassword}
@@ -394,10 +689,6 @@ const Profile = ({ language = "en" }) => {
                 </div>
               </div>
             </div>
-
-            <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base">
-              {t.changePassword}
-            </button>
           </div>
         </div>
 
@@ -409,7 +700,7 @@ const Profile = ({ language = "en" }) => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <label className="block text-sm font-medium text-green-800">{t.notifications}</label>
-                <p className="text-xs text-green-600">Receive price alerts and market updates</p>
+                <p className="text-xs text-green-600">{t.notificationsDescription || "Receive price alerts and market updates"}</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
@@ -420,7 +711,11 @@ const Profile = ({ language = "en" }) => {
             {/* Language */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <label className="block text-sm font-medium text-green-800">{t.language}</label>
-              <select className="px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base max-w-xs">
+              <select
+                value={language}
+                onChange={(e) => {/* Update language via parent component */}}
+                className="px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base max-w-xs"
+              >
                 <option value="en">English</option>
                 <option value="kh">ខ្មែរ (Khmer)</option>
               </select>
@@ -429,7 +724,9 @@ const Profile = ({ language = "en" }) => {
             {/* Timezone */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <label className="block text-sm font-medium text-green-800">{t.timezone}</label>
-              <select className="px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base max-w-xs">
+              <select
+                className="px-3 py-2 border-2 border-green-200 rounded-md focus:outline-none focus:border-green-600 transition-colors text-sm sm:text-base max-w-xs"
+              >
                 <option value="Asia/Phnom_Penh">Asia/Phnom Penh (GMT+7)</option>
                 <option value="Asia/Bangkok">Asia/Bangkok (GMT+7)</option>
                 <option value="UTC">UTC (GMT+0)</option>
@@ -442,8 +739,8 @@ const Profile = ({ language = "en" }) => {
         <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-green-200">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <p className="text-sm text-green-600">{t.lastUpdated}: January 15, 2025 at 2:30 PM</p>
-              <p className="text-sm text-green-600">{t.memberSince}: January 1, 2025</p>
+              <p className="text-sm text-green-600">{t.lastUpdated}: {formatDate(profileData.updated_at)}</p>
+              <p className="text-sm text-green-600">{t.memberSince}: {formatDate(profileData.created_at)}</p>
             </div>
             <button className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm sm:text-base">
               {t.deleteAccount}

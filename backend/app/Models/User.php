@@ -25,6 +25,7 @@ class User extends Authenticatable
         'location',
         'phone',
         'role',
+        'profile_image', // Added profile_image to fillable attributes
     ];
     public function seedScans()
     {
