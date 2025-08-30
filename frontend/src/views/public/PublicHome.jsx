@@ -191,10 +191,6 @@ const PublicHome = ({ language }) => {
                 {t.hero.cta}
                 <ArrowRight className="h-5 w-5" />
               </Link>
-              <button className="inline-flex items-center gap-2 px-8 py-4 border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-green-600 transition-colors">
-                <Play className="h-5 w-5" />
-                {t.hero.watchDemo}
-              </button>
             </div>
           </div>
         </div>

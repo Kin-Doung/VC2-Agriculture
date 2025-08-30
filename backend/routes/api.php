@@ -24,6 +24,12 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 | Public Routes
 |--------------------------------------------------------------------------
 */
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', [AuthController::class, 'getUser']);
+    Route::put('/user', [AuthController::class, 'updateUser']); // Add this line
+    Route::post('/profile/image', [AuthController::class, 'updateProfileImage']);
+});
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 

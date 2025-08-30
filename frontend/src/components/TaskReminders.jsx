@@ -1,3 +1,4 @@
+"use client"
 import { Clock, AlertCircle, Sprout } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
@@ -32,12 +33,16 @@ const TaskReminders = ({ language }) => {
     },
   }
 
-  const t = translations[language]
+  const t = translations[language] || translations.en
 
-  // Load notifications from localStorage on mount
+  // Load the 5 most recent notifications from localStorage on mount
   useEffect(() => {
     const notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
-    const mappedTasks = notifications.filter((n) => n.status !== "completed").map((n) => ({
+    const sortedNotifications = notifications
+      .filter((n) => n.status !== "completed")
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Sort by createdAt, newest first
+      .slice(0, 5); // Limit to 5 most recent
+    const mappedTasks = sortedNotifications.map((n) => ({
       id: n.id,
       task: n.message,
       status: n.status,
@@ -95,22 +100,31 @@ const TaskReminders = ({ language }) => {
       </div>
 
       <div className="space-y-3">
-        {tasks.map((task) => (
-          <div key={task.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <task.icon className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="font-medium">{task.task}</p>
-                <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(task.status)}`}>
-                  {getStatusLabel(task.status)}
-                </span>
-              </div>
-            </div>
-            <button onClick={() => handleMarkDone(task.id)} className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              {t.markDone}
-            </button>
+        {tasks.length === 0 ? (
+          <div className="text-center py-4 text-gray-600">
+            No tasks available
           </div>
-        ))}
+        ) : (
+          tasks.map((task) => (
+            <div key={task.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <task.icon className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-medium">{task.task}</p>
+                  <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(task.status)}`}>
+                    {getStatusLabel(task.status)}
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleMarkDone(task.id)} 
+                className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                {t.markDone}
+              </button>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )

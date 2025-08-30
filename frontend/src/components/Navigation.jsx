@@ -22,10 +22,10 @@ const Navigation = ({ isOpen, language, role }) => {
   const translations = {
     en: {
       dashboard: "Dashboard",
-      myFarm: "My Farm",
+      // myFarm: "My Farm",
       landMeasure: "Measure Land",
       cropTracker: "Crop Tracker",
-      // tasks: "Tasks & Reminders",
+      tasks: "Tasks & Reminders",
       cropManagement: "Crop Management",
       category: "Category",
       product: "Product",
@@ -69,7 +69,7 @@ const Navigation = ({ isOpen, language, role }) => {
     // { icon: MapPin, label: t.myFarm, path: "/farm" },
     { icon: MapPin, label: t.landMeasure, path: "/measure" },
     { icon: Sprout, label: t.cropTracker, path: "/crops" },
-    // { icon: Calendar, label: t.tasks, path: "/tasks" },
+    { icon: Calendar, label: t.tasks, path: "/tasks" },
     { icon: Leaf, label: t.cropManagement, path: "/cropmanagement" },
     { icon: List, label: t.category, path: "/category" },
     { icon: Package, label: t.product, path: "/product" },
