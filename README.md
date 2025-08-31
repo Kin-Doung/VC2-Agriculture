@@ -33,5 +33,6 @@ npm install react-router-dom
 npm install jspdf
 npm install lodash jspdf html2canvas lucide-react
 npm install chart.js react-chartjs-2
-npm install date-fns
+npm install date-fns@2.30.0
+
 
