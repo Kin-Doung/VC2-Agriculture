@@ -526,7 +526,7 @@ const PublicProducts = ({ language = "en" }) => {
                             {t.modal.viewDetails}
                           </button>
                           <Link
-                            to="/order"
+                            to="/register"
                             className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                               product.stock === t.modal.inStock
                                 ? "bg-blue-600 text-white hover:bg-blue-700"
