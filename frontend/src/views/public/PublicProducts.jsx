@@ -1,8 +1,7 @@
-"use client";
 
 import { Smartphone, Cloud, BarChart3, Users, Shield, Zap, ArrowRight, X } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
 const PublicProducts = ({ language = "en" }) => {
@@ -10,9 +9,76 @@ const PublicProducts = ({ language = "en" }) => {
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [error, setError] = useState(null);
   const itemsPerPage = 8;
+  const modalRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Mock products
+  const mockProducts = [
+    {
+      id: 1,
+      name: "Rice",
+      name_km: "អង្ករ",
+      price: 2500.00,
+      image: "/images/rice.jpg",
+      seller: "Farmer John",
+      sellerPhone: "123-456-7890",
+      quantity: 100,
+      description: "High-quality rice",
+      description_km: "អង្ករគុណភាពខ្ពស់",
+      category: "Grains",
+      category_km: "គ្រាប់ធញ្ញជាតិ",
+      expiration_date: "2025-12-31",
+    },
+    {
+      id: 2,
+      name: "Orange",
+      name_km: "ក្រូច",
+      price: 4000.00,
+      image: "/images/orange.jpg",
+      seller: "Farmer Sophea",
+      sellerPhone: "987-654-3210",
+      quantity: 0,
+      description: "Fresh oranges from the orchard",
+      description_km: "ក្រូចស្រស់ពីសួន",
+      category: "Fruits",
+      category_km: "ផ្លែឈើ",
+      expiration_date: "2025-09-15",
+    },
+    {
+      id: 3,
+      name: "Potato",
+      name_km: "ដំឡូង",
+      price: 1500.00,
+      image: "/images/potato.jpg",
+      seller: "Farmer Srey",
+      sellerPhone: "456-789-1234",
+      quantity: 50,
+      description: "Fresh potatoes for cooking",
+      description_km: "ដំឡូងស្រស់សម្រាប់ចម្អិនអាហារ",
+      category: "Vegetables",
+      category_km: "បន្លែ",
+      expiration_date: "2025-09-10",
+    },
+    {
+      id: 4,
+      name: "Bean",
+      name_km: "សណ្តែក",
+      price: 12000.00,
+      image: "/images/bean.jpg",
+      seller: "Farmer Rith",
+      sellerPhone: "321-654-9870",
+      quantity: 20,
+      description: "High-quality beans",
+      description_km: "សណ្តែកគុណភាពខ្ពស់",
+      category: "Nuts",
+      category_km: "គ្រាប់",
+      expiration_date: "2026-03-01",
+    },
+  ];
 
   // Translations
   const translations = {
@@ -23,7 +89,7 @@ const PublicProducts = ({ language = "en" }) => {
       },
       products: {
         title: "Products for Sale",
-        subtitle: "Discover fresh, locally-sourced agricultural products directly from Cambodian farmers.",
+        subtitle: "Discover fresh, locally-sourced agricultural products directly from farmers.",
       },
       features: {
         title: "Key Features",
@@ -72,6 +138,7 @@ const PublicProducts = ({ language = "en" }) => {
         stock: "Stock",
         inStock: "In Stock",
         outOfStock: "Out of Stock",
+        expired: "Expired",
         viewDetails: "View Details",
         price: "Price",
         perKg: "/kg",
@@ -80,9 +147,14 @@ const PublicProducts = ({ language = "en" }) => {
         description: "Description",
         expirationDate: "Expiration Date",
         order: "Order Product",
-        error: "Failed to load data. Please try again later.",
+        noProducts: "No products available.",
         page: "Page",
         of: "of",
+        error: "Failed to load products. Showing default products.",
+        unauthorized: "Please log in to view additional products.",
+        login: "Log In",
+        previous: "Previous",
+        next: "Next",
       },
     },
     km: {
@@ -141,6 +213,7 @@ const PublicProducts = ({ language = "en" }) => {
         stock: "ស្តុក",
         inStock: "មានស្តុក",
         outOfStock: "អស់ស្តុក",
+        expired: "ផុតកំណត់",
         viewDetails: "មើលលម្អិត",
         price: "តម្លៃ",
         perKg: "/គ.ក",
@@ -149,69 +222,183 @@ const PublicProducts = ({ language = "en" }) => {
         description: "ការពិពណ៌នា",
         expirationDate: "កាលបរិច្ឆេទផុតកំណត់",
         order: "បញ្ជាទិញផលិតផល",
-        error: "បរាជ័យក្នុងការផ្ទុកទិន្នន័យ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+        noProducts: "គ្មានផលិតផលទេ។",
         page: "ទំព័រ",
         of: "នៃ",
+        error: "បរាជ័យក្នុងការផ្ទុកផលិតផល។ បង្ហាញផលិតផលលំនាំដើម។",
+        unauthorized: "សូមចូលប្រព័ន្ធដើម្បីមើលផលិតផលបន្ថែម។",
+        login: "ចូលប្រព័ន្ធ",
+        previous: "មុន",
+        next: "បន្ទាប់",
       },
     },
   };
 
-  const t = translations[language] || translations.en;
+  // Language validation
+  const supportedLanguages = ["en", "km"];
   const API_URL = "http://127.0.0.1:8000/api/products";
-  // Fetch products
+  const effectiveLanguage = supportedLanguages.includes(language) ? language : "en";
+  if (language !== effectiveLanguage) {
+    console.warn(`Unsupported language "${language}". Falling back to English.`); // Fixed: Added semicolon
+  }
+  const t = translations[effectiveLanguage];
+
+  // Placeholder image based on category or product name
+  const getPlaceholderImage = (category, productName) => {
+    const imageMap = {
+      Rice: "/images/rice.jpg",
+      Orange: "/images/orange.jpg",
+      Potato: "/images/potato.jpg",
+      Bean: "/images/bean.jpg",
+      Apple: "/images/apple.jpg",
+    };
+    const placeholders = {
+      Grains: "/placeholder.svg?height=400&width=400&text=Grains",
+      Fruits: "/placeholder.svg?height=400&width=400&text=Fruits",
+      Vegetables: "/placeholder.svg?height=400&width=400&text=Vegetables",
+      Nuts: "/placeholder.svg?height=400&width=400&text=Nuts",
+    };
+    return imageMap[productName] || placeholders[category] || "/placeholder.svg?height=400&width=400&text=Product+Image";
+  };
+
+  // Check login status
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, []);
+
+  // Fetch products based on login status
+  useEffect(() => {
+    const today = new Date();
+
+    // Transform products with stock status and language fields
+    const transformProducts = (products) => {
+      return products.map((item) => {
+        const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
+        const isExpired = expirationDate && expirationDate < today;
+        return {
+          id: item.id,
+          name: language === "km" ? item.name_km || item.name : item.name,
+          price: item.price ? `${Number(item.price).toFixed(2)} KHR` : "0.00 KHR",
+          image: item.image_path
+            ? `http://127.0.0.1:8000/storage/${item.image_path}`
+            : item.image || getPlaceholderImage(item.category, item.name),
+          seller: item.user?.name || item.seller || "",
+          sellerPhone: item.user?.phone || item.sellerPhone || "N/A",
+          quantity: item.quantity || 0,
+          description: language === "km" ? item.description_km || item.description : item.description || "No description available",
+          category: language === "km" ? item.category?.name_km || item.category?.name : item.category?.name || item.category || "",
+          expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
+          stock: isExpired ? t.modal.expired : item.quantity === 0 ? t.modal.outOfStock : t.modal.inStock,
+        };
+      });
+    };
+
     const fetchData = async () => {
       setError(null);
       try {
-        const token = localStorage.getItem("token"); // Retrieve token from localStorage
+        if (!isLoggedIn) {
+          // Not logged in: use mockProducts only
+          const transformedMockProducts = transformProducts(mockProducts);
+          setProducts(transformedMockProducts);
+          return;
+        }
+
+        // Logged in: fetch API products and combine with mockProducts
+        const token = localStorage.getItem("token");
         if (!token) {
-          throw new Error("No authentication token found. Please log in.");
+          setError(t.modal.unauthorized);
+          setIsLoggedIn(false);
+          const transformedMockProducts = transformProducts(mockProducts);
+          setProducts(transformedMockProducts);
+          return;
         }
 
         const response = await axios.get(API_URL, {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // Include bearer token
+            Authorization: `Bearer ${token}`,
           },
         });
         const productData = response.data;
         if (!Array.isArray(productData)) {
           throw new Error("Products API response is not an array");
         }
-        const transformedProducts = productData.map((item) => {
-          const today = new Date();
-          const expirationDate = item.expiration_date ? new Date(item.expiration_date) : null;
-          const isExpired = expirationDate && expirationDate < today;
 
-          return {
-            id: item.id,
-            name: item[`name_${language}`] || item.name || "Unnamed Product",
-            price: item.price ? `${Number(item.price).toFixed(2)} KHR` : "0.00 KHR",
-            image: item.image_path
-              ? `http://127.0.0.1:8000/storage/${item.image_path}`
-              : "/placeholder.svg?height=400&width=400&text=Product+Image",
-            seller: item.user?.name || "",
-            sellerPhone: item.user?.phone || "N/A",
-            stock: isExpired || item.quantity === 0 ? t.modal.outOfStock : t.modal.inStock,
-            description: item[`description_${language}`] || item.description || "No description available",
-            category: item.category?.[`name_${language}`] || item.category?.name || "",
-            expiration_date: item.expiration_date ? new Date(item.expiration_date).toISOString().split("T")[0] : "",
-          };
-        });
+        // Combine mockProducts and API products
+        const combinedProducts = [...mockProducts, ...productData];
+        // Remove duplicates by ID
+        const uniqueProducts = Array.from(
+          new Map(combinedProducts.map((p) => [p.id, p])).values()
+        );
+        const transformedProducts = transformProducts(uniqueProducts);
         setProducts(transformedProducts);
       } catch (err) {
         console.error("Fetch data error:", err);
-        setError(`${t.modal.error}: ${err.message}`);
+        if (err.response?.status === 401) {
+          setError(t.modal.unauthorized);
+          localStorage.removeItem("token");
+          setIsLoggedIn(false);
+        } else {
+          setError(`${t.modal.error}: ${err.message}`);
+        }
+        // Fallback to mockProducts
+        const transformedMockProducts = transformProducts(mockProducts);
+        setProducts(transformedMockProducts);
       }
     };
+
     fetchData();
-  }, [language, t.modal.error, t.modal.inStock, t.modal.outOfStock]);
+  }, [isLoggedIn, language, t.modal.inStock, t.modal.outOfStock, t.modal.expired, t.modal.error, t.modal.unauthorized]);
+
+  // Modal handlers
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedProduct(null);
+  };
+
+  // Modal accessibility
+  useEffect(() => {
+    if (isModalOpen && modalRef.current) {
+      const focusableElements = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      const handleKeyDown = (e) => {
+        if (e.key === "Tab") {
+          if (e.shiftKey && document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          } else if (!e.shiftKey && document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+        if (e.key === "Escape") {
+          closeModal();
+        }
+      };
+
+      document.addEventListener("keydown", handleKeyDown);
+      if (firstElement) {
+        firstElement.focus();
+      } else {
+        modalRef.current.focus();
+      }
+
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [isModalOpen]);
 
   // Pagination logic
   const totalPages = Math.ceil(products.length / itemsPerPage);
   const paginatedProducts = products.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   // Modal handlers
@@ -220,14 +407,14 @@ const PublicProducts = ({ language = "en" }) => {
     setIsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedProduct(null);
-  };
-
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  // Handle login redirect
+  const handleLoginRedirect = () => {
+    navigate("/login");
   };
 
   return (
@@ -247,18 +434,20 @@ const PublicProducts = ({ language = "en" }) => {
             {t.products.title}
           </h2>
           <p className="text-center text-gray-600 mb-12">{t.products.subtitle}</p>
-
-          {error ? (
-            <div className="text-center py-12">
-              <div className="text-red-500 text-lg">{error}</div>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Retry
-              </button>
+          {error && (
+            <div className="text-center text-red-500 mb-6">
+              <p>{error}</p>
+              {error === t.modal.unauthorized && (
+                <button
+                  onClick={handleLoginRedirect}
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {t.modal.login}
+                </button>
+              )}
             </div>
-          ) : paginatedProducts.length > 0 ? (
+          )}
+          {paginatedProducts.length > 0 ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {paginatedProducts.map((product) => (
@@ -272,7 +461,11 @@ const PublicProducts = ({ language = "en" }) => {
                     <div className="absolute top-2 right-2 z-10">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                          product.stock === t.modal.inStock ? "bg-green-100/90 text-green-800" : "bg-red-100/90 text-red-800"
+                          product.stock === t.modal.inStock
+                            ? "bg-green-100/90 text-green-800"
+                            : product.stock === t.modal.expired
+                            ? "bg-orange-100/90 text-orange-800"
+                            : "bg-red-100/90 text-red-800"
                         }`}
                       >
                         {product.stock}
@@ -285,7 +478,7 @@ const PublicProducts = ({ language = "en" }) => {
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
-                        onError={(e) => (e.target.src = "/placeholder.svg?height=400&width=400&text=Product+Image")}
+                        onError={(e) => (e.target.src = getPlaceholderImage(product.category, product.name))}
                       />
                       {/* Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
@@ -333,7 +526,7 @@ const PublicProducts = ({ language = "en" }) => {
                             {t.modal.viewDetails}
                           </button>
                           <Link
-                            to="/register"
+                            to="/order"
                             className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                               product.stock === t.modal.inStock
                                 ? "bg-blue-600 text-white hover:bg-blue-700"
@@ -341,7 +534,7 @@ const PublicProducts = ({ language = "en" }) => {
                             }`}
                             aria-label={`${t.modal.order} ${product.name}`}
                             onClick={(e) => {
-                              if (product.stock === t.modal.outOfStock) {
+                              if (product.stock !== t.modal.inStock) {
                                 e.preventDefault();
                               }
                             }}
@@ -361,9 +554,10 @@ const PublicProducts = ({ language = "en" }) => {
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-300"
-                    aria-label="Previous page"
+                    aria-label={t.modal.previous}
+                    aria-disabled={currentPage === 1}
                   >
-                    Previous
+                    {t.modal.previous}
                   </button>
                   <span className="text-sm text-gray-600">
                     {t.modal.page} {currentPage} {t.modal.of} {totalPages}
@@ -372,16 +566,17 @@ const PublicProducts = ({ language = "en" }) => {
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-300"
-                    aria-label="Next page"
+                    aria-label={t.modal.next}
+                    aria-disabled={currentPage === totalPages}
                   >
-                    Next
+                    {t.modal.next}
                   </button>
                 </div>
               )}
             </>
           ) : (
-            <p className="text-center text-gray-500">
-              {language === "km" ? "គ្មានផលិតផលទេ។" : "No products available."}
+            <p className="text-center text-gray-500 text-lg font-medium py-12">
+              {t.modal.noProducts}
             </p>
           )}
         </div>
@@ -397,16 +592,18 @@ const PublicProducts = ({ language = "en" }) => {
           onClick={closeModal}
         >
           <div
+            ref={modalRef}
             className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
+            tabIndex="-1"
           >
-            <div className="flex items-center justify-between p-8 border-b">
+            <div className="flex items-center justify-between p-8 border-b border-gray-200">
               <h2 id="modal-title" className="text-2xl font-bold text-gray-800">
                 {t.modal.title}
               </h2>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-600"
+                className="text-gray-400 hover:text-gray-600"
                 aria-label={t.modal.close}
               >
                 <X className="h-8 w-8" />
@@ -420,51 +617,57 @@ const PublicProducts = ({ language = "en" }) => {
                     <img
                       src={selectedProduct.image}
                       alt={selectedProduct.name}
-                      className="w-full h-96 object-cover rounded-lg border shadow-lg"
+                      className="w-full h-96 object-cover rounded-lg border border-gray-300 shadow-md"
                       loading="lazy"
-                      onError={(e) => (e.target.src = "/placeholder.svg?height=400&width=400&text=Product+Image")}
+                      onError={(e) => (e.target.src = getPlaceholderImage(selectedProduct.category, selectedProduct.name))}
                     />
                   </div>
                 </div>
                 {/* Product Details */}
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-lg font-medium text-gray-700 mb-2">
-                      {t.modal.productName || t.modal.title}
-                    </label>
-                    <p className="text-2xl font-bold text-gray-900">{selectedProduct.name}</p>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                    <label className="text-lg font-medium text-gray-700">{t.modal.title}</label>
+                    <span className="text-gray-700">:</span>
+                    <p className="text-xl font-bold text-gray-900">{selectedProduct.name}</p>
                   </div>
                   {selectedProduct.category && (
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.category}</label>
+                    <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                      <label className="text-lg font-medium text-gray-700">{t.modal.category}</label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-xl text-gray-900">{selectedProduct.category}</p>
                     </div>
                   )}
-                  <div>
-                    <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.price}</label>
-                    <p className="text-3xl font-bold text-green-600">
+                  <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                    <label className="text-lg font-medium text-gray-700">{t.modal.price}</label>
+                    <span className="text-gray-700">:</span>
+                    <p className="text-2xl font-bold text-green-600">
                       {selectedProduct.price}
-                      <span className="text-lg text-gray-500 font-normal">{t.modal.perKg}</span>
+                      <span className="text-base text-gray-500 font-normal ml-2">{t.modal.perKg}</span>
                     </p>
                   </div>
                   {selectedProduct.seller && (
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.seller}</label>
+                    <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                      <label className="text-lg font-medium text-gray-700">{t.modal.seller}</label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-xl text-gray-900">{selectedProduct.seller}</p>
                     </div>
                   )}
                   {selectedProduct.sellerPhone && selectedProduct.sellerPhone !== "N/A" && (
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.sellerPhone}</label>
+                    <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                      <label className="text-lg font-medium text-gray-700">{t.modal.sellerPhone}</label>
+                      <span className="text-gray-700">:</span>
                       <p className="text-xl text-gray-900">{selectedProduct.sellerPhone}</p>
                     </div>
                   )}
-                  <div>
-                    <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.stock}</label>
+                  <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                    <label className="text-lg font-medium text-gray-700">{t.modal.stock}</label>
+                    <span className="text-gray-700">:</span>
                     <span
-                      className={`inline-block px-4 py-2 text-sm font-medium rounded-full ${
+                      className={`inline-block px-4 py-1.5 text-sm font-medium rounded-full ${
                         selectedProduct.stock === t.modal.inStock
                           ? "bg-green-100 text-green-800"
+                          : selectedProduct.stock === t.modal.expired
+                          ? "bg-orange-100 text-orange-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
@@ -472,24 +675,18 @@ const PublicProducts = ({ language = "en" }) => {
                     </span>
                   </div>
                   {selectedProduct.expiration_date && (
-                    <div>
-                      <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.expirationDate}</label>
-                      <p className="text-xl text-gray-900">{selectedProduct.expiration_date || "-"}</p>
+                    <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                      <label className="text-lg font-medium text-gray-700">{t.modal.expirationDate}</label>
+                      <span className="text-gray-700">:</span>
+                      <p className="text-xl text-gray-900">{selectedProduct.expiration_date}</p>
                     </div>
                   )}
-                  <div>
-                    <label className="block text-lg font-medium text-gray-700 mb-2">{t.modal.description}</label>
+                  <div className="grid grid-cols-[150px_20px_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[200px_20px_1fr]">
+                    <label className="text-lg font-medium text-gray-700">{t.modal.description}</label>
+                    <span className="text-gray-700">:</span>
                     <p className="text-lg text-gray-900 leading-relaxed">{selectedProduct.description}</p>
                   </div>
                 </div>
-              </div>
-              <div className="pt-8 mt-8 border-t">
-                <button
-                  onClick={closeModal}
-                  className="w-full px-6 py-3 text-lg bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  {t.modal.close}
-                </button>
               </div>
             </div>
           </div>
